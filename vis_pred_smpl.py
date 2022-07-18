@@ -1,7 +1,9 @@
+from cmath import e
 import numpy as np
 import h5py
 import configargparse
 import open3d as o3d
+from pyrsistent import s
 from scipy.spatial.transform import Rotation as R
 from o3dvis import o3dvis
 import matplotlib.pyplot as plt
@@ -14,13 +16,13 @@ view = {
 	"trajectory" :
 	[
 		{
-			"boundingbox_max" : [ 5.1457979434954328, 0.38067323662389352, 0.80782246589660645 ],
-			"boundingbox_min" : [ 4.5940770513223042, -1.3767244733512471, -1.5362253189086914 ],
+			"boundingbox_max" : [ 5.148459134744563, 0.18879798795550118, 0.79121494293212891 ],
+			"boundingbox_min" : [ 4.534800590236415, -0.87921318347675903, -0.90700364112854004 ],
 			"field_of_view" : 60.0,
 			"front" : [ -0.99257767585799128, 0.091189825013992476, 0.080461004233516153 ],
-			"lookat" : [ 4.8418659124034011, -0.39008184163038867, -0.89088623399209699 ],
+			"lookat" : [ 4.9251547242143854, -0.40716893764948942, 0.15594117452305134 ],
 			"up" : [ 0.086773297396398955, 0.067507214866913023, 0.99393821276770966 ],
-			"zoom" : 0.51999999999999869
+			"zoom" : 0.71999999999999886
 		}
 	],
 }
@@ -39,7 +41,7 @@ def make_cloud_in_vis_center(point_cloud):
     # put points in 5 meters distance
     trans_x = 5 - (rot @ center)[0]
 
-    rt = np.concatenate((rot.T, np.array([[trans_x, 0, 0]]))).T
+    rt = np.concatenate((rot.T, np.array([[trans_x, 0, -center[-1]]]))).T
     rt = np.concatenate((rt, np.array([[0, 0, 0, 1]])))
 
     point_cloud.transform(rt)
@@ -114,8 +116,10 @@ def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='
                 end = pred_pose.shape[0]
             pred_pose = pred_pose[start:end]
             pred_vertices = poses_to_vertices(pred_pose)
-
-            gt_pose = f[gt_pose][start:end]
+            try:
+                gt_pose = f[gt_pose][start:end]
+            except KeyError:
+                gt_pose = f['gt_pose'][start:end]
             gt_vertices = poses_to_vertices(gt_pose)
 
             point_clouds = f[points][start:end]
@@ -156,7 +160,7 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
 
         # transform
         rt, center = make_cloud_in_vis_center(pointcloud) # 根据点的中心点，在XY平面将点云旋转平移
-        rt[:3, 3] = np.array([5, -0.5, center[-1]])
+        rt[:3, 3] = np.array([5, -0.5, 0])
         if gt_smpl is not None:
             gt.transform(rt)
             gt.compute_vertex_normals()
