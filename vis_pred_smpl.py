@@ -1,16 +1,12 @@
-from cmath import e
 import numpy as np
 import h5py
 import configargparse
 import open3d as o3d
-from pyrsistent import s
-from scipy.spatial.transform import Rotation as R
-from o3dvis import o3dvis
 import matplotlib.pyplot as plt
-# from tool_func import imges_to_video
-import torch
-from smpl.smpl import SMPL
-from vis_3d_box import load_data_remote
+from scipy.spatial.transform import Rotation as R
+
+from util import o3dvis, load_data_remote, make_cloud_in_vis_center
+from smpl import poses_to_vertices
 
 view = {
 	"trajectory" :
@@ -30,48 +26,6 @@ view = {
 pt_color = plt.get_cmap("tab20")(1)[:3]
 smpl_color = plt.get_cmap("tab20")(3)[:3]
 gt_smpl_color = plt.get_cmap("tab20")(5)[:3]
-
-def make_cloud_in_vis_center(point_cloud):
-    center = point_cloud.get_center()
-    yaw = np.arctan2(center[1], center[0])
-
-    # rot the points, make them on the X-axis
-    rot = R.from_rotvec(np.array([0, 0, -yaw])).as_matrix()
-
-    # put points in 5 meters distance
-    trans_x = 5 - (rot @ center)[0]
-
-    rt = np.concatenate((rot.T, np.array([[trans_x, 0, -center[-1]]]))).T
-    rt = np.concatenate((rt, np.array([[0, 0, 0, 1]])))
-
-    point_cloud.transform(rt)
-    # point_cloud.traslate(rt)
-
-    return rt, center
-
-def poses_to_vertices(poses, trans=None):
-    poses = poses.astype(np.float32)
-    vertices = np.zeros((0, 6890, 3))
-
-    n = len(poses)
-    smpl = SMPL()
-    batch_size = 128
-    n_batch = (n + batch_size - 1) // batch_size
-
-    for i in range(n_batch):
-        lb = i * batch_size
-        ub = (i + 1) * batch_size
-
-        cur_n = min(ub - lb, n - lb)
-        cur_vertices = smpl(torch.from_numpy(
-            poses[lb:ub]), torch.zeros((cur_n, 10)))
-        vertices = np.concatenate((vertices, cur_vertices.cpu().numpy()))
-
-    if trans is not None:
-        trans = trans.astype(np.float32)
-        vertices += np.expand_dims(trans, 1)
-    return vertices
-
 
 def load_pkl_vis(file_path, start=0, end=-1, points='point_clouds', pose='pred_rotmats', remote=False):
     import pickle
@@ -188,7 +142,7 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
 
         vis.waitKey(40, helps=False)
         
-    # vis.save_imgs(os.path.join(file_path, f'imgs'))
+        # vis.save_imgs(os.path.join(file_path, f'imgs'))
             
     # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
 

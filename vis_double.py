@@ -1,14 +1,13 @@
 import numpy as np
-import h5py
 import configargparse
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
-from o3dvis import o3dvis
+from util import o3dvis
 import matplotlib.pyplot as plt
 import torch
-from smpl.smpl import SMPL
-from vis_3d_box import load_data_remote
-from copy import deepcopy
+
+from smpl import SMPL, poses_to_vertices
+from util import load_data_remote, generate_views, load_scene
 
 view = {
 	"trajectory" : 
@@ -30,95 +29,9 @@ smpl_color = plt.get_cmap("tab20")(3)[:3]
 gt_smpl_color = plt.get_cmap("tab20")(5)[:3]
 pred_smpl_color = plt.get_cmap("tab20")(7)[:3]
 
-
-def filterTraj(traj_xyz, fit_time=None, segment=20, frame_time=0.05, keep_data = False):
-
-    if fit_time is None:
-        fit_time = np.arange(len(traj_xyz)) * frame_time
-    
-    times = fit_time.copy()
-
-    # 2. Spherical Linear Interpolation of Rotations.
-    from scipy.spatial.transform import RotationSpline
-
-    rotation = False
-    if rotation:
-        R_quats = R.from_quat(traj_xyz[:, 4: 8])
-        spline = RotationSpline(times, R_quats)
-        quats_plot = spline(fit_time).as_quat()
-
-    trajs_plot = []  # 拟合后轨迹
-
-    length = traj_xyz.shape[0]
-    for i in range(0, length, segment):
-        s = max(0, i-1)   # start index
-        e = i+segment   # end index
-        if length < e:
-            s = length - segment
-            e = length
-
-        ps = s - segment//2  # filter start index
-        pe = e + segment//2  # # filter end index
-
-        if ps < 0:
-            ps = 0
-            pe += segment//2
-        if pe > length:
-            ps -= segment//2
-            pe = length
-
-        fp = np.polyfit(times[ps:pe], traj_xyz[ps:pe], 3)  # 分段拟合轨迹
-
-        fs = 0 if s == 0 else np.where(fit_time == times[i - 1])[0][0] # 拟合轨迹到起始坐标
-        fe = np.where(fit_time == times[e-1])[0][0]  # 拟合轨迹到结束坐标
-        fe = fe+1 if e == length else fe
-
-        for j in fit_time[fs: fe]:
-            trajs_plot.append(np.polyval(fp, j))
-
-
-    frame_id = -1 * np.ones(len(trajs_plot))
-    old_id = [np.where(fit_time==t)[0][0] for t in times]
-    frame_id[old_id] = old_id
-    interp_idx = np.where(frame_id == -1)[0]
-
-    frame_id = np.arange(len(trajs_plot))
-
-    # fitLidar = np.concatenate(
-    #     (frame_id.reshape(-1, 1), np.asarray(trajs_plot), quats_plot, fit_time.reshape(-1, 1)), axis=1)
-    fit_traj = trajs_plot
-
-    if keep_data:
-        fit_traj[old_id] = traj_xyz
-
-    return fit_traj
-
-
 def vertices_to_head(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
-
-def poses_to_vertices(poses, trans=None, batch_size = 1024):
-    poses = poses.astype(np.float32)
-    vertices = np.zeros((0, 6890, 3))
-
-    n = len(poses)
-    smpl = SMPL()
-    n_batch = (n + batch_size - 1) // batch_size
-
-    for i in range(n_batch):
-        lb = i * batch_size
-        ub = (i + 1) * batch_size
-
-        cur_n = min(ub - lb, n - lb)
-        cur_vertices = smpl(torch.from_numpy(
-            poses[lb:ub]), torch.zeros((cur_n, 10)))
-        vertices = np.concatenate((vertices, cur_vertices.cpu().numpy()))
-
-    if trans is not None:
-        trans = trans.astype(np.float32)
-        vertices += np.expand_dims(trans, 1)
-    return vertices
 
 def load_pred_smpl(file_path, start=0, end=-1, pose='pred_rotmats', trans=None, remote=False):
     import pickle
@@ -217,7 +130,7 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
         smpl_geometries.append(o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')) # a ramdon SMPL mesh
 
     init_param = False
-
+    extrinsic = np.eye(4)
     for i in range(smpl_list[0].shape[0]):
 
         # load data
@@ -242,6 +155,12 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
 
         if view_list is not None:
             vis.set_view(view_list[i])
+            front = view_list[i]['trajectory'][0]['front']
+            up = view_list[i]['trajectory'][0]['up']
+            origin = view_list[i]['trajectory'][0]['lookat']
+            extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
+            extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)
+            vis.init_camera(extrinsic)            
 
         # add to visualization
         if not init_param:
@@ -264,59 +183,6 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
     # vis.save_imgs(os.path.join(file_path, f'imgs'))
             
     # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
-
-def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
-    assert len(position) == len(direction)
-
-    mocap_init = np.array([[-1, 0, 0, ], [0, 0, 1], [0, 1, 0]])
-    base_view = {
-        "trajectory" : 
-        [
-            {
-                "field_of_view" : 90.0,
-                "front" : [ 0, -np.cos(rad), np.sin(rad)],
-                "lookat" : [ 0, 1, 1.7],
-                "up" : [ 0, np.sin(rad), np.cos(rad)],
-                "zoom" : 0.0065
-            }
-        ],
-    }
-
-    if direction[0].shape[0] == 4:
-        func = R.from_quat
-    else:
-        func = R.from_matrix
-
-    init_direction = func(direction[0]).as_matrix()
-
-    if filter:
-       position = filterTraj(position)
-
-    view_list = []
-    for t, r in zip(position, direction):
-        view = deepcopy(base_view)
-        # rot = func(r).as_euler('xyz', degrees=False)
-        rot = func(r).as_matrix() @ init_direction.T
-
-        view['trajectory'][0]['lookat'] = t.tolist()
-        view['trajectory'][0]['up'] = rot @ np.array(view['trajectory'][0]['up'])
-        view['trajectory'][0]['front'] = rot @ np.array(view['trajectory'][0]['front'])
-        view_list.append(view)
-    
-    return view_list
-
-def load_scene(vis, pcd_path=None, scene = None):
-    from time import time
-    reading_class = load_data_remote(remote=True)
-    if pcd_path is not None:
-        t1 = time()
-        print(f'Loading scene from {pcd_path}')
-        scene = reading_class.load_point_cloud(pcd_path)
-        t2 = time()
-        print(f'====> Scene loading comsumed {t2-t1:.1f} s.')
-    vis.set_view(view)
-    vis.add_geometry(scene)
-    return scene
 
 if __name__ == '__main__':    
     parser = configargparse.ArgumentParser()

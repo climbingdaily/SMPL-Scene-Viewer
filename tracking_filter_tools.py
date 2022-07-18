@@ -3,10 +3,8 @@ import os
 import shutil
 import argparse
 import open3d as o3d
-from o3dvis import o3dvis
 from scipy.spatial.transform import Rotation as R
-from vis_3d_box import load_data_remote
-from o3dvis import list_dir_remote
+from util import o3dvis, list_dir_remote, load_data_remote
 
 def select_pcds_by_id(folder, ids):
     pcds = os.listdir(folder)

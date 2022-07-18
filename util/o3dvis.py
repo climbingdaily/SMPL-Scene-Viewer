@@ -96,26 +96,15 @@ lidar_cap_view = {
 }
 
 
-def o3d_callback_rotate():
-    Keyword.ROTATE = not Keyword.ROTATE
-    return False
-
-camera = {
+CAMERA = {
     'phi': 0,
     'theta': -30,
     'cx': 0.,
     'cy': 0.5,
     'cz': 3.}
 
-def init_camera(vis, camera_pose):
-    ctr = vis.get_view_control()
-    init_param = ctr.convert_to_pinhole_camera_parameters()
-    # init_param.intrinsic.set_intrinsics(init_param.intrinsic.width, init_param.intrinsic.height, fx, fy, cx, cy)
-    init_param.extrinsic = np.array(camera_pose)
-    ctr.convert_from_pinhole_camera_parameters(init_param)
-
 def set_camera(camera_pose):
-    theta, phi = np.deg2rad(-(camera['theta'] + 90)), np.deg2rad(camera['phi'] + 180)
+    theta, phi = np.deg2rad(-(CAMERA['theta'] + 90)), np.deg2rad(CAMERA['phi'] + 180)
     theta = theta + np.pi
     st, ct = np.sin(theta), np.cos(theta)
     sp, cp = np.sin(phi), np.cos(phi)
@@ -132,21 +121,6 @@ def set_camera(camera_pose):
     camera_pose[:3, :3] = rot_x @ rot_z
     return camera_pose
 
-def get_camera(vis):
-    ctr = vis.get_view_control()
-    init_param = ctr.convert_to_pinhole_camera_parameters()
-    return np.array(init_param.extrinsic)
-
-def o3dcallback(camera_pose=None):
-    # if ROTATE:
-    #     camera['phi'] += np.pi/10
-    #     camera_pose = set_camera(get_camera())
-        # camera_pose = np.array([[-0.927565, 0.36788, 0.065483, -1.18345],
-        #                         [0.0171979, 0.217091, -0.976, -0.0448631],
-        #                         [-0.373267, -0.904177, -0.207693, 8.36933],
-        #                         [0, 0, 0, 1]])
-    print(camera_pose)
-    init_camera(camera_pose)
 
 def set_view(vis):
     Keyword.SET_VIEW = not Keyword.SET_VIEW
@@ -155,12 +129,12 @@ def set_view(vis):
 
 def press_yes(vis):
     Keyword.PRESS_YES = not Keyword.PRESS_YES
-    print('PRESS_YES', Keyword.PRESS_YES)
+    print(f'\r[PRESS_YES]: {Keyword.PRESS_YES} ', end='', flush=True)
     return False
     
 def press_no(vis):
     Keyword.PRESS_NO = not Keyword.PRESS_NO
-    print('PRESS_NO', Keyword.PRESS_NO)
+    print(f'\r[PRESS_NO]: {Keyword.PRESS_NO} ', end='', flush=True)
     return False
 
 def save_imgs(vis):
@@ -171,12 +145,12 @@ def save_imgs(vis):
 def stream_callback(vis):
     # 以视频流方式，更新式显示mesh
     Keyword.VIS_STREAM = not Keyword.VIS_STREAM
-    print('VIS_STREAM', Keyword.VIS_STREAM)
+    print(f'\r[VIS_STREAM]: {Keyword.VIS_STREAM} ', end='', flush=True)
     return False
 
 def pause_callback(vis):
     Keyword.PAUSE = not Keyword.PAUSE
-    # print('Pause', Keyword.PAUSE)
+    print(f'\r[Pause]: {Keyword.PAUSE} ', end='\t', flush=True)
     return False
 
 def destroy_callback(vis):
@@ -219,6 +193,10 @@ def capture_image(vis):
     plt.show()
     return False
 
+def o3d_callback_rotate(vis):
+    Keyword.ROTATE = not Keyword.ROTATE
+    return False
+
 def print_help(is_print=True):
     if is_print:
         print('============Help info============')
@@ -254,7 +232,7 @@ class o3dvis():
         self.vis.register_key_callback(ord(" "), pause_callback)
         self.vis.register_key_callback(ord("Q"), destroy_callback)
         self.vis.register_key_callback(ord("D"), remove_scene_geometry)
-        self.vis.register_key_callback(ord("R"), read_dir_ply)
+        self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
         self.vis.register_key_callback(ord("T"), read_dir_traj)
         self.vis.register_key_callback(ord("F"), stream_callback)
         self.vis.register_key_callback(ord("."), save_imgs)
@@ -263,20 +241,28 @@ class o3dvis():
         self.vis.register_key_callback(ord("Y"), press_yes)
         self.vis.create_window(window_name=window_name, width=width, height=height)
 
-    def init_camera(self):
-        camera_pose = np.array([[0.927565, -0.36788, 0.065483, -1.18345],
-                                [-0.0171979, -0.217091, -0.976, -0.0448631],
-                                [0.373267, 0.904177, -0.207693, 4.36933],
-                                [0, 0, 0, 1]])
+    def get_camera(self):
+        ctr = self.vis.get_view_control()
+        init_param = ctr.convert_to_pinhole_camera_parameters()
+        return np.array(init_param.extrinsic)
+
+    def rotate(self):
+        if Keyword.ROTATE:
+            CAMERA['phi'] += np.pi/10
+            camera_pose = set_camera(self.get_camera())
+            self.init_camera(camera_pose)
+
+    def init_camera(self, camera_pose):
         ctr = self.vis.get_view_control()
         init_param = ctr.convert_to_pinhole_camera_parameters()
         # init_param.intrinsic.set_intrinsics(init_param.intrinsic.width, init_param.intrinsic.height, fx, fy, cx, cy)
         init_param.extrinsic = np.array(camera_pose)
-        ctr.convert_from_pinhole_camera_parameters(init_param)
+        ctr.convert_from_pinhole_camera_parameters(init_param) 
 
     def waitKey(self, key, helps = True):
         print_help(helps)
         while True:
+            self.rotate()
             self.vis.poll_events()
             self.vis.update_renderer()
             cv2.waitKey(key)
@@ -522,10 +508,6 @@ class o3dvis():
 
         Keyword.VIS_TRAJ = False
         return sphere_list
-    # def transform_view(self, rot, trans=np.array([0,0,0])):
-    #     ctr = self.vis.get_view_control()
-    #     ctr.rotate(rot)
-    #     ctr.translate(trans)
 
     def set_view(self, view=lidar_cap_view):
         ctr = self.vis.get_view_control()

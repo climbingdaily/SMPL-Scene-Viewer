@@ -1,2 +1,1 @@
-# -*- coding: utf-8 -*-
-# @Author  : jingyi
+from .smpl import SMPL, poses_to_vertices

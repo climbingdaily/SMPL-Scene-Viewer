@@ -245,3 +245,26 @@ def append_alpha(imtmp):
     b_channel, g_channel, r_channel = cv2.split(imtmp)
     im_RGBA = cv2.merge((b_channel, g_channel, r_channel, alpha))
     return im_RGBA
+
+
+def poses_to_vertices(poses, trans=None, batch_size = 1024):
+    poses = poses.astype(np.float32)
+    vertices = np.zeros((0, 6890, 3))
+
+    n = len(poses)
+    smpl = SMPL()
+    n_batch = (n + batch_size - 1) // batch_size
+
+    for i in range(n_batch):
+        lb = i * batch_size
+        ub = (i + 1) * batch_size
+
+        cur_n = min(ub - lb, n - lb)
+        cur_vertices = smpl(torch.from_numpy(
+            poses[lb:ub]), torch.zeros((cur_n, 10)))
+        vertices = np.concatenate((vertices, cur_vertices.cpu().numpy()))
+
+    if trans is not None:
+        trans = trans.astype(np.float32)
+        vertices += np.expand_dims(trans, 1)
+    return vertices
