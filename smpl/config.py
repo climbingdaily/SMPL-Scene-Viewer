@@ -9,26 +9,11 @@ for the datasets and data files necessary to run the code.
 import os
 import sys
 from os.path import join
+os.path.dirname(__file__)
 
-ROOT_DATASET = '/hdd/dyd'
-PEDX_ROOT = os.path.join(ROOT_DATASET, 'pedx')
-LIDARCAP_ROOT = join(ROOT_DATASET, 'lidarcap')
-DATASET_FILES = [
-    {'pedx': join(PEDX_ROOT, 'extras_py3', 'pedx_test.npz'), 'lidarcap': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_test.npz'), 'lidarcap_seq': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_seq_test.hdf5'), 'lidarcap_seq_reduced': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_seq_reduced_test.hdf5')},
-    {'pedx': join(PEDX_ROOT, 'extras_py3', 'pedx_train.npz'), 'lidarcap': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_train.npz'), 'lidarcap_seq': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_seq_train.hdf5'), 'lidarcap_seq_reduced': join(
-        LIDARCAP_ROOT, 'extras', 'lidarcap_seq_reduced_train.hdf5')},
-]
-
-VISUAL_DATASET_FILES = {'lidarcap_seq': join(
-    LIDARCAP_ROOT, 'extras', 'lidarcap_seq_whole.hdf5')}
-SMPL_FILE = 'C:\\Users\\DAI\\Documents\\GitHub\\ASC_Lidar_human\\smpl\\basicModel_neutral_lbs_10_207_0_v1.0.0.pkl'
+SMPL_FILE = os.path.join(os.path.dirname(__file__), 'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl')
 # seems all zeros.
-JOINT_REGRESSOR_TRAIN_EXTRA = 'C:\\Users\\DAI\\Documents\\GitHub\\ASC_Lidar_human\\smpl\\J_regressor_extra.npy'
+JOINT_REGRESSOR_TRAIN_EXTRA = os.path.join(os.path.dirname(__file__), 'J_regressor_extra.npy')
 
 """
 Each dataset uses different sets of joints.

@@ -7,8 +7,9 @@ Visualization tool for SMPL and lidar data
 3. *Predicted SMPL pose* from LiDARCap
    
 ## 1. Visulize one human. Predicted SMPL pose is optional.
-- Contains `pose`和`point_clouds`
-- Contains `gt_pose`, `point_clouds`和`pred_rotmats`
+- Suport binary `pkl` and `hdf5` formats.
+- The file should contains `pose` and `point_clouds`
+- Or contains `gt_pose`, `point_clouds` and `pred_rotmats`
   
 ```bash
 python vis_pred_smpl.py -F "/path/to/your/file"
