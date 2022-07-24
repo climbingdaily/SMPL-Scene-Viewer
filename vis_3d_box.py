@@ -1,5 +1,4 @@
 import numpy as np
-import pickle as pkl
 import os
 import configargparse
 import open3d as o3d
@@ -7,10 +6,7 @@ from scipy.spatial.transform import Rotation as R
 from util.o3dvis import o3dvis
 import matplotlib.pyplot as plt
 import copy
-from util import load_data_remote, make_cloud_in_vis_center
-from simulatorLiDAR import hidden_point_removal, select_points_on_the_scan_line
-import shutil
-import pypcd
+from util import load_data_remote, make_cloud_in_vis_center, hidden_point_removal, select_points_on_the_scan_line
 
 mat_box = o3d.visualization.rendering.MaterialRecord()
 # mat_box.shader = 'defaultUnlit'

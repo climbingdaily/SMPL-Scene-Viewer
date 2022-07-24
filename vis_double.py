@@ -185,41 +185,43 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
     # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
 
 if __name__ == '__main__':    
+    import config
     parser = configargparse.ArgumentParser()
-    parser.add_argument("--type", '-T', type=int, default=3)
-    parser.add_argument("--start", '-S', type=int, default=0)
-    parser.add_argument("--end", '-e', type=int, default=-1)
-    parser.add_argument("--scene", '-s', type=str,
-                        default='/hdd/dyd/lidarhumanscene/data/0623/002/0623.pcd')
-    parser.add_argument("--remote", '-r', type=bool, default=True)
-    parser.add_argument("--file_path", '-F', type=str,
-                        default='/hdd/dyd/lidarhumanscene/data/0623/002/synced_data/two_person_param.pkl')
-    parser.add_argument("--pred_file_path", '-P', type=str,
-                        default=None)
-                        # default='/hdd/dyd/lidarhumanscene/data/0604_haiyun/synced_data/second_person/segments.pkl')
-                        
+    parser.add_argument("--start", '-S', type=int, default=-2)
+    parser.add_argument("--end", '-e', type=int, default=-2)
+    parser.add_argument("--scene_path", '-s', type=str,default=None)
+    # parser.add_argument("--remote", '-r', action='store_true',
+    #                     help='If the file in from remote machine')
+    parser.add_argument("--smpl_file_path", '-F', type=str, default=None)
+    parser.add_argument("--pred_file_path", '-P', type=str, default=None)
+
     args, opts = parser.parse_known_args()
 
+    start = config.start if args.start == -2 else args.start
+    end = config.end if args.end == -2 else args.end
+    scene_path = config.scene_path if args.scene_path is None else args.scene_path
+    is_remote = True if '--remote' in opts else config.remote
+    smpl_file_path = config.smpl_file_path if args.smpl_file_path is None else args.smpl_file_path
+    pred_file_path = config.pred_file_path if args.pred_file_path is None else args.pred_file_path
+
     fvis = o3dvis("First view", width=1280, height=720)
-    # svis = o3dvis("Second view", width=1280, height=720)
+    load_data_class = load_data_remote(is_remote)
 
-    _ = load_scene(fvis, args.scene)
-    # load_scene(svis, scene=scene)
+    scene = load_scene(fvis, scene_path, load_data_class=load_data_class)
 
-    print(f'Load pkl in {args.file_path}')
-    load_data_class = load_data_remote(args.remote)
-    humans = load_data_class.load_pkl(args.file_path)
+    print(f'Load pkl in {smpl_file_path}')
 
+    humans = load_data_class.load_pkl(smpl_file_path)
     smpl_a, smpl_b, pred_smpl_b, pc, pc_idx = load_pkl_vis(
-        humans, args.start, args.end, args.pred_file_path, remote=args.remote)
+        humans, start, end, pred_file_path, remote=is_remote)
 
     # lidar_view = generate_views(humans['first_person']['lidar_traj']
     #                      [:, 1:4], humans['first_person']['lidar_traj'][:, 4:8])
 
-    FPV = generate_views(humans['first_person']['lidar_traj']
+    FPV, extrinsic = generate_views(humans['first_person']['lidar_traj']
                          [:, 1:4], get_head_global_rots(humans['first_person']['pose']))
 
-    SPV = generate_views(vertices_to_head(
+    SPV, extrinsic = generate_views(vertices_to_head(
         smpl_b) + np.array([0, 0, 0.2]), get_head_global_rots(humans['second_person']['pose']))
 
     vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, fvis, pred_smpl_verts = pred_smpl_b, view_list = FPV)

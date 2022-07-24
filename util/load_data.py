@@ -3,11 +3,12 @@ import pickle as pkl
 import os
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
-from util.o3dvis import o3dvis
 import matplotlib.pyplot as plt
 import shutil
-import pypcd
 import paramiko
+import config
+
+from util import pypcd
 
 view = {
 	"trajectory" : 
@@ -24,7 +25,7 @@ view = {
 	],
 }
 
-def client_server(username = 'dyd', hostname = "10.24.80.241", port = 911):
+def client_server(username = config.username, hostname = config.hostname, port = config.port):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(hostname, port, username, compress=True)
@@ -69,17 +70,25 @@ def read_pcd_from_server(client, filepath, sftp_client = None):
         remote_file.close()
 
       
-def load_scene(vis, pcd_path=None, scene = None):
+def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
     from time import time
-    reading_class = load_data_remote(remote=True)
-    if pcd_path is not None:
+    
+    if load_data_class is None:
+        load_data_class = load_data_remote(remote=True)
+
+    if scene is None and pcd_path is not None:
         t1 = time()
         print(f'Loading scene from {pcd_path}')
-        scene = reading_class.load_point_cloud(pcd_path)
+        scene = load_data_class.load_point_cloud(pcd_path)
         t2 = time()
         print(f'====> Scene loading comsumed {t2-t1:.1f} s.')
+    else:
+        print('No scene data!!!')
+        return None
+
     vis.set_view(view)
     vis.add_geometry(scene)
+
     return scene
 
 

@@ -148,19 +148,19 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
 
 if __name__ == '__main__':    
     parser = configargparse.ArgumentParser()
-    parser.add_argument("--type", '-T', type=int, default=3)
-    parser.add_argument("--start", '-S', type=int, default=0)
-    parser.add_argument("--end", '-E', type=int, default=-1)
-    parser.add_argument("--remote", '-R', action='store_true')
-    parser.add_argument("--file_path", '-F', type=str,
-                        default='C:\\Users\\DAI\\Desktop\\temp\\chenchen001_label.h5py')
-                        # default='/hdd/dyd/lidarhumanscene/data/0417-03/synced_data/second_person/segments.pkl')
+    parser.add_argument("--start", '-S', type=int, default=-2)
+    parser.add_argument("--end", '-E', type=int, default=-2)
+    parser.add_argument("--file_path", '-F', type=str, default=None)
                         
     args, opts = parser.parse_known_args()
 
-    if args.file_path.endswith('.pkl'):
-        load_pkl_vis(args.file_path, args.start, args.end, remote=args.remote)
+    import config
+    start = config.start if args.start == -2 else args.start
+    end = config.end if args.end == -2 else args.end
+    file_path = config.file_path if args.file_path is None else args.file_path
+
+    if file_path.endswith('.pkl'):
+        is_remote = True if '--remote' in opts else config.remote
+        load_pkl_vis(file_path, start, end, remote=is_remote)
     else:
-        load_hdf5_vis(args.file_path, args.start, args.end)
-
-
+        load_hdf5_vis(file_path, start, end)

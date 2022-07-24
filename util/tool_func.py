@@ -1,11 +1,4 @@
-import open3d as o3d
 import numpy as np
-import cv2
-import sys
-import os
-import paramiko
-import pypcd
-import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
 def filterTraj(traj_xyz, fit_time=None, segment=20, frame_time=0.05, keep_data = False):

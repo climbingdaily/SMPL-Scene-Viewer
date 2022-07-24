@@ -1,3 +1,4 @@
+from cmath import e
 import numpy as np
 import os
 import shutil
@@ -14,7 +15,7 @@ def select_pcds_by_id(folder, ids):
             continue
         if pcd_path.endswith('.pcd') and int(pcd_path.split('_')[0]) in ids:
             shutil.copyfile(os.path.join(folder, pcd_path), os.path.join(folder + '_select', pcd_path))
-            print(f'{pcd_path} saved in {folder}_select')
+            print(f'\r{pcd_path} saved in {folder}_select', end='', flush=True)
 
 ids = [2,303,216,421,733,832,1037,1207,3437,3116,3218,4753,4922,5222,5725] # 0417-01
 ids = [9, 152, 181, 193, 293, 379, 451, 674, 962, 1601, 1709, 2319, 2777, 1395, 2839, 92, 187, 275, 310, 1905, 1960] # 0417-03
@@ -25,8 +26,8 @@ def nearest_box(pre_trajs, box_list, diff_frames, framerate = 20, dist_thresh=0.
     dist_XY = [np.linalg.norm(pre_trajs[-1, :2] - box[:2]) for box in box_list]
     diff_Z = [abs(pre_trajs[-1, 2] - box[2]) for box in box_list]
     min_index = dist_XY.index(min(dist_XY))
-    min_vel_XY = min(dist_XY) * framerate / diff_frames
-    min_vel_Z = diff_Z[min_index] * framerate / diff_frames
+    min_vel_XY = min(dist_XY) * framerate / (diff_frames + 0.1)
+    min_vel_Z = diff_Z[min_index] * framerate / (diff_frames + 0.1)
     # if min_vel_XY < 5 :
     return min_index, min_vel_XY, min_vel_Z
 
@@ -51,6 +52,8 @@ class filter_tracking_by_interactive():
         self._select = self.tracking_folder + '_select'
         self.load_data.mkdir(self._select)
         self.load_data.mkdir(self._raw_select)
+        self.vel_xy = 0
+        self.vel_z = 0
 
     def copy_human_pcd(self, save_file):
         self.load_data.mkdir(self._raw_select)
@@ -59,10 +62,6 @@ class filter_tracking_by_interactive():
         self.load_data.cpfile(source, target)
 
     def copy_save_files(self, reid=False):
-        """
-        Copy the pcd files in the tracking folder to the tracking_select folder, and rename the pcd files
-        according to the reID dictionary.
-        """
         # 在远程设备上新建文件夹
         # ss = [self.join.join([self.tracking_folder, p]) for p in self.save_list]
         # tt = [self.join.join([self._raw_select, p]) for p in self.save_list]
@@ -77,13 +76,13 @@ class filter_tracking_by_interactive():
                 humanid, appendix = pcd_path.split('_')
                 target = self.join.join([self._select, pcd_path])
 
-                if humanid in self.reID:
-                    new_id = self.reID[humanid]
-                    target = self.join.join([os.path.dirname(target), f'{new_id}_{appendix}'])
+                # if humanid in self.reID:
+                #     new_id = self.reID[humanid]
+                #     target = self.join.join([os.path.dirname(target), f'{new_id}_{appendix}'])
                 pc += self.load_data.load_point_cloud(source)
 
                 self.load_data.cpfile(source, target)
-                print(f'{pcd_path} saved in {self._select}')
+                print(f'\r{pcd_path} saved in {self._select}', end='', flush=True)
 
         save_all_pcd_path = self.join.join([os.path.dirname(self.tracking_folder), 'all_human.pcd'])
         xyz = np.asarray(pc.points)
@@ -157,7 +156,7 @@ class filter_tracking_by_interactive():
             box2 = None
             
         while True:
-            print(f'Is this {strs}? Press \'Y\' / \'N\'')
+            print(f'Is this {strs}? Press \'Y\'/\'N\' | Vel_xy: {self.vel_xy:.1f}, vel_z: {self.vel_z:.1f}', end='', flush=True)
             state = self.vis.return_press_state()
             if state and file_path is not None:
                 box.color = (0,1,0)
@@ -211,6 +210,16 @@ class filter_tracking_by_interactive():
         return abs(vel), pre_box, cur_box, pre_framid
 
     def is_false_box(self, cur_box, dist_thresh=0.3):
+        """
+        Args:
+          cur_box: the current box that we're checking
+          dist_thresh: the distance threshold for the xy plane. If the distance between the current box and
+        the box in the none_human_boxes list is less than this threshold, then the current box is considered
+        a false positive.
+        
+        Returns:
+          a boolean value.
+        """
         for box in self.none_human_boxes: 
             dist_xy = np.linalg.norm(cur_box[:2] - box[:2])
             dist_z = abs(cur_box[2] - box[2])
@@ -220,6 +229,14 @@ class filter_tracking_by_interactive():
         return False
 
     def is_real_box(self, cur_box, dist_thresh=0.3):
+        """
+        Args:
+          cur_box: the current box we're checking
+          dist_thresh: the distance threshold for the xy coordinates of the bounding box.
+        
+        Returns:
+          the list of real human boxes.
+        """
         for box in self.real_human_boxes:
             dist_xy = np.linalg.norm(cur_box[:2] - box[:2])
             dist_z = abs(cur_box[2] - box[2])
@@ -355,7 +372,6 @@ class filter_tracking_by_interactive():
     def raw_tracking_selected_human(self, frameid, humanid, tracking_results, scene_paths, filtered = 0):  
         
         cur_box = self.get_box(frameid, humanid, tracking_results)
-
         if filtered >=0:
             is_human = self.is_real_human(frameid, humanid, 
                                     self.tracking_folder, 
@@ -364,9 +380,9 @@ class filter_tracking_by_interactive():
         else:
             is_human = False
             box = self.get_box(frameid, humanid, tracking_results)
-            self.none_human_boxes.append(box)
+            # self.none_human_boxes.append(box)
 
-        if is_human:
+        if is_human:            
             if humanid not in self.real_person_id:
                 self.real_person_id.append(humanid)
 
@@ -426,18 +442,21 @@ class filter_tracking_by_interactive():
         if self.remote:
             tracking_file_path = f'{basename}/{os.path.basename(basename)}_tracking.pkl'
         else:
-            tracking_file_path = self.join.join([basename, '0604_haiyun_tracking.pkl'])
+            tracking_file_path = self.join.join([basename, '*_tracking.pkl'])
 
         tracking_results = self.load_data.load_pkl(tracking_file_path)
 
-        scene_folder = self.join.join([os.path.dirname(self.tracking_folder), '0604_haiyun_lidar_frames_rot'])
-        tracking_traj_path = self.join.join([os.path.dirname(self.tracking_folder), 'tracking_trajectory.txt'])
+        scene_folder = self.join.join([os.path.dirname(self.tracking_folder), 'lidar_frames_rot'])
+        tracking_traj_path = self.join.join([os.path.dirname(self.tracking_folder), 'tracking_traj.txt'])
         scene_paths = self.load_data.list_dir(scene_folder)
         scene_paths = [self.join.join([scene_folder, p]) for p in scene_paths]
         
         for frameid in sorted(tracking_list.keys()):
             if int(frameid) < start:
                 continue
+            if int(frameid) == 1171:
+                print(frameid)
+                pass
             humanids = tracking_list[frameid]
             if tracking:
                 # 找到所有的box
@@ -446,19 +465,22 @@ class filter_tracking_by_interactive():
                 pre_frameids = [k for k in self.trajectory.keys()]
                 if len(pre_frameids) > 0:
 
-                    trajectory = np.array([self.trajectory[fid]['box'][:3] for fid in pre_frameids]).astype(np.float32)
-                    append =  np.array([self.trajectory[fid]['humanid'] for fid in pre_frameids]).astype(np.float32)
-                    save_traj = np.concatenate((trajectory.reshape(-1, 3), append.reshape(-1, 1)), axis=1)
+                    trajectory = np.array(
+                        [self.trajectory[fid]['box'][:3] for fid in pre_frameids]).astype(np.float32)
+                    append = np.array([self.trajectory[fid]['humanid']
+                                      for fid in pre_frameids]).astype(np.float32)
+                    save_traj = np.concatenate(
+                        (trajectory.reshape(-1, 3), append.reshape(-1, 1)), axis=1)
                     # self.load_data.write_txt(tracking_traj_path, save_traj)
                     pre_box = self.trajectory[pre_frameids[-1]]['box']
                     # 挑出离上一个最近的
                     # todo: 取最近的四个点中的非离群点算距离
                     gap = int(frameid) - int(pre_frameids[-1])
-                    nn_id, vel_xy, vel_z = nearest_box(trajectory, bboxes, gap)
+                    nn_id, self.vel_xy, self.vel_z = nearest_box(trajectory, bboxes, gap)
                     # is_human = True if humanid in self.real_person_id and vel_xy < 10 else False
-                    if vel_xy > 10 or vel_z > 2:
+                    if self.vel_xy > 9.3 or self.vel_z > 2:
                         filtered = -1 
-                    elif vel_xy < 5 and vel_z < 2 and gap < 10:
+                    elif self.vel_xy < 3 and self.vel_z < 1 and gap < 10:
                         filtered = 1
                     else:
                         filtered = 0
@@ -474,20 +496,30 @@ class filter_tracking_by_interactive():
                 for humanid in humanids:
                     self.filter_human(frameid, humanid, tracking_results, scene_paths, filtered)
         if tracking:
+            pre_frameids = [k for k in self.trajectory.keys()]
+            trajectory = np.array(
+                [self.trajectory[fid]['box'][:3] for fid in pre_frameids]).astype(np.float32)
+            append = np.array([self.trajectory[fid]['humanid']
+                                for fid in pre_frameids]).astype(np.float32)
+            save_traj = np.concatenate(
+                (trajectory.reshape(-1, 3), append.reshape(-1, 1)), axis=1)
             self.load_data.write_txt(tracking_traj_path, save_traj)
         self.copy_save_files()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--remote", '-R', action='store_true')
     parser.add_argument("--tracking", '-T', action='store_true')
-    parser.add_argument("--start_frame", '-S', type=int, default=0)
-    # parser.add_argument('--folder', '-f', type=str,
-    #                     help='A directory', default="C:\\Users\\DAI\\Desktop\\temp\\segment_by_tracking_03_select")
-    parser.add_argument('--folder', '-f', type=str,
-                        help='A directory', default="/hdd/dyd/lidarhumanscene/data/0604_haiyun/segment_by_tracking_raw_select_raw_select_raw_select")
+    parser.add_argument("--start_frame", '-S', type=int, default=-1)
+    parser.add_argument('--tracking_folder', '-f', type=str,
+                        default=None, help='A directory')
     args, opts = parser.parse_known_args()
-    # select_pcds_by_id(args.folder, ids)
-    filter = filter_tracking_by_interactive(args.folder, remote=True)
-    filter.run(start=args.start_frame, tracking=True)
 
+    import config
+    start_frame = config.start_frame if args.start_frame == -1 else args.start_frame
+    is_remote = True if '--remote' in opts else config.remote
+    tracking_filter = True if '--filter' in opts else config.tracking_filter
+    tracking_folder = config.tracking_folder if args.tracking_folder is None else args.tracking_folder
+
+    # select_pcds_by_id(args.folder, ids)
+    filter = filter_tracking_by_interactive(tracking_folder, remote=is_remote)
+    filter.run(start=start_frame, tracking=tracking_filter)

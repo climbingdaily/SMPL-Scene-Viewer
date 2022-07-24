@@ -4,7 +4,7 @@ import cv2
 import sys
 import os
 import paramiko
-import pypcd
+from util import pypcd
 import matplotlib.pyplot as plt
 # from util.segmentation import Segmentation
 from matplotlib.animation import FuncAnimation, writers
