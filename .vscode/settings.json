@@ -1,3 +1,7 @@
 {
-    "docwriter.style": "Google"
+    "docwriter.style": "Google",
+    "docwriter.language": "English",
+    "docwriter.progress.trackClasses": true,
+    "docwriter.progress.trackTypes": true,
+    "docwriter.progress.trackFunctions": false
 }

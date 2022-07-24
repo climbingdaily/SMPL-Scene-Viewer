@@ -26,17 +26,50 @@ view = {
 }
 
 def client_server(username = config.username, hostname = config.hostname, port = config.port):
+    """
+    It creates a client object that connects to the server using the username, hostname, and port number
+    that you provide
+    
+    Args:
+      username: The username to log in with.
+      hostname: The hostname of the server you want to connect to.
+      port: The port number to connect to the SSH server on.
+    
+    Returns:
+      A client object.
+    """
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(hostname, port, username, compress=True)
     return client
 
 def list_dir_remote(client, folder):
+    """
+    It takes a client object and a folder name, and returns a list of the files in that folder
+    
+    Args:
+      client: the ssh client
+      folder: the folder you want to list
+    
+    Returns:
+      A list of files in the folder
+    """
     stdin, stdout, stderr = client.exec_command('ls ' + folder)
     res_list = stdout.readlines()
     return [i.strip() for i in res_list]
 
 def read_pcd_from_server(client, filepath, sftp_client = None):
+    """
+    It reads a pcd file from a remote server and returns a numpy array
+    
+    Args:
+      client: the ssh client
+      filepath: the path to the file on the server
+      sftp_client: the sftp client that you use to connect to the server.
+    
+    Returns:
+      a numpy array of the point cloud data.
+    """
     if sftp_client is None:
         sftp_client = client.open_sftp()
     remote_file = sftp_client.open(filepath, mode='rb')  # 文件路径
@@ -71,6 +104,18 @@ def read_pcd_from_server(client, filepath, sftp_client = None):
 
       
 def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
+    """
+    It loads a point cloud from a file and displays it in the viewer
+    
+    Args:
+      vis: the visualization object
+      pcd_path: the path to the point cloud file
+      scene: the scene to be rendered.
+      load_data_class: the class that loads the data.
+    
+    Returns:
+      The scene is being returned.
+    """
     from time import time
     
     if load_data_class is None:
@@ -116,6 +161,12 @@ class load_data_remote(object):
             return os.path.isdir(path)
 
     def mkdir(self, path):
+        """
+        If the remote directory doesn't exist, create it
+        
+        Args:
+          path: The path to the file or directory to be uploaded or downloaded.
+        """
         if self.remote:
             _, stdout, _ = self.client.exec_command(f'[ -d {path} ] && echo OK') # 远程判断文件是否存在
             if stdout.read().strip() != b'OK':
@@ -124,6 +175,14 @@ class load_data_remote(object):
             os.makedirs(path, exist_ok=True)
 
     def cpfile(self, source, target):
+        """
+        If the remote flag is set, then copy the file using the remote client. Otherwise, use the local
+        copyfile function
+        
+        Args:
+          source: The source file path
+          target: The target host to connect to.
+        """
         if self.remote:
             _, stdout, _ = self.client.exec_command(f'cp {source} {target} && echo OK') # 远程判断文件是否存在
             if stdout.read().strip() != b'OK':
@@ -132,9 +191,29 @@ class load_data_remote(object):
             shutil.copyfile(source, target)
             
     def exec_command(self, command):
+        """
+        It takes a command as a string, and returns the output of that command as a string
+        
+        Args:
+          command: The command to execute on the remote host.
+        
+        Returns:
+          The return value is a tuple of three items:
+                stdin, stdout, stderr
+        """
         return self.client.exec_command(command)
     
     def list_dir(self, folder):
+        """
+        If the remote flag is set, then execute the command 'ls' on the remote server, and return the
+        result. Otherwise, return the result of the local 'ls' command
+        
+        Args:
+          folder: the folder to list
+        
+        Returns:
+          A list of files in the folder
+        """
         if self.remote:
             stdin, stdout, stderr = self.client.exec_command('ls ' + folder)
             res_list = stdout.readlines()
@@ -144,6 +223,17 @@ class load_data_remote(object):
         return dirs
 
     def load_point_cloud(self, file_name, pointcloud = None, position = [0, 0, 0]):
+        """
+        > Load point cloud from local or remote server
+        
+        Args:
+          file_name: the name of the file to be loaded
+          pointcloud: The point cloud to be visualized.
+          position: the position of the point cloud
+        
+        Returns:
+          A pointcloud object.
+        """
         if pointcloud is None:
             pointcloud = o3d.geometry.PointCloud()
             
@@ -190,6 +280,21 @@ class load_data_remote(object):
         return pointcloud
 
     def load_pkl(self, filepath):
+        """
+        If the remote flag is set to True, then the function will open the filepath using the sftp_client
+        object, and load the pickle file. 
+        
+        If the remote flag is set to False, then the function will open the filepath using the open()
+        function, and load the pickle file. 
+        
+        The function returns the loaded pickle file.
+        
+        Args:
+          filepath: the path to the file you want to load
+        
+        Returns:
+          A list of dictionaries.
+        """
         if self.remote:
             with self.sftp_client.open(filepath, mode='rb') as f:
                 dets = pkl.load(f)
@@ -201,6 +306,16 @@ class load_data_remote(object):
         return dets
 
     def write_pcd(self, filepath, data, rgb=None, intensity=None, mode='w') -> None:
+        """
+        It takes a point cloud, and writes it to a file on the remote server
+        
+        Args:
+          filepath: The path to the file on the remote server.
+          data: numpy array of shape (N, 3)
+          rgb: a numpy array of shape (N, 3) value from 0 to 255
+          intensity: the intensity of the point cloud, (N, 1) 
+          mode: 'w' for write, 'a' for append. Defaults to w
+        """
 
         if rgb is not None and intensity is not None:
             rgb = pypcd.encode_rgb_for_pcl(rgb.astype(np.uint8))
@@ -225,6 +340,15 @@ class load_data_remote(object):
             pc.save_pcd_to_fileobj(f, compression='binary')
 
     def write_txt(self, filepath, data, mode='w') -> None:
+        """
+        > This function writes a list of lists to a text file on the remote server
+        
+        Args:
+          filepath: The path to the file on the remote server.
+          data: a list of lists, where each list is a row of data
+          mode: 'w' for write, 'a' for append, 'r' for read, 'rb' for read binary, 'wb' for write binary.
+        Defaults to w
+        """
         save_data = []
         for line in data:
             ll = ''
@@ -236,6 +360,15 @@ class load_data_remote(object):
             f.writelines(save_data)
 
     def read_poses(self, data_root_path):
+        """
+        It reads the poses.txt file and returns the poses44 array.
+        
+        Args:
+          data_root_path: the path to the root directory of the dataset
+        
+        Returns:
+          poses44
+        """
         if self.remote:
             with self.sftp_client.open(data_root_path + '/poses.txt', mode='r') as f:
                 poses = f.readlines()
