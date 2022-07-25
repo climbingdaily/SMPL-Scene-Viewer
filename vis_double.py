@@ -12,6 +12,7 @@
 ################################################################################
 
 
+import re
 import numpy as np
 import configargparse
 import open3d as o3d
@@ -22,7 +23,7 @@ import torch
 import os
 
 from smpl import SMPL, poses_to_vertices
-from util import load_data_remote, generate_views, load_scene
+from util import load_data_remote, generate_views, load_scene, images_to_video
 
 view = {
 	"trajectory" : 
@@ -127,16 +128,8 @@ def load_pkl_vis(humans, start=0, end=-1, pred_file_path=None, remote=False):
 
     return f_vert, s_vert, pred_s_vert, point_clouds, point_valid_idx
 
-def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=None):
-    """
-    > This function takes in two SMPL meshes, a point cloud, and a list of indices that correspond to
-    the point cloud. It then displays the point cloud and the two SMPL meshes in a 3D viewer
-    
-    :param smpl_a: the SMPL mesh that you want to visualize
-    :param smpl_b: the ground truth SMPL mesh
-    :param pc: the point cloud data
-    :param pc_idx: the index of the point cloud that you want to visualize
-    """
+def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, extrinsics=None, video_name=None, freeviewpoint=False):
+
     # assert smpl_list[0].shape[0] == smpl_list[1].shape[0], "Groundtruth Data Shape are not compatible"
     pointcloud = o3d.geometry.PointCloud()
     smpl_geometries = []
@@ -145,7 +138,10 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
         smpl_geometries.append(o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')) # a ramdon SMPL mesh
 
     init_param = False
-    extrinsic = np.eye(4)
+    # extrinsic = np.eye(4)
+    vis.img_save_count = 0
+    image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
+
     for i in range(smpl_list[0].shape[0]):
 
         # load data
@@ -167,15 +163,7 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
             smpl.vertices = o3d.utility.Vector3dVector(smpl_list[idx][i])
             smpl.paint_uniform_color(plt.get_cmap("tab20")(idx*2 + 3)[:3])
             smpl.compute_vertex_normals()
-
-        if view_list is not None:
-            vis.set_view(view_list[i])
-            front = view_list[i]['trajectory'][0]['front']
-            up = view_list[i]['trajectory'][0]['up']
-            origin = view_list[i]['trajectory'][0]['lookat']
-            extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
-            extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)
-            vis.init_camera(extrinsic)            
+        
 
         # add to visualization
         if not init_param:
@@ -193,11 +181,25 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
                 vis.vis.update_geometry(pred_smpl)  
             for smpl in smpl_geometries:
                 vis.vis.update_geometry(smpl)    
+
+        if extrinsics is not None:
+            # vis.set_view(view_list[i])
+            if i > 0 and freeviewpoint:
+                camera_pose = vis.get_camera()
+                # relative_pose = extrinsics[i] @ np.linalg.inv(extrinsics[i-1])
+                relative_trans = (extrinsics[i] - extrinsics[i-1])[:3, 3]
+                
+                camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
+                camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
+                vis.init_camera(camera_pose)
+            else:
+                vis.init_camera(extrinsics[i])    
+                
+        vis.save_imgs(image_dir)
+        
         vis.waitKey(20, helps=False)
-    
-        vis.save_imgs(os.path.join(file_path, f'imgs'))
             
-    # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
+    images_to_video(image_dir, video_name, delete=True)
 
     for g in smpl_geometries:
         vis.remove_geometry(g)
@@ -212,6 +214,7 @@ if __name__ == '__main__':
     #                     help='If the file in from remote machine')
     parser.add_argument("--smpl_file_path", '-F', type=str, default=None)
     parser.add_argument("--pred_file_path", '-P', type=str, default=None)
+    parser.add_argument("--viewpoint_type", '-V', type=str, default=None)
 
     args, opts = parser.parse_known_args()
 
@@ -221,11 +224,12 @@ if __name__ == '__main__':
     is_remote = True if '--remote' in opts else config.remote
     smpl_file_path = config.smpl_file_path if args.smpl_file_path is None else args.smpl_file_path
     pred_file_path = config.pred_file_path if args.pred_file_path is None else args.pred_file_path
+    viewpoint_type = config.viewpoint_type if args.viewpoint_type is None else args.viewpoint_type
 
-    fvis = o3dvis("First view", width=1280, height=720)
+    vis = o3dvis("First view", width=1280, height=720)
     load_data_class = load_data_remote(is_remote)
 
-    scene = load_scene(fvis, scene_path, load_data_class=load_data_class)
+    scene = load_scene(vis, scene_path, load_data_class=load_data_class)
 
     print(f'Load pkl in {smpl_file_path}')
 
@@ -236,11 +240,37 @@ if __name__ == '__main__':
     # lidar_view = generate_views(humans['first_person']['lidar_traj']
     #                      [:, 1:4], humans['first_person']['lidar_traj'][:, 4:8])
 
-    FPV, extrinsic = generate_views(humans['first_person']['lidar_traj']
-                         [:, 1:4], get_head_global_rots(humans['first_person']['pose']))
+    scene_name = os.path.basename(scene_path).split('.')[0]
 
-    SPV, extrinsic = generate_views(vertices_to_head(
+    FPV, fextrinsic = generate_views(humans['first_person']['lidar_traj']
+                         [:, 1:4], get_head_global_rots(humans['first_person']['pose']))
+                         
+    SPV, sextrinsic = generate_views(vertices_to_head(
         smpl_b) + np.array([0, 0, 0.2]), get_head_global_rots(humans['second_person']['pose']))
 
-    vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, fvis, pred_smpl_verts = pred_smpl_b, view_list = FPV)
-    vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, fvis, pred_smpl_verts = pred_smpl_b, view_list = SPV)
+    if viewpoint_type == 'first':
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
+                        video_name = scene_name + '_FPV')
+
+    elif viewpoint_type == 'second':
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=sextrinsic, 
+                        video_name = scene_name + '_SPV')
+
+    elif viewpoint_type == 'third':        
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
+                        video_name = scene_name + '_TPV', freeviewpoint=True)
+
+    else:
+
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
+                        video_name = scene_name + '_FPV')
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=sextrinsic, 
+                        video_name = scene_name + '_SPV')
+        vis_pt_and_smpl([smpl_a, smpl_b], pc, pc_idx, vis,
+                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
+                        video_name = scene_name + '_TPV', freeviewpoint=True)

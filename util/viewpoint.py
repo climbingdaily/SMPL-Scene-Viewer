@@ -35,8 +35,8 @@ def make_cloud_in_vis_center(point_cloud):
 
     return rt, center
 
-def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
-    assert len(position) == len(direction)
+def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 0.2):
+    assert len(position) == len(direction) 
 
     mocap_init = np.array([[-1, 0, 0, ], [0, 0, 1], [0, 1, 0]])
     base_view = {
@@ -57,8 +57,6 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
     else:
         func = R.from_matrix
 
-    init_direction = func(direction[0]).as_matrix()
-
     if filter:
        position = filterTraj(position)
 
@@ -66,10 +64,10 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
     extrinsic_list = []
     for t, r in zip(position, direction):
         view = deepcopy(base_view)
-        # rot = func(r).as_euler('xyz', degrees=False)
         rot = func(r).as_matrix()
+        rot = R.from_rotvec(-rad * rot[:, 0]).as_matrix() @ rot
 
-        view['trajectory'][0]['lookat'] = t.tolist()
+        view['trajectory'][0]['lookat'] = t + rot @ np.array([0, -dist, 0])
         view['trajectory'][0]['up'] = rot[:, 2] 
         view['trajectory'][0]['front'] = -rot[:, 1]
         view_list.append(view)

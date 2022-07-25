@@ -152,7 +152,8 @@ def press_no(vis):
 
 def save_imgs(vis):
     Keyword.SAVE_IMG = not Keyword.SAVE_IMG
-    print('SAVE_IMG', Keyword.SAVE_IMG)
+    print_help()
+    # print('SAVE_IMG', Keyword.SAVE_IMG)
     return False
 
 def stream_callback(vis):
@@ -163,7 +164,8 @@ def stream_callback(vis):
 
 def pause_callback(vis):
     Keyword.PAUSE = not Keyword.PAUSE
-    print(f'\r[Pause]: {Keyword.PAUSE} ', end='\t', flush=True)
+    # print(f'\r[Pause]: {Keyword.PAUSE} ', end='\t', flush=True)
+    print_help()
     return False
 
 def destroy_callback(vis):
@@ -213,14 +215,16 @@ def o3d_callback_rotate(vis):
 def print_help(is_print=True):
     if is_print:
         print('============Help info============')
-        print('Press R to refresh visulization')
-        print('Press Q to quit window')
-        print('Press D to remove the scene')
-        print('Press T to load and show traj file')
-        print('Press F to stop current motion')
-        print('Press . to turn on auto-screenshot ')
-        print('Press , to set view zoom based on json file ')
-        print('Press SPACE to pause the stream')
+        print('[SPACE] : ▶||')
+        print('[Q] : Quit visualization and exit the function')
+        print('[R] : reset viewpoint')
+        # print('Press D to remove the scene')
+        # print('Press T to load and show traj file')
+        # print('Press F to stop current motion')
+        print('[F] : Turn on capture-screenshot ')
+        # print('Press , to set view zoom based on json file ')
+        print('----------------------------------')
+        print(f'[Pause]: {Keyword.PAUSE} | [Screen save]: {Keyword.SAVE_IMG} ')
         print('=================================')
 
 
@@ -231,6 +235,8 @@ class o3dvis():
         self.width = width
         self.height = height
         self.img_save_count = 0
+        opt = self.vis.get_render_option()
+        opt.point_size = 3
         print_help()
 
     def change_pause_status(self):
@@ -244,12 +250,12 @@ class o3dvis():
         self.vis = o3d.visualization.VisualizerWithKeyCallback()
         self.vis.register_key_callback(ord(" "), pause_callback)
         self.vis.register_key_callback(ord("Q"), destroy_callback)
-        self.vis.register_key_callback(ord("D"), remove_scene_geometry)
-        self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
-        self.vis.register_key_callback(ord("T"), read_dir_traj)
-        self.vis.register_key_callback(ord("F"), stream_callback)
-        self.vis.register_key_callback(ord("."), save_imgs)
-        self.vis.register_key_callback(ord(","), set_view)
+        # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
+        # self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
+        # self.vis.register_key_callback(ord("T"), read_dir_traj)
+        # self.vis.register_key_callback(ord("F"), stream_callback)
+        self.vis.register_key_callback(ord("F"), save_imgs)
+        # self.vis.register_key_callback(ord(","), set_view)
         self.vis.register_key_callback(ord("N"), press_no)
         self.vis.register_key_callback(ord("Y"), press_yes)
         self.vis.create_window(window_name=window_name, width=width, height=height)
@@ -289,6 +295,9 @@ class o3dvis():
         self.vis.add_geometry(geometry, reset_bounding_box)
         if waitKey > 0:
             self.waitKey(waitKey, helps=False)
+    
+    def update_geometry(self, geometry):
+        self.vis.update_geometry(geometry)
 
     def remove_geometry(self, geometry, reset_bounding_box = True):
         self.vis.remove_geometry(geometry, reset_bounding_box)
@@ -395,7 +404,7 @@ class o3dvis():
                 geometies[idx].vertices = mesh.vertices
                 geometies[idx].vertex_colors = mesh.vertex_colors
                 geometies[idx].vertex_normals = mesh.vertex_normals
-                self.vis.update_geometry(geometies[idx])
+                self.update_geometry(geometies[idx])
             else:
                 geometies.append(mesh)
                 self.add_geometry(mesh, reset_bounding_box = False, waitKey=0)
@@ -550,8 +559,9 @@ class o3dvis():
             out_dir ([str]): [description]
             filename ([str]): [description]
         """        
-            
+        
         if Keyword.SAVE_IMG:
+            os.makedirs(out_dir, exist_ok=True)
             # outname = os.path.join(out_dir, filename)
             outname = os.path.join(out_dir, f'{self.img_save_count:04d}.jpg')
             self.img_save_count += 1
@@ -561,7 +571,6 @@ class o3dvis():
             # if self.video_writer is None:
             #     fourcc = cv2.VideoWriter_fourcc(*"DIVX")
             #     self.video_writer = cv2.VideoWriter(outname, fourcc, 15.0, (img.shape[1], img.shape[0]), True)
-            os.makedirs(out_dir, exist_ok=True)
             self.vis.capture_screen_image(outname)
             # r = img[..., 0:1]
             # g = img[..., 1:2]
@@ -630,7 +639,7 @@ class o3dvis():
             else:
                 continue
             
-            self.vis.update_geometry(pointcloud)
+            self.update_geometry(pointcloud)
 
             # ! Segment plane
             # pointcloud.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.20, max_nn=20))
@@ -655,7 +664,7 @@ class o3dvis():
             # colors[labels < 0] = 0
             # pointcloud.colors = o3d.utility.Vector3dVector(colors[:, :3])
 
-            self.vis.update_geometry(pointcloud)
+            self.update_geometry(pointcloud)
 
             if Reset:
                 Reset = self.set_view_zoom(view, 0, 0)

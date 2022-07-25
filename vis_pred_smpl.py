@@ -12,12 +12,13 @@
 
 import numpy as np
 import h5py
+import os
 import configargparse
 import open3d as o3d
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
-from util import o3dvis, load_data_remote, make_cloud_in_vis_center
+from util import o3dvis, load_data_remote, make_cloud_in_vis_center, images_to_video
 from smpl import poses_to_vertices
 
 view = {
@@ -39,8 +40,8 @@ pt_color = plt.get_cmap("tab20")(1)[:3]
 smpl_color = plt.get_cmap("tab20")(3)[:3]
 gt_smpl_color = plt.get_cmap("tab20")(5)[:3]
 
-def load_pkl_vis(file_path, start=0, end=-1, points='point_clouds', pose='pred_rotmats', remote=False):
-    import pickle
+
+def load_pkl_vis(file_path, start=0, end=-1, points='point_clouds', pose='pred_rotmats', file_name=None, remote=False):
 
     point_clouds = np.zeros((0, 512, 3))
     pred_vertices = np.zeros((0, 6890, 3))
@@ -57,10 +58,10 @@ def load_pkl_vis(file_path, start=0, end=-1, points='point_clouds', pose='pred_r
         point_clouds = np.concatenate((point_clouds, v[points][start:end]))
         pred_vertices = np.concatenate((pred_vertices, poses_to_vertices(pred_pose)))
 
-    vis_pt_and_smpl(pred_vertices, point_clouds)
+    vis_pt_and_smpl(pred_vertices, point_clouds, video_name=file_name)
 
 
-def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='pred_rotmats', gt_pose='pose'):
+def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='pred_rotmats', gt_pose='pose', file_name=None,):
     """
     > This function loads a hdf5 file, and visualizes the point clouds and the SMPL vertices
     
@@ -89,7 +90,7 @@ def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='
             gt_vertices = poses_to_vertices(gt_pose)
 
             point_clouds = f[points][start:end]
-            vis_pt_and_smpl(pred_vertices, point_clouds, gt_vertices)
+            vis_pt_and_smpl(pred_vertices, point_clouds, gt_vertices, video_name=file_name)
         else:
             gt_pose = f[gt_pose]
             if end == -1:
@@ -98,10 +99,10 @@ def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='
             gt_pose = gt_pose[start:end]
             gt_vertices = poses_to_vertices(gt_pose)
             point_clouds = f[points][start:end]
-            vis_pt_and_smpl(gt_vertices, point_clouds, gt_vertices)
+            vis_pt_and_smpl(gt_vertices, point_clouds, gt_vertices, video_name=file_name)
 
     
-def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
+def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None, video_name=None):
     # assert v.shape[0] == pc.shape[0], "Groundtruth Data Shape are not compatible"
     vis = o3dvis(width=600, height=600)
     pointcloud = o3d.geometry.PointCloud()
@@ -110,6 +111,8 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
 
     init_param = False
     centerz = 0
+    image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
+
     for i in range(pred_smpl.shape[0]):
 
         # load data
@@ -152,11 +155,10 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None):
             # vis.vis.update_geometry(gt_2)    
             vis.vis.update_geometry(pred)  
 
+        vis.save_imgs(image_dir)
         vis.waitKey(40, helps=False)
-        
-        # vis.save_imgs(os.path.join(file_path, f'imgs'))
             
-    # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
+    images_to_video(image_dir, video_name, delete=True)
 
 if __name__ == '__main__':    
     parser = configargparse.ArgumentParser()
@@ -171,8 +173,10 @@ if __name__ == '__main__':
     end = config.end if args.end == -2 else args.end
     file_path = config.file_path if args.file_path is None else args.file_path
 
+    file_name = os.path.basename(file_path).split('.')[0]
+
     if file_path.endswith('.pkl'):
         is_remote = True if '--remote' in opts else config.remote
-        load_pkl_vis(file_path, start, end, remote=is_remote)
+        load_pkl_vis(file_path, start, end, remote=is_remote, file_name=file_name)
     else:
-        load_hdf5_vis(file_path, start, end)
+        load_hdf5_vis(file_path, start, end, file_name=file_name)
