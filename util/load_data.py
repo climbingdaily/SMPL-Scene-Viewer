@@ -319,7 +319,7 @@ class load_data_remote(object):
 
         if rgb is not None and intensity is not None:
             rgb = pypcd.encode_rgb_for_pcl(rgb.astype(np.uint8))
-            dt = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32),('rgb', np.float32), ('intensity', np.uint8)])
+            dt = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32),('rgb', np.float32), ('intensity', np.float32)])
             pc = np.rec.fromarrays([data[:,0], data[:,1], data[:,2], rgb, intensity], dtype=dt)
 
         elif rgb is not None:
@@ -328,7 +328,7 @@ class load_data_remote(object):
             pc = np.rec.fromarrays([data[:,0], data[:,1], data[:,2], rgb], dtype=dt)
 
         elif intensity is not None:
-            dt = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32),('intensity', np.uint8)])
+            dt = np.dtype([('x', np.float32), ('y', np.float32), ('z', np.float32),('intensity', np.float32)])
             pc = np.rec.fromarrays([data[:,0], data[:,1], data[:,2], intensity], dtype=dt)
 
         else:
