@@ -1,3 +1,17 @@
+################################################################################
+# File: \vis_double.py                                                         #
+# Created Date: Sunday July 17th 2022                                          #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
+
 import numpy as np
 import configargparse
 import open3d as o3d
@@ -5,6 +19,7 @@ from scipy.spatial.transform import Rotation as R
 from util import o3dvis
 import matplotlib.pyplot as plt
 import torch
+import os
 
 from smpl import SMPL, poses_to_vertices
 from util import load_data_remote, generate_views, load_scene
@@ -150,8 +165,8 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
 
         for idx, smpl in enumerate(smpl_geometries):
             smpl.vertices = o3d.utility.Vector3dVector(smpl_list[idx][i])
-            smpl.compute_vertex_normals()
             smpl.paint_uniform_color(plt.get_cmap("tab20")(idx*2 + 3)[:3])
+            smpl.compute_vertex_normals()
 
         if view_list is not None:
             vis.set_view(view_list[i])
@@ -178,11 +193,14 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, view_list=
                 vis.vis.update_geometry(pred_smpl)  
             for smpl in smpl_geometries:
                 vis.vis.update_geometry(smpl)    
-        vis.waitKey(30, helps=False)
-        
-    # vis.save_imgs(os.path.join(file_path, f'imgs'))
+        vis.waitKey(20, helps=False)
+    
+        vis.save_imgs(os.path.join(file_path, f'imgs'))
             
     # imges_to_video(os.path.join(file_path, f'imgs'), delete=True)
+
+    for g in smpl_geometries:
+        vis.remove_geometry(g)
 
 if __name__ == '__main__':    
     import config

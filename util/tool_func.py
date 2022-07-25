@@ -1,3 +1,16 @@
+################################################################################
+# File: \tool_func.py                                                          #
+# Created Date: Monday July 18th 2022                                          #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 

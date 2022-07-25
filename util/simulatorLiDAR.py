@@ -1,3 +1,16 @@
+################################################################################
+# File: \simulatorLiDAR.py                                                     #
+# Created Date: Sunday July 17th 2022                                          #
+# Author: shaoyang chen                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 shaoyang chen                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import os
 import open3d as o3d
 import numpy as np

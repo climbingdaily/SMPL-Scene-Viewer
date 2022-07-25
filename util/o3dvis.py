@@ -1,4 +1,17 @@
 import open3d as o3d
+################################################################################
+# File: \o3dvis.py                                                             #
+# Created Date: Sunday July 17th 2022                                          #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import numpy as np
 import cv2
 import sys

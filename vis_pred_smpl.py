@@ -1,3 +1,15 @@
+################################################################################
+# File: \vis_pred_smpl.py                                                      #
+# Created Date: Sunday July 17th 2022                                          #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# -----                                                                        #
+# Copyright (c) 2022 <<https://github.com/climbingdaily>>                      #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import numpy as np
 import h5py
 import configargparse

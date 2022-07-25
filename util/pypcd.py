@@ -1,13 +1,15 @@
-"""
-Read and write PCL .pcd files in python.
-dimatura@cmu.edu, 2013-2018
-
-- TODO better API for wacky operations.
-- TODO add a cli for common operations.
-- TODO deal properly with padding
-- TODO deal properly with multicount fields
-- TODO better support for rgb nonsense
-"""
+################################################################################
+# File: \pypcd.py                                                              #
+# Created Date: Sunday July 17th 2022                                          #
+# Author: dimatura                                                             #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) dimatura@cmu.edu, 2013-2018                                    #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
 
 import re
 import struct

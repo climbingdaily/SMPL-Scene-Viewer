@@ -1,3 +1,16 @@
+################################################################################
+# File: \viewpoint.py                                                          #
+# Created Date: Monday July 18th 2022                                          #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import numpy as np
 from pkg_resources import ExtractionError
 from scipy.spatial.transform import Rotation as R
@@ -54,11 +67,11 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
     for t, r in zip(position, direction):
         view = deepcopy(base_view)
         # rot = func(r).as_euler('xyz', degrees=False)
-        rot = func(r).as_matrix() @ init_direction.T
+        rot = func(r).as_matrix()
 
         view['trajectory'][0]['lookat'] = t.tolist()
-        view['trajectory'][0]['up'] = rot @ np.array(view['trajectory'][0]['up'])
-        view['trajectory'][0]['front'] = rot @ np.array(view['trajectory'][0]['front'])
+        view['trajectory'][0]['up'] = rot[:, 2] 
+        view['trajectory'][0]['front'] = -rot[:, 1]
         view_list.append(view)
         
         front = view['trajectory'][0]['front']
@@ -68,6 +81,7 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(15)):
         extrinsic = np.eye(4)
         extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
         extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)
+
         extrinsic_list.append(extrinsic)
     
     return view_list, extrinsic_list
