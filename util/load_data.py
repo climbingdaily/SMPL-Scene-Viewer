@@ -336,8 +336,11 @@ class load_data_remote(object):
             pc = np.rec.fromarrays([data[:,0], data[:,1], data[:,2]], dtype=dt)
 
         pc = pypcd.PointCloud.from_array(pc)
-        with self.sftp_client.open(filepath, mode = mode) as f:
-            pc.save_pcd_to_fileobj(f, compression='binary')
+        if self.remote:
+            f = self.sftp_client.open(filepath, mode = mode)
+        else:
+            f = open(filepath, mode = mode)  
+        pc.save_pcd_to_fileobj(f, compression='binary')
 
     def write_txt(self, filepath, data, mode='w') -> None:
         """
