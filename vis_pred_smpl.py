@@ -111,7 +111,7 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None, video_name=None):
 
     init_param = False
     centerz = 0
-    image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'temp')
+    image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
 
     for i in range(pred_smpl.shape[0]):
 

@@ -165,14 +165,27 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, extrinsics
             smpl.compute_vertex_normals()
         
 
+        if extrinsics is not None:
+            # vis.set_view(view_list[i])
+            if i > 0 and freeviewpoint:
+                camera_pose = vis.get_camera()
+                # relative_pose = extrinsics[i] @ np.linalg.inv(extrinsics[i-1])
+                relative_trans = -extrinsics[i][:3, :3].T @ extrinsics[i][:3, 3] + extrinsics[i-1][:3, :3].T @ extrinsics[i-1][:3, 3]
+                
+                camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
+                camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
+                vis.init_camera(camera_pose)
+            else:
+                vis.init_camera(extrinsics[i])   
+                
         # add to visualization
         if not init_param:
-            vis.change_pause_status()
             vis.add_geometry(pointcloud, reset_bounding_box = False)  
             for smpl in smpl_geometries:
                 vis.add_geometry(smpl, reset_bounding_box = False)  
             if pred_smpl is not None:
                 vis.add_geometry(pred_smpl, reset_bounding_box = False)  
+            vis.change_pause_status()
             init_param = True
 
         else:
@@ -181,19 +194,7 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, extrinsics
                 vis.vis.update_geometry(pred_smpl)  
             for smpl in smpl_geometries:
                 vis.vis.update_geometry(smpl)    
-
-        if extrinsics is not None:
-            # vis.set_view(view_list[i])
-            if i > 0 and freeviewpoint:
-                camera_pose = vis.get_camera()
-                # relative_pose = extrinsics[i] @ np.linalg.inv(extrinsics[i-1])
-                relative_trans = (extrinsics[i] - extrinsics[i-1])[:3, 3]
-                
-                camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
-                camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
-                vis.init_camera(camera_pose)
-            else:
-                vis.init_camera(extrinsics[i])    
+ 
                 
         vis.save_imgs(image_dir)
         
@@ -229,7 +230,8 @@ if __name__ == '__main__':
     vis = o3dvis("First view", width=1280, height=720)
     load_data_class = load_data_remote(is_remote)
 
-    scene = load_scene(vis, scene_path, load_data_class=load_data_class)
+    # scene = load_scene(vis, scene_path, load_data_class=load_data_class)
+    scene = load_scene(vis, scene_path)
 
     print(f'Load pkl in {smpl_file_path}')
 

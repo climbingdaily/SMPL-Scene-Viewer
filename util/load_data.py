@@ -132,7 +132,7 @@ def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
     from time import time
     
     if load_data_class is None:
-        load_data_class = load_data_remote(remote=True)
+        load_data_class = load_data_remote(remote=False)
 
     if scene is None and pcd_path is not None:
         t1 = time()
@@ -235,7 +235,7 @@ class load_data_remote(object):
             dirs = os.listdir(folder)
         return dirs
 
-    def load_point_cloud(self, file_name, pointcloud = None, position = [0, 0, 0]):
+    def load_point_cloud(self, file_name, pointcloud = None, position = None):
         """
         > Load point cloud from local or remote server
         
@@ -263,7 +263,7 @@ class load_data_remote(object):
         if file_name.endswith('.txt'):
             pts = np.loadtxt(file_name)
             pointcloud.points = o3d.utility.Vector3dVector(pts[:, :3]) 
-        elif file_name.endswith('.pcd') or file_name.endswith('.ply'):
+        elif file_name.endswith('.pcd'):
             if self.remote:
                 pcd = read_pcd_from_server(self.client, file_name, self.sftp_client)
                 pointcloud.points = o3d.utility.Vector3dVector(pcd[:, :3])
@@ -276,18 +276,22 @@ class load_data_remote(object):
                 pcd = o3d.io.read_point_cloud(file_name)
                 points = np.asarray(pcd.points)
                 colors = np.asarray(pcd.colors)
-                rule1 = abs(points[:, 0] - position[0]) < 40
-                rule2 = abs(points[:, 1] - position[1]) < 40
-                rule3 = abs(points[:, 2] - position[2]) < 5
-                rule = [a and b and c for a,b,c in zip(rule1, rule2, rule3)]
-                
-                pointcloud.points = o3d.utility.Vector3dVector(points[rule])
-                pointcloud.colors = o3d.utility.Vector3dVector(colors[rule])
-
+                if position is not None:
+                    rule1 = abs(points[:, 0] - position[0]) < 40
+                    rule2 = abs(points[:, 1] - position[1]) < 40
+                    rule3 = abs(points[:, 2] - position[2]) < 5
+                    rule = [a and b and c for a,b,c in zip(rule1, rule2, rule3)]
+                    
+                    pointcloud.points = o3d.utility.Vector3dVector(points[rule])
+                    pointcloud.colors = o3d.utility.Vector3dVector(colors[rule])
+                else:
+                    pointcloud = pcd
                 # print(len(pcd.poits))
                 # pointcloud.paint_uniform_color([0.5, 0.5, 0.5])
             # segment_ransac(pointcloud, return_seg=True)
-            
+        elif  file_name.endswith('.ply'):
+            pointcloud = o3d.io.read_triangle_mesh(file_name)
+            pointcloud.compute_vertex_normals()
         else:
             pass
         return pointcloud

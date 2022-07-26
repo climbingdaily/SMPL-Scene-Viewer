@@ -78,7 +78,7 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 
 
         extrinsic = np.eye(4)
         extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
-        extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)
+        extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)   # t = - R @ p
 
         extrinsic_list.append(extrinsic)
     
