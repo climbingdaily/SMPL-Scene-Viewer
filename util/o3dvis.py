@@ -209,7 +209,9 @@ def capture_image(vis):
     return False
 
 def o3d_callback_rotate(vis):
-    Keyword.ROTATE = not Keyword.ROTATE
+    ctr = vis.get_view_control()
+    ctr.rotate(10.0, 0.0)
+    # Keyword.ROTATE = not Keyword.ROTATE
     return False
 
 def print_help(is_print=True):
@@ -217,7 +219,7 @@ def print_help(is_print=True):
         print('============Help info============')
         print('[SPACE] : ▶||')
         print('[Q] : Quit visualization and exit the function')
-        print('[R] : reset viewpoint')
+        print('[R] : rotate viewpoint')
         # print('Press D to remove the scene')
         # print('Press T to load and show traj file')
         # print('Press F to stop current motion')
@@ -251,7 +253,7 @@ class o3dvis():
         self.vis.register_key_callback(ord(" "), pause_callback)
         self.vis.register_key_callback(ord("Q"), destroy_callback)
         # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
-        # self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
+        self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
         # self.vis.register_key_callback(ord("T"), read_dir_traj)
         # self.vis.register_key_callback(ord("F"), stream_callback)
         self.vis.register_key_callback(ord("F"), save_imgs)

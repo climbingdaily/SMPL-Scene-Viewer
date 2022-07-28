@@ -258,6 +258,7 @@ class load_data_remote(object):
                 print(f'Load {file_name} error')
                 return pointcloud
         elif not os.path.exists(file_name):
+            print(f'Load {file_name} error')
             return pointcloud
 
         if file_name.endswith('.txt'):
