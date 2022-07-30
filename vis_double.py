@@ -100,7 +100,7 @@ def load_pkl_vis(humans, start=0, end=-1, pred_file_path=None, remote=False):
         head_rots = get_head_global_rots(pose)
 
         lidar_to_head =  head[0] - lidar_traj[0] + trans[0] 
-        lidar_to_head = head_rots @ lidar_to_head.numpy()
+        lidar_to_head = head_rots @ head_rots[0].T @ lidar_to_head.numpy()
 
         trans = lidar_traj + lidar_to_head + head_to_root
         # trans = lidar_traj[:, 1:4]

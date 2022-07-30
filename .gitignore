@@ -132,3 +132,4 @@ dmypy.json
 /temp*
 *.avi
 /demo_scene*/
+/smpl/*.pkl
