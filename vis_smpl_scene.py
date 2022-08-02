@@ -266,7 +266,6 @@ if __name__ == '__main__':
     if not scene.has_points():
         scene = load_scene(vis, scene_path, load_data_class = load_data_class)
 
-
     print(f'Load pkl in {smpl_file_path}')
 
     humans = load_data_class.load_pkl(smpl_file_path)
