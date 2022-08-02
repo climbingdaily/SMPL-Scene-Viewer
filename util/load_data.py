@@ -250,16 +250,16 @@ class load_data_remote(object):
         if pointcloud is None:
             pointcloud = o3d.geometry.PointCloud()
             
-        if self.remote:
-            # client = client_server()
-            # files = sorted(list_dir_remote(client, file_path))
-            _, stdout, _ = self.client.exec_command(f'[ -f {file_name} ] && echo OK') # 远程判断文件是否存在
-            if stdout.read().strip() != b'OK':
-                print(f'Load {file_name} error')
-                return pointcloud
-        elif not os.path.exists(file_name):
-            print(f'Load {file_name} error')
-            return pointcloud
+        # if self.remote:
+        #     # client = client_server()
+        #     # files = sorted(list_dir_remote(client, file_path))
+        #     _, stdout, _ = self.client.exec_command(f'[ -f {file_name} ] && echo OK') # 远程判断文件是否存在
+        #     if stdout.read().strip() != b'OK':
+        #         print(f'Load {file_name} error')
+        #         return pointcloud
+        # elif not os.path.exists(file_name):
+        #     print(f'Load {file_name} error')
+        #     return pointcloud
 
         if file_name.endswith('.txt'):
             pts = np.loadtxt(file_name)

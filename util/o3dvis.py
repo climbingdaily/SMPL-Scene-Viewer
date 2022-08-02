@@ -1,4 +1,3 @@
-import open3d as o3d
 ################################################################################
 # File: \o3dvis.py                                                             #
 # Created Date: Sunday July 17th 2022                                          #
@@ -12,61 +11,14 @@ import open3d as o3d
 # HISTORY:                                                                     #
 ################################################################################
 
+import open3d as o3d
 import numpy as np
 import cv2
-import sys
 import os
-import paramiko
-from util import pypcd
 import matplotlib.pyplot as plt
-# from util.segmentation import Segmentation
-from matplotlib.animation import FuncAnimation, writers
+from util import client_server, list_dir_remote, read_pcd_from_server
 
-def client_server(username = 'dyd', hostname = "10.24.80.241", port = 911):
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, port, username, compress=True)
-    return client
-
-def list_dir_remote(client, folder):
-    stdin, stdout, stderr = client.exec_command('ls ' + folder)
-    res_list = stdout.readlines()
-    return [i.strip() for i in res_list]
-
-def read_pcd_from_server(client, filepath, sftp_client = None):
-    if sftp_client is None:
-        sftp_client = client.open_sftp()
-    remote_file = sftp_client.open(filepath, mode='rb')  # 文件路径
-
-    try:
-        pc_pcd = pypcd.PointCloud.from_fileobj(remote_file)
-        pc = np.zeros((pc_pcd.pc_data.shape[0], 3))
-        pc[:, 0] = pc_pcd.pc_data['x']
-        pc[:, 1] = pc_pcd.pc_data['y']
-        pc[:, 2] = pc_pcd.pc_data['z']
-        if 'rgb' in pc_pcd.fields:
-            append = pypcd.decode_rgb_from_pcl(pc_pcd.pc_data['rgb'])/255
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_x' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_x'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_y' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_y'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_z' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_z'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'intensity' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        
-        return np.concatenate((pc, append), axis=1)
-    except Exception as e:
-        print(f"Load point cloud {filepath} error")
-    finally:
-        remote_file.close()
-
-        
+    
 colors = {
     'yellow':[251/255, 217/255, 2/255],
     'red'   :[234/255, 101/255, 144/255],
@@ -225,8 +177,10 @@ def print_help(is_print=True):
         # print('Press F to stop current motion')
         print('[F] : Turn on capture-screenshot ')
         # print('Press , to set view zoom based on json file ')
-        print('----------------------------------')
-        print(f'[Pause]: {Keyword.PAUSE} | [Screen save]: {Keyword.SAVE_IMG} ')
+
+        str1 = '[Paused]' if Keyword.PAUSE else '[Playing]' 
+        str2 = '[Auto screen save -ON-]' if Keyword.SAVE_IMG else '[Auto screen save -OFF-]'
+        print(f'==>{str1} {str2}')
         print('=================================')
 
 
