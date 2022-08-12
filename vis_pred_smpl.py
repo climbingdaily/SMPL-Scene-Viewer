@@ -62,23 +62,16 @@ def load_pkl_vis(file_path, start=0, end=-1, points='point_clouds', pose='pred_r
 
 
 def load_hdf5_vis(file_path, start=0, end=-1, points='point_clouds', pred_rots='pred_rotmats', gt_pose='pose', file_name=None,):
-    """
-    > This function loads a hdf5 file, and visualizes the point clouds and the SMPL vertices
-    
-    :param file_path: the path to the hdf5 file
-    :param start: the index of the first frame to visualize, defaults to 0 (optional)
-    :param end: the last frame to visualize
-    :param points: the name of the point cloud data in the hdf5 file, defaults to point_clouds
-    (optional)
-    :param pred_rots: the name of the hdf5 dataset that contains the predicted rotations, defaults to
-    pred_rotmats (optional)
-    :param gt_pose: the ground truth pose, defaults to pose (optional)
-    """
+
     with h5py.File(file_path, mode='r') as f:
         # 'full_joints', 'lidar_to_mocap_RT', 'point_clouds', 'points_num', 'pose', 'rotmats', 'shape', 'trans'
         print(f.keys())
-        if pred_rots in f:
-            pred_pose = f[pred_rots]
+        if pred_rots in f or 'pred_pose' in f:
+            try:
+                pred_pose = f[pred_rots]
+            except:
+                pred_pose = f['pred_pose']
+
             if end == -1:
                 end = pred_pose.shape[0]
             pred_pose = pred_pose[start:end]

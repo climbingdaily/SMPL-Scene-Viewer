@@ -115,6 +115,29 @@ def read_pcd_from_server(client, filepath, sftp_client = None):
     finally:
         remote_file.close()
 
+def read_pcd(pcd_file):
+    pc_pcd = pypcd.point_cloud_from_path(pcd_file)
+    pc = np.zeros((pc_pcd.pc_data.shape[0], 3))
+    pc[:, 0] = pc_pcd.pc_data['x']
+    pc[:, 1] = pc_pcd.pc_data['y']
+    pc[:, 2] = pc_pcd.pc_data['z']
+    if 'rgb' in pc_pcd.fields:
+        append = pypcd.decode_rgb_from_pcl(pc_pcd.pc_data['rgb'])/255
+        pc = np.concatenate((pc, append), axis=1)
+    if 'normal_x' in pc_pcd.fields:        
+        append = pc_pcd.pc_data['normal_x'].reshape(-1, 1)
+        pc = np.concatenate((pc, append), axis=1)
+    if 'normal_y' in pc_pcd.fields:        
+        append = pc_pcd.pc_data['normal_y'].reshape(-1, 1)
+        pc = np.concatenate((pc, append), axis=1)
+    if 'normal_z' in pc_pcd.fields:        
+        append = pc_pcd.pc_data['normal_z'].reshape(-1, 1)
+        pc = np.concatenate((pc, append), axis=1)
+    if 'intensity' in pc_pcd.fields:        
+        append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
+        pc = np.concatenate((pc, append), axis=1)
+    
+    return pc
       
 def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
     """
@@ -216,6 +239,25 @@ class load_data_remote(object):
         """
         return self.client.exec_command(command)
     
+    def glob(self, str):
+        """
+        It takes a string as input, and returns a list of files that match the string
+        
+        Args:
+          str: the string to be searched for
+        
+        Returns:
+          A list of files that match the glob pattern.
+        """
+        from glob import glob
+        if self.remote:
+            stdin, stdout, stderr = self.client.exec_command('ls ' + str)
+            res_list = stdout.readlines()
+            files = [i.strip() for i in res_list]
+        else:
+            files = glob(str)
+        return files
+
     def list_dir(self, folder):
         """
         If the remote flag is set, then execute the command 'ls' on the remote server, and return the
@@ -250,46 +292,38 @@ class load_data_remote(object):
         if pointcloud is None:
             pointcloud = o3d.geometry.PointCloud()
             
-        # if self.remote:
-        #     # client = client_server()
-        #     # files = sorted(list_dir_remote(client, file_path))
-        #     _, stdout, _ = self.client.exec_command(f'[ -f {file_name} ] && echo OK') # 远程判断文件是否存在
-        #     if stdout.read().strip() != b'OK':
-        #         print(f'Load {file_name} error')
-        #         return pointcloud
-        # elif not os.path.exists(file_name):
-        #     print(f'Load {file_name} error')
-        #     return pointcloud
-
         if file_name.endswith('.txt'):
             pts = np.loadtxt(file_name)
             pointcloud.points = o3d.utility.Vector3dVector(pts[:, :3]) 
         elif file_name.endswith('.pcd'):
             if self.remote:
                 pcd = read_pcd_from_server(self.client, file_name, self.sftp_client)
-                pointcloud.points = o3d.utility.Vector3dVector(pcd[:, :3])
-                if pcd.shape[1] == 6:
-                    pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6])  
-                elif pcd.shape[1] > 6:
-                    pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6]) 
-                    # pointcloud.normals = o3d.utility.Vector3dVector(pcd[:, 6:9]) 
             else:
-                pcd = o3d.io.read_point_cloud(file_name)
-                points = np.asarray(pcd.points)
-                colors = np.asarray(pcd.colors)
-                if position is not None:
-                    rule1 = abs(points[:, 0] - position[0]) < 40
-                    rule2 = abs(points[:, 1] - position[1]) < 40
-                    rule3 = abs(points[:, 2] - position[2]) < 5
-                    rule = [a and b and c for a,b,c in zip(rule1, rule2, rule3)]
-                    
-                    pointcloud.points = o3d.utility.Vector3dVector(points[rule])
-                    pointcloud.colors = o3d.utility.Vector3dVector(colors[rule])
+                pcd = read_pcd(file_name)
+
+            pointcloud.points = o3d.utility.Vector3dVector(pcd[:, :3])
+            if pcd.shape[1] == 4 or pcd.shape[1] == 7 or pcd.shape[1] == 10:
+                if pcd[:, -1].max() > 255:
+                    intensity = np.array([155 * np.log2(i/100) / np.log2(864) + 100 if i > 100 else i for i in pcd[:, -1]])
                 else:
-                    pointcloud = pcd
-                # print(len(pcd.poits))
-                # pointcloud.paint_uniform_color([0.5, 0.5, 0.5])
-            # segment_ransac(pointcloud, return_seg=True)
+                    intensity = pcd[:, -1]
+                colors = plt.get_cmap('plasma')(intensity/255)[:, :3]
+                pointcloud.colors = o3d.utility.Vector3dVector(colors)
+            elif pcd.shape[1] == 6:
+                pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6])  
+            elif pcd.shape[1] > 6:
+                pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6]) 
+                # pointcloud.normals = o3d.utility.Vector3dVector(pcd[:, 6:9]) 
+
+            if position is not None:
+                
+                points = np.asarray(pointcloud.points)
+                rule1 = abs(points[:, 0] - position[0]) < 40
+                rule2 = abs(points[:, 1] - position[1]) < 40
+                rule3 = abs(points[:, 2] - position[2]) < 5
+                rule = [a and b and c for a,b,c in zip(rule1, rule2, rule3)]
+
+                pointcloud = pointcloud.select_by_index(np.arange(len(rule1))[rule]) 
         elif  file_name.endswith('.ply'):
             pointcloud = o3d.io.read_triangle_mesh(file_name)
             pointcloud.compute_vertex_normals()

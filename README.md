@@ -13,8 +13,8 @@ python vis_pred_smpl.py -F "/path/to/your/file"
 ```
 
 ## 2. Visulize humans and the scene. 
-- Suported human data file structure
-  ```bash
+- Human data file structure
+  ```
   pkl/
   ├──'first_person'
   |  ├── 'pose' # (N, a)
@@ -31,7 +31,7 @@ python vis_pred_smpl.py -F "/path/to/your/file"
   |  └── 'point_clouds' (optional_4) # (N, b)
   └──'frame_num'(optional_4) # (N, )
   ```
-  - *a = 72 or 24, 3, 3*
+  - *a = 72 or [24, 3, 3]*
   - *b = any number*
   
 ```

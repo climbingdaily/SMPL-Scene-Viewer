@@ -11,12 +11,13 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+from ast import keyword
 import open3d as o3d
 import numpy as np
 import cv2
 import os
 import matplotlib.pyplot as plt
-from util import client_server, list_dir_remote, read_pcd_from_server
+from util import client_server, list_dir_remote, read_pcd_from_server, images_to_video
 
     
 colors = {
@@ -192,7 +193,7 @@ class o3dvis():
         self.height = height
         self.img_save_count = 0
         opt = self.vis.get_render_option()
-        opt.point_size = 3
+        opt.point_size = 2
         print_help()
 
     def change_pause_status(self):
@@ -242,6 +243,7 @@ class o3dvis():
             self.vis.update_renderer()
             cv2.waitKey(key)
             if Keyword.DESTROY:
+                images_to_video(self.out_dir, delete=True)
                 self.vis.destroy_window()
             if not Keyword.PAUSE:
                 break
@@ -528,6 +530,7 @@ class o3dvis():
             #     fourcc = cv2.VideoWriter_fourcc(*"DIVX")
             #     self.video_writer = cv2.VideoWriter(outname, fourcc, 15.0, (img.shape[1], img.shape[0]), True)
             self.vis.capture_screen_image(outname)
+            self.out_dir = out_dir
             # r = img[..., 0:1]
             # g = img[..., 1:2]
             # b = img[..., 2:3]

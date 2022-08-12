@@ -130,6 +130,8 @@ dmypy.json
 
 .vscode/
 /temp*
+vis_data/
 *.avi
+*.mp4
 /demo_scene*/
 /smpl/*.pkl

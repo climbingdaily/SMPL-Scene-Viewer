@@ -15,26 +15,28 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
 from subprocess import run
+import time
 
-def images_to_video(path, filename=None, delete=False):
+def images_to_video(img_dir, filename=None, delete=False):
     if filename is None:
-        filename = os.path.basename(path)
-    # strs = sys.argv[2]
-    video_path = os.path.join(os.path.dirname(path), 'vis_data', filename + '.mp4')
-    video_path2 = os.path.join(os.path.dirname(path), 'vis_data', filename + '.avi')
+        filename = os.path.basename(img_dir) + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+    video_path = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.mp4')
+    video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
 
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
-    command = f"ffmpeg -f image2 -i \"{path}\\%4d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path2}\""
-    if not os.path.exists(video_path) and not os.path.exists(video_path2):
+    command = f"ffmpeg -f image2 -i \"{img_dir}\\%4d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path2}\""
+    if not os.path.exists(video_path) and not os.path.exists(video_path2) and os.path.exists(img_dir):
         try:
             run(command, shell=True)
         except:
             print(f'[command error] \"{command}\"')
 
-        if delete:
-            img_list = os.listdir(path)
+        if delete :
+            # ! Danger
+            img_list = os.listdir(img_dir)
             for img in img_list:
-                os.remove(os.path.join(path, img))
+                os.remove(os.path.join(img_dir, img))
+            os.removedirs(img_dir)
 
 def filterTraj(traj_xyz, fit_time=None, segment=20, frame_time=0.05, keep_data = False):
 

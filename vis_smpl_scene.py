@@ -9,9 +9,9 @@
 # Copyright (c) 2022 yudidai                                                   #
 # -----                                                                        #
 # HISTORY:                                                                     #
+# 2022-08-10	ABC	
 ################################################################################
 
-import re
 import numpy as np
 import configargparse
 import open3d as o3d
@@ -20,6 +20,7 @@ from util import o3dvis
 import matplotlib.pyplot as plt
 import torch
 import os
+import time
 
 from smpl import SMPL, poses_to_vertices
 from util import load_data_remote, generate_views, load_scene, images_to_video
@@ -39,11 +40,12 @@ view = {
 	],
 }
 
+POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
 pt_color = plt.get_cmap("tab20")(1)[:3]
-smpl_color = plt.get_cmap("tab20")(3)[:3]
-gt_smpl_color = plt.get_cmap("tab20")(5)[:3]
-pred_smpl_color = plt.get_cmap("tab20")(7)[:3]
-
+POSE_COLOR = {}
+for i, color in enumerate(POSE_KEY):
+    POSE_COLOR[color] = plt.get_cmap("tab20c")(i * 4 + 3)[:3]
+    
 def vertices_to_head(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
@@ -75,27 +77,41 @@ def get_head_global_rots(pose):
     head_rots = head_rots @ np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]]).T
     return head_rots
 
-def load_pkl_vis(humans, start=0, end=-1, pred_file_path=None, remote=False):
+def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
+    if pose_str in human_data:
+        pose = human_data[pose_str].copy()
+        if tran_str in human_data:
+            trans = human_data[tran_str].copy()
+        else:
+            trans = human_data[trans_str2].copy()
+        vert = poses_to_vertices(pose, trans)
+        verts_list[f'{info} {pose_str}'] = vert[start:end]
+        print(f'[SMPL MODEL] {info} {pose_str} loaded')
+
+def load_vis_data(humans, start=0, end=-1):
     """
-    It takes in the human dictionary, and returns a list of vertices, a list of predicted vertices, a
-    list of point clouds, and a list of indices
+    It loads the data from the pickle file into a dictionary
     
     Args:
       humans: the dictionary containing the data
       start: the first frame to load. Defaults to 0
-      end: the last frame to be rendered
-      pred_file_path: the path to the predicted SMPL model
-      remote: whether the data is stored on a remote server or not. Defaults to False
+      end: the last frame to be visualized
+    
+    Returns:
+      vis_data
     """
 
-    point_valid_idx = []
-    verts_list = []
-    point_clouds = np.array([[0,0,0]])
-    pred_s_vert = None
+    vis_data = {}
+    vis_data['humans'] = {}
+    vis_data['point clous'] = {}
 
     first_person = humans['first_person']
     pose = first_person['pose'].copy()
-    trans = first_person['mocap_trans'].copy()
+    end = pose.shape[0] if end <= 0 else end 
+    if 'mocap_trans' in first_person:
+        trans = first_person['mocap_trans'].copy()
+    else:
+        trans = first_person['trans'].copy()
 
     f_vert = poses_to_vertices(pose)
 
@@ -116,85 +132,93 @@ def load_pkl_vis(humans, start=0, end=-1, pred_file_path=None, remote=False):
     
     f_vert += np.expand_dims(trans.astype(np.float32), 1)
 
-    verts_list.append(f_vert)
+    # vis_data['humans']['First pose'] = f_vert[start: end]
     print(f'[SMPL MODEL] First person loaded')
 
-    # load second person
+    load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
+
     if 'second_person' in humans:
         second_person = humans['second_person']    
-        pose = second_person['pose'].copy()
-        trans = second_person['mocap_trans'].copy()
-        s_vert = poses_to_vertices(pose, trans)
-        verts_list.append(s_vert)
-        print(f'[SMPL MODEL] Second person loaded')
 
-        # load optimized person
-        if 'opt_pose' in first_person:
-            pose = first_person['opt_pose'].copy()
-            trans = first_person['opt_trans'].copy()
-            vert = poses_to_vertices(pose, trans)
-            verts_list.append(vert)
-            print(f'[SMPL MODEL] First optmized person loaded')
-            
-        if 'opt_pose' in second_person:
-            pose = second_person['opt_pose'].copy()
-            trans = second_person['opt_trans'].copy()
-            vert = poses_to_vertices(pose, trans)
-            verts_list.append(vert)
-            print(f'[SMPL MODEL] Second optmized person loaded')
+        # load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
+        #                 'trans', 'mocap_trans', info='Second')
+
+        # load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
+        #                 'opt_trans', info='Second')
 
         if 'point_clouds' in second_person:
-            point_clouds = second_person['point_clouds']
-            ll = second_person['point_frame']
+            global_frame_id = second_person['point_frame']
+            global_frame_id = set(global_frame_id).intersection(humans['frame_num'][start: end])
+            valid_idx = [humans['frame_num'].index(l) for l in global_frame_id]
+
+            vis_data['point cloud'] = [second_person['point_clouds'], valid_idx]
             print(f'[PointCloud] Second point cloud loaded')
 
-        else:
-            ll = []
+            if 'pred_pose' in second_person:
+                pose = second_person['pred_pose'].copy()
+                if 'opt_trans' in second_person:
+                    trans = second_person['opt_trans'].copy()
+                else:
+                    trans = second_person['trans'].copy()
+                local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
+                vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx])
+                print(f'[SMPL MODEL] Predicted person loaded')
 
-        point_valid_idx = [np.where(humans['frame_num'] == l)[0][0] for l in ll ]
+    return vis_data
 
-    if pred_file_path is not None :
-        pred_s_vert = load_pred_smpl(pred_file_path, trans=trans[point_valid_idx], remote=remote)
-        print(f'[SMPL MODEL] Predicted person loaded')
+def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoint=False):
+    """
+    > This function takes in a point cloud and a SMPL mesh, and visualizes them in a 3D viewer
+    
+    Args:
+      vis: the visualization object
+      vis_data: a dictionary containing the point cloud and the SMPL meshes.
+      extrinsics: the camera extrinsics for each frame.
+      video_name: the name of the video you want to visualize
+      freeviewpoint: if True, the camera will move relative to the previous frame. If False, the camera
+    will be fixed. Defaults to False
+    """
 
-    return verts_list, pred_s_vert, point_clouds, point_valid_idx
-
-def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, extrinsics=None, video_name=None, freeviewpoint=False):
-
-    # assert smpl_list[0].shape[0] == smpl_list[1].shape[0], "Groundtruth Data Shape are not compatible"
     pointcloud = o3d.geometry.PointCloud()
     smpl_geometries = []
-    pred_smpl = o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')
-    for i in smpl_list:
+    human_data = vis_data['humans']
+    points = vis_data['point cloud'][0]
+    indexes = vis_data['point cloud'][1]
+
+    for i in human_data:
         smpl_geometries.append(o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')) # a ramdon SMPL mesh
 
     init_param = False
-    # extrinsic = np.eye(4)
+
     vis.img_save_count = 0
+    video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
     image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
 
-    for i in range(smpl_list[0].shape[0]):
-
-        # load data
-        if i in pc_idx:
-            pointcloud.points = o3d.utility.Vector3dVector(pc[pc_idx.index(i)])
-            if pred_smpl_verts is not None:
-                pred_smpl.vertices = o3d.utility.Vector3dVector(pred_smpl_verts[pc_idx.index(i)])
-                pred_smpl.paint_uniform_color(plt.get_cmap("tab20")(7)[:3])
-                pred_smpl.compute_vertex_normals()
+    for i in range(human_data[list(human_data.keys())[0]].shape[0]):
+        if i in indexes:
+            index = indexes.index(i)
+            pointcloud.points = o3d.utility.Vector3dVector(points[index])
         else:
+            index = -1
             pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-            pred_smpl.vertices = o3d.utility.Vector3dVector(np.asarray(pred_smpl.vertices) * 0)
-            pred_smpl.compute_vertex_normals()
 
-        # color
         pointcloud.paint_uniform_color(pt_color)
 
         for idx, smpl in enumerate(smpl_geometries):
-            smpl.vertices = o3d.utility.Vector3dVector(smpl_list[idx][i])
-            smpl.paint_uniform_color(plt.get_cmap("tab20")(idx*2 + 3)[:3])
+            key = list(human_data.keys())[idx]
+            if 'pred' in key.lower():
+                if index >= 0:
+                    smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
+                    smpl.paint_uniform_color(POSE_COLOR[key])
+                else:
+                    smpl.vertices = o3d.utility.Vector3dVector(np.asarray(smpl.vertices) * 0)
+            elif 'first' in key.lower():
+                smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
+                smpl.paint_uniform_color(POSE_COLOR[key])
+            elif 'second' in key.lower():
+                smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
+                smpl.paint_uniform_color(POSE_COLOR[key])
             smpl.compute_vertex_normals()
-        
 
         if extrinsics is not None:
             # vis.set_view(view_list[i])
@@ -214,17 +238,13 @@ def vis_pt_and_smpl(smpl_list, pc, pc_idx, vis, pred_smpl_verts=None, extrinsics
             vis.add_geometry(pointcloud, reset_bounding_box = False)  
             for smpl in smpl_geometries:
                 vis.add_geometry(smpl, reset_bounding_box = False)  
-            if pred_smpl is not None:
-                vis.add_geometry(pred_smpl, reset_bounding_box = False)  
             vis.change_pause_status()
             init_param = True
 
         else:
-            vis.vis.update_geometry(pointcloud) 
-            if pred_smpl is not None:
-                vis.vis.update_geometry(pred_smpl)  
+            vis.update_geometry(pointcloud) 
             for smpl in smpl_geometries:
-                vis.vis.update_geometry(smpl)    
+                vis.update_geometry(smpl)    
  
         vis.save_imgs(image_dir)
         
@@ -241,11 +261,7 @@ if __name__ == '__main__':
     parser.add_argument("--start", '-S', type=int, default=-2)
     parser.add_argument("--end", '-e', type=int, default=-2)
     parser.add_argument("--scene_path", '-s', type=str,default=None)
-    # parser.add_argument("--remote", '-r', action='store_true',
-    #                     help='If the file in from remote machine')
-    
     parser.add_argument("--smpl_file_path", '-F', type=str, default=None)
-    parser.add_argument("--pred_file_path", '-P', type=str, default=None)
     parser.add_argument("--viewpoint_type", '-V', type=str, default=None)
 
     args, opts = parser.parse_known_args()
@@ -256,13 +272,13 @@ if __name__ == '__main__':
     is_remote = True if '--remote' in opts else config.remote
 
     smpl_file_path = config.smpl_file_path if args.smpl_file_path is None else args.smpl_file_path
-    pred_file_path = config.pred_file_path if args.pred_file_path is None else args.pred_file_path
     viewpoint_type = config.viewpoint_type if args.viewpoint_type is None else args.viewpoint_type
 
-    vis = o3dvis("First view", width=1280, height=720)
+    vis = o3dvis("Humans and scen vis", width=1280, height=720)
     load_data_class = load_data_remote(is_remote)
 
     scene = load_scene(vis, scene_path)
+
     if not scene.has_points():
         scene = load_scene(vis, scene_path, load_data_class = load_data_class)
 
@@ -270,43 +286,24 @@ if __name__ == '__main__':
 
     humans = load_data_class.load_pkl(smpl_file_path)
 
-    smpl_list, pred_smpl_b, pc, pc_idx = load_pkl_vis(
-        humans, start, end, pred_file_path, remote=is_remote)
-
-    # lidar_view = generate_views(humans['first_person']['lidar_traj']
-    #                      [:, 1:4], humans['first_person']['lidar_traj'][:, 4:8])
+    vis_data_list = load_vis_data(humans, start, end)
 
     scene_name = os.path.basename(scene_path).split('.')[0]
 
-    FPV, fextrinsic = generate_views(humans['first_person']['lidar_traj']
-                         [:, 1:4], get_head_global_rots(humans['first_person']['pose']))
-                         
-    SPV, sextrinsic = generate_views(vertices_to_head(
-        smpl_list[1]) + np.array([0, 0, 0.2]), get_head_global_rots(humans['second_person']['pose']))
+    freeview = False
 
-    if viewpoint_type == 'first':
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
-                        video_name = scene_name + '_FPV')
+    POVs, extrinsics = generate_views(humans['first_person']['lidar_traj']
+                        [:, 1:4], get_head_global_rots(humans['first_person']['pose']))
 
-    elif viewpoint_type == 'second':
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=sextrinsic, 
-                        video_name = scene_name + '_SPV')
+    if viewpoint_type == 'second':
+        if 'Second pose' in vis_data_list:         
+            POVs, extrinsics = generate_views(vertices_to_head(
+                vis_data_list['Second pose']) + np.array([0, 0, 0.2]), get_head_global_rots(humans['second_person']['pose']))
+        else:
+            print(f'There is no second pose in the data')
 
     elif viewpoint_type == 'third':        
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
-                        video_name = scene_name + '_TPV', freeviewpoint=True)
+        freeview = True
 
-    else:
-
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
-                        video_name = scene_name + '_FPV')
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=sextrinsic, 
-                        video_name = scene_name + '_SPV')
-        vis_pt_and_smpl(smpl_list, pc, pc_idx, vis,
-                        pred_smpl_verts=pred_smpl_b, extrinsics=fextrinsic, 
-                        video_name = scene_name + '_TPV', freeviewpoint=True)
+    vis_pt_and_smpl(vis, vis_data_list, extrinsics=extrinsics, 
+                    video_name = scene_name + f'_{viewpoint_type}', freeviewpoint=freeview)
