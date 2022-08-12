@@ -204,17 +204,28 @@ class o3dvis():
             self.add_geometry(geometry)
 
     def init_vis(self, window_name, width, height):
-        self.vis = o3d.visualization.VisualizerWithKeyCallback()
-        self.vis.register_key_callback(ord(" "), pause_callback)
-        self.vis.register_key_callback(ord("Q"), destroy_callback)
-        # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
-        self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
-        # self.vis.register_key_callback(ord("T"), read_dir_traj)
-        # self.vis.register_key_callback(ord("F"), stream_callback)
-        self.vis.register_key_callback(ord("F"), save_imgs)
-        # self.vis.register_key_callback(ord(","), set_view)
-        self.vis.register_key_callback(ord("N"), press_no)
-        self.vis.register_key_callback(ord("Y"), press_yes)
+        
+        ground_plane = o3d.geometry.TriangleMesh.create_box(
+            50.0, 0.1, 50.0, create_uv_map=True, map_texture_to_each_face=True)
+        ground_plane.compute_triangle_normals()
+        rotate_180 = o3d.geometry.get_rotation_matrix_from_xyz((-np.pi, 0, 0))
+        ground_plane.rotate(rotate_180)
+        ground_plane.translate((-25.0, -0.1, -25.0))
+        ground_plane.paint_uniform_color((1, 1, 1))
+        ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
+        
+        # self.vis = o3d.visualization.VisualizerWithKeyCallback()
+        self.vis = o3d.visualization.Visualizer()
+        # self.vis.register_key_callback(ord(" "), pause_callback)
+        # self.vis.register_key_callback(ord("Q"), destroy_callback)
+        # # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
+        # self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
+        # # self.vis.register_key_callback(ord("T"), read_dir_traj)
+        # # self.vis.register_key_callback(ord("F"), stream_callback)
+        # self.vis.register_key_callback(ord("F"), save_imgs)
+        # # self.vis.register_key_callback(ord(","), set_view)
+        # self.vis.register_key_callback(ord("N"), press_no)
+        # self.vis.register_key_callback(ord("Y"), press_yes)
         self.vis.create_window(window_name=window_name, width=width, height=height)
 
     def get_camera(self):
@@ -264,7 +275,6 @@ class o3dvis():
         for geometry in geometries:
             self.remove_geometry(geometry, reset_bounding_box)
         geometries.clear()
-        
 
     def set_view_zoom(self, info, count, steps):
         """

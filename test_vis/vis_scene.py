@@ -208,3 +208,4 @@ if __name__ == "__main__":
              show_ui=True,
              width=1920,
              height=1080)
+    print('test done')

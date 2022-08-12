@@ -16,7 +16,8 @@ import numpy as np
 import configargparse
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
-from util import o3dvis
+# from util import o3dvis
+from test_vis.non_blocking import MultiWinApp as o3dvis
 import matplotlib.pyplot as plt
 import torch
 import os
@@ -165,6 +166,17 @@ def load_vis_data(humans, start=0, end=-1):
                 print(f'[SMPL MODEL] Predicted person loaded')
 
     return vis_data
+mat_box = o3d.visualization.rendering.MaterialRecord()
+    # mat_box.shader = 'defaultLitTransparency'
+mat_box.shader = 'defaultLitSSR'
+mat_box.base_color = [0.467, 0.467, 0.467, 0.2]
+mat_box.base_roughness = 0.0
+mat_box.base_reflectance = 0.0
+mat_box.base_clearcoat = 1.0
+mat_box.thickness = 1.0
+mat_box.transmission = 1.0
+mat_box.absorption_distance = 10
+mat_box.absorption_color = [0.5, 0.5, 0.5]
 
 def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoint=False):
     """
@@ -181,12 +193,26 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
 
     pointcloud = o3d.geometry.PointCloud()
     smpl_geometries = []
+    smpl_materials = []
     human_data = vis_data['humans']
     points = vis_data['point cloud'][0]
     indexes = vis_data['point cloud'][1]
 
+    mat_ground = o3d.visualization.Material("defaultLitSSR")
+    mat_ground.scalar_properties['roughness'] = 0.15
+    mat_ground.scalar_properties['reflectance'] = 0.72
+    mat_ground.scalar_properties['transmission'] = 0.6
+    mat_ground.scalar_properties['thickness'] = 0.3
+    mat_ground.scalar_properties['absorption_distance'] = 0.1
+    mat_ground.vector_properties['absorption_color'] = np.array(
+        [0.82, 0.98, 0.972, 1.0])
+
     for i in human_data:
-        smpl_geometries.append(o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')) # a ramdon SMPL mesh
+        smpl = o3d.io.read_triangle_mesh('.\\smpl\\sample.ply')
+        # smpl_m = o3d.t.geometry.TriangleMesh.from_legacy(smpl)
+        # smpl_m.material = mat_ground
+        # smpl_materials.append(smpl_m)
+        smpl_geometries.append(smpl) # a ramdon SMPL mesh
 
     init_param = False
 
