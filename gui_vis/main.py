@@ -25,7 +25,9 @@ from scipy.spatial.transform import Rotation as R
 sys.path.append('.')
 sys.path.append('..')
 
-from test_vis.vis_gui import AppWindow as GUI_BASE
+from menu import Menu as base_gui
+from bottons import _init_left_panel
+
 from util import load_data_remote, generate_views, load_scene as load_pts, images_to_video
 from vis_smpl_scene import load_vis_data, get_head_global_rots, vertices_to_head, POSE_COLOR
 from smpl import sample_path
@@ -70,22 +72,7 @@ class HUMAN_DATA:
     def get_cameras(self, FOV):
         return self.cameras[FOV.lower()]
 
-def add_checkbox(vis, name, callback):
-    vis._show_skybox = gui.Checkbox(name)
-    self._show_skybox.set_on_checked(self._on_show_skybox)
-    view_ctrls.add_child(self._show_skybox)
-
-def create_button(name, callback, h_padding=0.5, v_padding=0):
-    button = gui.Button(name)
-    button.horizontal_padding_em = h_padding
-    button.vertical_padding_em = v_padding
-    button.set_on_clicked(callback)
-    return button
-
-class o3dvis(GUI_BASE):
-    MENU_SCENE = 31
-    MENU_SMPL = 32
-    MENU_VIS = 33
+class o3dvis(base_gui):
     PAUSE = False
 
     def __init__(self, width=1280, height=768, is_remote=False):
@@ -97,53 +84,13 @@ class o3dvis(GUI_BASE):
         self.POV = 'first'
         self.is_done = False
         self.names = []
-        self.add_menu()
-        self._init_left_panel()
-
-    def add_menu(self):
-        file_menu = gui.Menu()
-        if gui.Application.instance.menubar is not None:
-            menu = gui.Application.instance.menubar
-            smpl_menu = gui.Menu()
-            smpl_menu.add_item("Open scene PCD", o3dvis.MENU_SCENE)
-            smpl_menu.add_item("Open SMPL pkl", o3dvis.MENU_SMPL)
-            smpl_menu.add_item("Show humans and scene", o3dvis.MENU_VIS)
-            menu.add_menu("SMPL", smpl_menu)
-
-        self.window.set_on_menu_item_activated(o3dvis.MENU_SCENE, self._on_menu_scene)
-        self.window.set_on_menu_item_activated(o3dvis.MENU_SMPL, self._on_menu_smpl)
-        self.window.set_on_menu_item_activated(o3dvis.MENU_VIS, self._on_menu_show)
+        # self._init_left_panel()
 
     def _on_menu_show(self):
         if self.scene_name or self.Human_data:
             threading.Thread(target=self.update_thread).start()
         else:
-            em = self.window.theme.font_size
-            dlg = gui.Dialog("Warning")
-            dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-            dlg_layout.add_child(gui.Label("[Warning]: Please load the scene first"))
-            ok = gui.Button("OK")
-            ok.set_on_clicked(self._on_about_ok)
-            h = gui.Horiz()
-            h.add_stretch()
-            h.add_child(ok)
-            h.add_stretch()
-            dlg_layout.add_child(h)
-
-            dlg.add_child(dlg_layout)
-            self.window.show_dialog(dlg)
-
-    def _on_menu_scene(self):
-        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pcd/ply/obj to load",
-                        self.window.theme)
-        dlg.add_filter(
-            ".xyz .xyzn .xyzrgb .ply .pcd .pts",
-            "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, "
-            ".pcd, .pts)")
-
-        dlg.set_on_cancel(self._on_file_dialog_cancel)
-        dlg.set_on_done(self.load_scene)
-        self.window.show_dialog(dlg)
+            super(o3dvis, self)._on_menu_show()
 
     def load_scene(self, scene_path):
         self.window.close_dialog()
@@ -152,47 +99,6 @@ class o3dvis(GUI_BASE):
         self.scene_name = os.path.basename(scene_path).split('.')[0]
         load_pts(self, scene_path)
 
-    def _on_menu_smpl(self):
-        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pkl file to load",
-                             self.window.theme)
-        dlg.add_filter(
-            ".pkl",
-            "SMPL files")
-
-        dlg.set_on_cancel(self._on_file_dialog_cancel)
-        dlg.set_on_done(self._on_load_smpl_done)
-        self.window.show_dialog(dlg)
-
-    def _init_left_panel(self):
-        em = self.window.theme.font_size
-        def go_to_pcd_frame():
-            frame = int(self._pcd_frame_index_edit.text_value)
-            # self.pcd_frame_step(frame - self.cur_pcd_index)
-
-        button_layout8 = gui.Horiz()
-        self._pcd_frame_index_edit = gui.TextEdit()
-        button_layout8.add_child(self._pcd_frame_index_edit)
-        button_layout8.add_fixed(0.25 * em)
-        button_layout8.add_child(create_button('go', go_to_pcd_frame))
-
-        button_layout6 = gui.Horiz()
-        button_layout6.add_child(gui.Label('Start,End:'))
-        self._pcds_range_edit = gui.TextEdit()
-        self._pcds_range_edit.text_value = '0,-1'
-        button_layout6.add_child(self._pcds_range_edit)
-        button_layout6.add_fixed(0.25 * em)
-        button_layout6.add_child(create_button('go', go_to_pcd_frame))
-        button_layout6.add_fixed(0.25 * em)
-        button_layout6.add_child(create_button('l', go_to_pcd_frame))
-        button_layout6.add_fixed(0.25 * em)
-        button_layout6.add_child(create_button('r', go_to_pcd_frame))
-
-        self.left_pannel = gui.Vert()
-        self.left_pannel.add_child(button_layout8)
-        self.left_pannel.add_fixed(0.5 * em)
-        self.left_pannel.add_child(button_layout6)
-        self.left_pannel.add_fixed(0.5 * em)
-        self.window.add_child(self.left_pannel)
 
     def _on_load_smpl_done(self, filename):
         self.window.close_dialog()
