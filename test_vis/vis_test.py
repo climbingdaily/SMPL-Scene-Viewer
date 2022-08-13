@@ -1,3 +1,15 @@
+################################################################################
+# File: \vis_test.py                                                           #
+# Created Date: Friday August 12th 2022                                        #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
 
 import numpy as np
 import open3d as o3d
@@ -14,7 +26,7 @@ sys.path.append('.')
 sys.path.append('..')
 from test_vis.vis_gui import AppWindow as GUI_BASE
 from util import load_data_remote, generate_views, load_scene as load_pts, images_to_video
-from vis_smpl_scene import vis_pt_and_smpl, load_vis_data, get_head_global_rots, vertices_to_head
+from vis_smpl_scene import load_vis_data, get_head_global_rots, vertices_to_head, POSE_COLOR
 from smpl import sample_path
 
 class HUMAN_DATA:
@@ -167,12 +179,11 @@ class o3dvis(GUI_BASE):
             smpl = o3d.io.read_triangle_mesh(sample_path)
             smpl_geometries.append(smpl) # a ramdon SMPL mesh
 
-        init_param = False
-
         self.img_save_count = 0
         video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
         image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
         keys = list(human_data.keys())
+        init_param = False
 
         for i in range(human_data[keys[0]].shape[0]):
             time.sleep(0.1)
@@ -183,23 +194,26 @@ class o3dvis(GUI_BASE):
                 index = -1
                 pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
 
-            pointcloud.paint_uniform_color(pt_color)
+            pointcloud.paint_uniform_color(POSE_COLOR['points'])
 
             for idx, smpl in enumerate(smpl_geometries):
                 key = keys[idx]
                 if 'pred' in key.lower():
                     if index >= 0:
                         smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
+                        smpl.compute_vertex_normals()
                         smpl.paint_uniform_color(POSE_COLOR[key])
                     else:
                         smpl.vertices = o3d.utility.Vector3dVector(np.asarray(smpl.vertices) * 0)
                 elif 'first' in key.lower():
                     smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
+                    smpl.compute_vertex_normals()
                     smpl.paint_uniform_color(POSE_COLOR[key])
+                    
                 elif 'second' in key.lower():
                     smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
+                    smpl.compute_vertex_normals()
                     smpl.paint_uniform_color(POSE_COLOR[key])
-                smpl.compute_vertex_normals()
 
             if extrinsics is not None:
                 # vis.set_view(view_list[i])
@@ -215,24 +229,26 @@ class o3dvis(GUI_BASE):
                     self.init_camera(extrinsics[i])   
                     
             # add to visualization
-            def updata_cloud():
-                if not init_param:
-                    self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
-                    for si, smpl in enumerate(smpl_geometries):
-                        self.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
-                    self.change_pause_status()
-                    init_param = True
+            
+            def add_first_cloud():
+                self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
+                for si, smpl in enumerate(smpl_geometries):
+                    self.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
+                self.change_pause_status()
 
-                else:
-                    self.update_geometry(pointcloud,  name='human points') 
-                    
-                    for si, smpl in enumerate(smpl_geometries):
-                        self.update_geometry(smpl, name=keys[si])  
-    
+            if not init_param:
+                init_param = True
+                gui.Application.instance.post_to_main_thread(self.window, add_first_cloud)
+
+            time.sleep(0.01)
+
+            def updata_cloud():
+                self.update_geometry(pointcloud,  name='human points') 
+                for si, smpl in enumerate(smpl_geometries):
+                    self.update_geometry(smpl, name=keys[si])  
                 self.save_imgs(image_dir)
-            
                 self.waitKey(20, helps=False)
-            
+        
             gui.Application.instance.post_to_main_thread(
                 self.window, updata_cloud)
                 
@@ -248,6 +264,7 @@ class o3dvis(GUI_BASE):
             name = 'scene'
             
         geometry.transform(self.COOR_INIT)
+
         try: 
             if geometry.has_points():
                 if not geometry.has_normals():
@@ -272,7 +289,7 @@ class o3dvis(GUI_BASE):
 
         if name not in self.names:
             self.names.append(name)
-        print(name)
+        # print(name)
         self._scene.scene.add_geometry(name, geometry, mat)
         
         if reset_bounding_box:
@@ -281,7 +298,7 @@ class o3dvis(GUI_BASE):
 
     def update_geometry(self, geometry, name):
         self.remove_geometry(name)
-        self.add_geometry(geometry, name)
+        self.add_geometry(geometry, name, reset_bounding_box=False)
 
     def remove_geometry(self, name):
         self._scene.scene.remove_geometry(name)

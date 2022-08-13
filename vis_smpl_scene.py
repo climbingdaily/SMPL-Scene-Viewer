@@ -42,8 +42,7 @@ view = {
 }
 
 POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
-pt_color = plt.get_cmap("tab20")(1)[:3]
-POSE_COLOR = {}
+POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20c")(i * 4 + 3)[:3]
     
@@ -217,7 +216,7 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
             index = -1
             pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
 
-        pointcloud.paint_uniform_color(pt_color)
+        pointcloud.paint_uniform_color(POSE_COLOR['points'])
 
         for idx, smpl in enumerate(smpl_geometries):
             key = keys[idx]
