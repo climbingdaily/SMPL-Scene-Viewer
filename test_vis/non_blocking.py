@@ -28,13 +28,19 @@ import numpy as np
 import open3d as o3d
 import threading
 import time
+import open3d.visualization.gui as gui
+
+import sys
+sys.path.append('.')
+sys.path.append('..')
+# from test_vis.vis_gui import AppWindow
+from util import load_data_remote, generate_views, load_scene, images_to_video
 
 CLOUD_NAME = "points"
 
 
 def main():
-    MultiWinApp().run()
-
+    MultiWinApp()
 
 class MultiWinApp:
 
@@ -51,18 +57,17 @@ class MultiWinApp:
         app.initialize()
 
         self.main_vis = o3d.visualization.O3DVisualizer(title, width, height)
-        self.main_vis.add_action("Take snapshot in new window",
-                                 self.on_snapshot)
+        self.main_vis.add_action("smpl file", self.load_smpl_pkl)
         self.main_vis.set_on_close(self.on_main_window_closing)
 
         app.add_window(self.main_vis)
         self.snapshot_pos = (self.main_vis.os_frame.x, self.main_vis.os_frame.y)
 
         # threading.Thread(target=self.update_thread).start()
-
+        
         app.run()
     
-    def set_view(sef, view):
+    def set_view(self, view):
         pass
         # setup_camera(intrinsic_matrix, extrinsic_matrix, intrinsic_width_px, intrinsic_height_px): sets the camera view
 
@@ -77,6 +82,21 @@ class MultiWinApp:
 
     def remove_geometry(self, geometry):
         self.main_vis.add_geometry(geometry)
+
+    def load_smpl_pkl(self, vis):
+        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pcd/ply/obj to load",
+                        vis.window.theme())
+        dlg.add_filter(
+            ".xyz .xyzn .xyzrgb .ply .pcd .pts",
+            "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, "
+            ".pcd, .pts)")
+
+        dlg.set_on_cancel(self._on_file_dialog_cancel)
+        dlg.set_on_done(load_scene)
+        self.main_vis.show_dialog(dlg)
+
+    def _on_file_dialog_cancel(self):
+        self.main_vis.close_dialog()
 
     def on_snapshot(self, vis):
         self.n_snapshots += 1

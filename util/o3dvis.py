@@ -260,12 +260,12 @@ class o3dvis():
                 break
         return Keyword.READ
 
-    def add_geometry(self, geometry, reset_bounding_box = True, waitKey = 10):
+    def add_geometry(self, geometry, reset_bounding_box = True, waitKey = 10, name=None):
         self.vis.add_geometry(geometry, reset_bounding_box)
         if waitKey > 0:
             self.waitKey(waitKey, helps=False)
     
-    def update_geometry(self, geometry):
+    def update_geometry(self, geometry, name=None):
         self.vis.update_geometry(geometry)
 
     def remove_geometry(self, geometry, reset_bounding_box = True):

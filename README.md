@@ -1,4 +1,6 @@
 # vis_lidar_human_scene
+
+![](rendered.png)
 Visualization tool for SMPL and lidar data
 
    

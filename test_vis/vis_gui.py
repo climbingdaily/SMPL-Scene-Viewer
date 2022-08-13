@@ -158,7 +158,8 @@ class Settings:
     def __init__(self):
         self.mouse_model = gui.SceneWidget.Controls.ROTATE_CAMERA
         self.bg_color = gui.Color(1, 1, 1)
-        self.show_skybox = False
+        self.show_skybox = True
+        self.show_ground_plane = True
         self.show_axes = False
         self.use_ibl = True
         self.use_sun = True
@@ -206,7 +207,8 @@ class Settings:
 class AppWindow:
     MENU_OPEN = 1
     MENU_EXPORT = 2
-    MENU_QUIT = 3
+    # MENU_SMPL = 3
+    MENU_QUIT = 4
     MENU_SHOW_SETTINGS = 11
     MENU_ABOUT = 21
 
@@ -313,9 +315,14 @@ class AppWindow:
 
         self._show_axes = gui.Checkbox("Show axes")
         self._show_axes.set_on_checked(self._on_show_axes)
-        view_ctrls.add_fixed(separation_height)
+        # view_ctrls.add_fixed(separation_height)
         view_ctrls.add_child(self._show_axes)
 
+        self._show_ground_plane = gui.Checkbox("Show ground")
+        self._show_ground_plane.set_on_checked(self._on_show_ground_plane)
+        # view_ctrls.add_fixed(separation_height)
+        view_ctrls.add_child(self._show_ground_plane)
+        
         self._profiles = gui.Combobox()
         for name in sorted(Settings.LIGHTING_PROFILES.keys()):
             self._profiles.add_item(name)
@@ -438,6 +445,7 @@ class AppWindow:
                 app_menu.add_item("Quit", AppWindow.MENU_QUIT)
             file_menu = gui.Menu()
             file_menu.add_item("Open...", AppWindow.MENU_OPEN)
+            # file_menu.add_item("Open smpl pkl", AppWindow.MENU_SMPL)
             file_menu.add_item("Export Current Image...", AppWindow.MENU_EXPORT)
             if not isMacOS:
                 file_menu.add_separator()
@@ -470,6 +478,7 @@ class AppWindow:
         # window, so that the window can call the appropriate function when the
         # menu item is activated.
         w.set_on_menu_item_activated(AppWindow.MENU_OPEN, self._on_menu_open)
+        # w.set_on_menu_item_activated(AppWindow.MENU_SMPL, self._on_menu_smpl)
         w.set_on_menu_item_activated(AppWindow.MENU_EXPORT,
                                      self._on_menu_export)
         w.set_on_menu_item_activated(AppWindow.MENU_QUIT, self._on_menu_quit)
@@ -487,6 +496,7 @@ class AppWindow:
         ]
         self._scene.scene.set_background(bg_color)
         self._scene.scene.show_skybox(self.settings.show_skybox)
+        self._scene.scene.show_ground_plane(self.settings.show_ground_plane, rendering.Scene.GroundPlane(0))
         self._scene.scene.show_axes(self.settings.show_axes)
         if self.settings.new_ibl_name is not None:
             self._scene.scene.scene.set_indirect_light(
@@ -511,6 +521,7 @@ class AppWindow:
 
         self._bg_color.color_value = self.settings.bg_color
         self._show_skybox.checked = self.settings.show_skybox
+        self._show_ground_plane.checked = self.settings.show_ground_plane
         self._show_axes.checked = self.settings.show_axes
         self._use_ibl.checked = self.settings.use_ibl
         self._use_sun.checked = self.settings.use_sun
@@ -562,6 +573,10 @@ class AppWindow:
 
     def _on_show_skybox(self, show):
         self.settings.show_skybox = show
+        self._apply_settings()
+
+    def _on_show_ground_plane(self, show):
+        self.settings.show_ground_plane = show
         self._apply_settings()
 
     def _on_show_axes(self, show):
@@ -627,6 +642,20 @@ class AppWindow:
         self.settings.material.point_size = int(size)
         self.settings.apply_material = True
         self._apply_settings()
+
+    
+    def _on_menu_smpl(self):
+        pass
+        # dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pkl file to load",
+        #                      self.window.theme)
+        # dlg.add_filter(
+        #     ".pkl",
+        #     "SMPL files")
+
+        # dlg.set_on_cancel(self._on_file_dialog_cancel)
+        # dlg.set_on_done(self._on_load_dialog_done)
+        # self.window.show_dialog(dlg)
+
 
     def _on_menu_open(self):
         dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose file to load",
@@ -720,7 +749,7 @@ class AppWindow:
         self.window.close_dialog()
 
     def load(self, path):
-        self._scene.scene.clear_geometry()
+        # self._scene.scene.clear_geometry()
 
         geometry = None
         geometry_type = o3d.io.read_file_geometry_type(path)
@@ -728,6 +757,7 @@ class AppWindow:
         mesh = None
         if geometry_type & o3d.io.CONTAINS_TRIANGLES:
             mesh = o3d.io.read_triangle_mesh(path)
+
         if mesh is not None:
             if len(mesh.triangles) == 0:
                 print(
@@ -761,6 +791,8 @@ class AppWindow:
                 print("[WARNING] Failed to read points", path)
 
         if geometry is not None:
+            geometry.transform(self.COOR_INIT)
+
             try:
                 self._scene.scene.add_geometry("__model__", geometry,
                                                self.settings.material)

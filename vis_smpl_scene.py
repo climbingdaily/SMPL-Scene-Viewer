@@ -104,7 +104,6 @@ def load_vis_data(humans, start=0, end=-1):
 
     vis_data = {}
     vis_data['humans'] = {}
-    vis_data['point clous'] = {}
 
     first_person = humans['first_person']
     pose = first_person['pose'].copy()
@@ -134,7 +133,7 @@ def load_vis_data(humans, start=0, end=-1):
     f_vert += np.expand_dims(trans.astype(np.float32), 1)
 
     # vis_data['humans']['First pose'] = f_vert[start: end]
-    print(f'[SMPL MODEL] First person loaded')
+    # print(f'[SMPL MODEL] First person loaded')
 
     load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
 
@@ -144,8 +143,8 @@ def load_vis_data(humans, start=0, end=-1):
         # load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
         #                 'trans', 'mocap_trans', info='Second')
 
-        # load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
-        #                 'opt_trans', info='Second')
+        load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
+                        'opt_trans', info='Second')
 
         if 'point_clouds' in second_person:
             global_frame_id = second_person['point_frame']
@@ -166,17 +165,6 @@ def load_vis_data(humans, start=0, end=-1):
                 print(f'[SMPL MODEL] Predicted person loaded')
 
     return vis_data
-mat_box = o3d.visualization.rendering.MaterialRecord()
-    # mat_box.shader = 'defaultLitTransparency'
-mat_box.shader = 'defaultLitSSR'
-mat_box.base_color = [0.467, 0.467, 0.467, 0.2]
-mat_box.base_roughness = 0.0
-mat_box.base_reflectance = 0.0
-mat_box.base_clearcoat = 1.0
-mat_box.thickness = 1.0
-mat_box.transmission = 1.0
-mat_box.absorption_distance = 10
-mat_box.absorption_color = [0.5, 0.5, 0.5]
 
 def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoint=False):
     """
@@ -219,8 +207,9 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
     vis.img_save_count = 0
     video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
     image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
+    keys = list(human_data.keys())
 
-    for i in range(human_data[list(human_data.keys())[0]].shape[0]):
+    for i in range(human_data[keys[0]].shape[0]):
         if i in indexes:
             index = indexes.index(i)
             pointcloud.points = o3d.utility.Vector3dVector(points[index])
@@ -231,7 +220,7 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
         pointcloud.paint_uniform_color(pt_color)
 
         for idx, smpl in enumerate(smpl_geometries):
-            key = list(human_data.keys())[idx]
+            key = keys[idx]
             if 'pred' in key.lower():
                 if index >= 0:
                     smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
@@ -261,16 +250,17 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
                 
         # add to visualization
         if not init_param:
-            vis.add_geometry(pointcloud, reset_bounding_box = False)  
-            for smpl in smpl_geometries:
-                vis.add_geometry(smpl, reset_bounding_box = False)  
+            vis.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
+            for si, smpl in enumerate(smpl_geometries):
+                vis.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
             vis.change_pause_status()
             init_param = True
 
         else:
-            vis.update_geometry(pointcloud) 
-            for smpl in smpl_geometries:
-                vis.update_geometry(smpl)    
+            vis.update_geometry(pointcloud,  name='human points') 
+            
+            for si, smpl in enumerate(smpl_geometries):
+                vis.update_geometry(smpl, name=keys[si])  
  
         vis.save_imgs(image_dir)
         
