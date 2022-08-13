@@ -1,19 +1,12 @@
-import numpy as np
-import open3d as o3d
 import open3d.visualization.gui as gui
-import open3d.visualization.rendering as rendering
 import sys
-import cv2
-import threading
-import os
-import time
 from scipy.spatial.transform import Rotation as R
 
 sys.path.append('.')
 sys.path.append('..')
 
 from base_gui import AppWindow as GUI_BASE
-s
+
 class Menu(GUI_BASE):
     MENU_SCENE = 31
     MENU_SMPL = 32
@@ -81,3 +74,13 @@ class Menu(GUI_BASE):
 
     def load_scene(self, scene_path):
         pass
+
+def main():
+    gui.Application.instance.initialize()
+
+    w = Menu(1080, 720)
+
+    gui.Application.instance.run()
+
+if __name__ == "__main__":
+    main()

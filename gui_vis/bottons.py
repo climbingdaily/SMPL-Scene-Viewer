@@ -17,8 +17,8 @@ def create_button(name, callback, h_padding=0.5, v_padding=0):
     return button
 
 
-def add_checkbox(vis, name, callback):
-    vis._show_skybox = gui.Checkbox(name)
+def add_checkbox(self, name, callback):
+    self._show_skybox = gui.Checkbox(name)
     self._show_skybox.set_on_checked(self._on_show_skybox)
     view_ctrls.add_child(self._show_skybox)
 
