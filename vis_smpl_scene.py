@@ -43,7 +43,7 @@ view = {
 POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
 POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
-    POSE_COLOR[color] = plt.get_cmap("tab20c")(i * 4 + 3)[:3]
+    POSE_COLOR[color] = plt.get_cmap("Pastel1")(i)[:3]
     
 def vertices_to_head(vertices, index = 15):
     smpl = SMPL()

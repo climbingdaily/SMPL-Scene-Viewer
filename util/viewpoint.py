@@ -36,6 +36,20 @@ def make_cloud_in_vis_center(point_cloud):
     return rt, center
 
 def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 0.2):
+    """
+    > Given a list of positions and directions, generate a list of views and extrinsics
+    
+    Args:
+      position: the position of the camera
+      direction: the direction of the camera. This is a list of 3x3 matrices, where each matrix is the
+    rotation matrix of the camera.
+      filter: whether to filter the trajectory or not. Defaults to True
+      rad: the angle of the camera from the ground
+      dist: distance from the camera to the lookat point
+    
+    Returns:
+      view_list is a list of dictionaries, each dictionary contains the trajectory of the camera.
+    """
     assert len(position) == len(direction) 
 
     mocap_init = np.array([[-1, 0, 0, ], [0, 0, 1], [0, 1, 0]])

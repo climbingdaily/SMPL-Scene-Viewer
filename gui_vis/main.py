@@ -26,26 +26,26 @@ from scipy.spatial.transform import Rotation as R
 sys.path.append('.')
 sys.path.append('..')
 
-from gui_vis import HUMAN_DATA, Menu as base_gui, create_checkboxes, creat_plane
+from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_plane
 
 from util import load_scene as load_pts, images_to_video
 from vis_smpl_scene import POSE_COLOR
 from smpl import sample_path
 
 class o3dvis(base_gui):
-    PAUSE = False
+    # PAUSE = False
     IMG_COUNT = 0
 
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
         self.COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
+        self.intrinsic = np.array([[623.53829072,   0.        , 639.5       ],
+                                    [  0.        , 623.53829072, 359.5       ],
+                                    [  0.        ,   0.        ,   1.        ]])
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
-        self.freeview = True
-        self.POV = 'first'
         self.is_done = False
         self.data_names = {}
-        self.check_boxes, self.camera_setting, self.slider_bar, self.play_btn = create_checkboxes(self)
         self.add_geometry(creat_plane(), name='ground')
 
     def load_scene(self, scene_path):
@@ -61,6 +61,7 @@ class o3dvis(base_gui):
         self.Human_data.load(filename) 
 
         if self.Human_data:
+            # self.update_thread()
             threading.Thread(target=self.update_thread).start()
 
     def update_thread(self):
@@ -68,20 +69,18 @@ class o3dvis(base_gui):
         The function is to render the 3D point cloud and the SMPL mesh in the same window
         """
         vis_data = self.Human_data.vis_data_list
-        views, extrinsics = self.Human_data.get_cameras('first')
 
-        video_name = self.scene_name + f'_{self.POV}'
-        freeviewpoint = self.freeview
+        video_name = self.scene_name
 
         pointcloud = o3d.geometry.PointCloud()
         smpl_geometries = []
-        smpl_materials = []
         human_data = vis_data['humans']
         points = vis_data['point cloud'][0]
         indexes = vis_data['point cloud'][1]
 
         for i in human_data:
             smpl = o3d.io.read_triangle_mesh(sample_path)
+            smpl.vertex_colors = o3d.utility.Vector3dVector()
             smpl_geometries.append(smpl) # a ramdon SMPL mesh
     
         video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
@@ -94,6 +93,9 @@ class o3dvis(base_gui):
         self.slider_bar.set_limits(0, total_frames)
 
         for i in range(total_frames):
+            
+            _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
+
             time.sleep(0.1)
             if i in indexes:
                 index = indexes.index(i)
@@ -105,36 +107,49 @@ class o3dvis(base_gui):
             pointcloud.paint_uniform_color(POSE_COLOR['points'])
 
             for idx, smpl in enumerate(smpl_geometries):
+                # smpl = o3d.geometry.TriangleMesh()
                 key = keys[idx]
                 if 'pred' in key.lower():
                     if index >= 0:
                         smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
+                        smpl.vertex_normals = o3d.utility.Vector3dVector()
+                        smpl.triangle_normals = o3d.utility.Vector3dVector()
+
                         smpl.compute_vertex_normals()
-                        smpl.paint_uniform_color(POSE_COLOR[key])
+                        if len(smpl.vertex_colors) == 0:
+                            smpl.paint_uniform_color(POSE_COLOR[key])
                     else:
-                        smpl.vertices = o3d.utility.Vector3dVector(np.asarray(smpl.vertices) * 0)
+                        smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
                 elif 'first' in key.lower() or 'second' in key.lower():
                     smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
+                    
+                    smpl.vertex_normals = o3d.utility.Vector3dVector()
+                    smpl.triangle_normals = o3d.utility.Vector3dVector()
                     smpl.compute_vertex_normals()
-                    smpl.paint_uniform_color(POSE_COLOR[key])
+                    if len(smpl.vertex_colors) == 0:
+                        smpl.paint_uniform_color(POSE_COLOR[key])
                     
                 else :
                     print('Edit your key in human_data here!')
 
-                smpl.normalize_normals()
+
+                # smpl.normalize_normals()
+                # smpl.orient_triangles()
                 
 
             if extrinsics is not None:
                 # vis.set_view(view_list[i])
-                if i > 0 and freeviewpoint:
+                if i > 0 and o3dvis.FREE_VIEW:
                     camera_pose = self.get_camera()
                     relative_trans = -extrinsics[i][:3, :3].T @ extrinsics[i][:3, 3] + extrinsics[i-1][:3, :3].T @ extrinsics[i-1][:3, 3]
                     
+                    relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
+
                     camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
                     camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
                     self.init_camera(camera_pose)
                 else:
-                    self.init_camera(extrinsics[i])   
+                    self.init_camera(extrinsics[i] @ self.COOR_INIT)   
                     
             def add_first_cloud():
                 self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
@@ -167,7 +182,6 @@ class o3dvis(base_gui):
             mat =self.settings.material
         if name is None:
             name = self.scene_name
-            
 
         try: 
             if geometry.has_points():
@@ -176,10 +190,6 @@ class o3dvis(base_gui):
                 geometry.normalize_normals()
         except:
             try:
-                if len(geometry.triangles) == 0:
-                    print(
-                        "[WARNING] Contains 0 triangles, will read as point cloud")
-                    geometry = None
                 if not geometry.has_triangle_normals():
                     geometry.compute_vertex_normals()
                 if len(geometry.vertex_colors) == 0:
@@ -188,16 +198,13 @@ class o3dvis(base_gui):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-                    
+
+                # self_intersecting = geometry.is_self_intersecting()
+                # watertight = geometry.is_watertight()
             except:
-                print("[Info]", "not PCD or pkl.")
+                print("[Info]", "not pointcloud or mehs.")
 
         geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
-
-        if self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-
-        self._scene.scene.add_geometry(name, geometry, mat)
 
         if name not in self.data_names.keys():
             box = gui.Checkbox(name)
@@ -205,6 +212,12 @@ class o3dvis(base_gui):
             box.checked = True
             self.check_boxes.add_child(box)
             self.data_names[name] = box
+
+        elif self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
+
+        if self.data_names[name].checked:
+            self._scene.scene.add_geometry(name, geometry, mat)
         
         if reset_bounding_box:
             bounds = geometry.get_axis_aligned_bounding_box()
@@ -224,23 +237,16 @@ class o3dvis(base_gui):
 
     def set_view(self, view):
         pass
-        # setup_camera(intrinsic_matrix, extrinsic_matrix, intrinsic_width_px, intrinsic_height_px): sets the camera view
 
     def get_camera(self):
-        self.intrinsic = np.array([[623.53829072,   0.        , 639.5       ],
-                                    [  0.        , 623.53829072, 359.5       ],
-                                    [  0.        ,   0.        ,   1.        ]])
-        return np.eye(4)
+        view = self._scene.scene.camera.get_view_matrix()
+        view[1, :] = - view[1, :]
+        view[2, :] = - view[2, :]
+        return view
 
-    def init_camera(self, extrinsic_matrix, intrinsic_width_px=0, intrinsic_height_px=0): 
-        pass
-
-    def change_pause_status(self):
-        o3dvis.PAUSE = not o3dvis.PAUSE
-        text = 'Stoped' if o3dvis.PAUSE else 'Playing'
-        color = gui.Color(r=0.5, b=0, g=0) if o3dvis.PAUSE else gui.Color(r=0, b=0, g=0.5)
-        self.play_btn.text = f'>|| ({text})'
-        self.play_btn.background_color = color
+    def init_camera(self, extrinsic_matrix): 
+        bounds = self._scene.scene.bounding_box
+        self._scene.setup_camera(self.intrinsic, extrinsic_matrix, 1280, 720, bounds)
 
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
@@ -254,14 +260,11 @@ class o3dvis(base_gui):
         while o3dvis.PAUSE:
             cv2.waitKey(key)
             pass
-
-    def _on_slider(self, new_val):
-        pass
     
 def main():
     gui.Application.instance.initialize()
 
-    w = o3dvis(1080, 720)
+    w = o3dvis(1280, 720)
 
     gui.Application.instance.run()
 
