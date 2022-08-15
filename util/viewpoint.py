@@ -43,7 +43,7 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 
         "trajectory" : 
         [
             {
-                "field_of_view" : 90.0,
+                "field_of_view" : 80.0,
                 "front" : [ 0, -np.cos(rad), np.sin(rad)],
                 "lookat" : [ 0, 1, 1.7],
                 "up" : [ 0, np.sin(rad), np.cos(rad)],
@@ -76,10 +76,32 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 
         up = view['trajectory'][0]['up']
         origin = view['trajectory'][0]['lookat']
 
-        extrinsic = np.eye(4)
-        extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
-        extrinsic[:3, 3] = - (extrinsic[:3, :3] @ origin)   # t = - R @ p
-
-        extrinsic_list.append(extrinsic)
+        extrinsic_list.append(view_to_extrinsic(origin, up, front))
     
     return view_list, extrinsic_list
+
+def view_to_extrinsic(lookat, up, front):
+    extrinsic = np.eye(4)
+    extrinsic[:3, :3] = np.stack([-np.cross(front, up), -up, -front])
+    extrinsic[:3, 3] = - (extrinsic[:3, :3] @ lookat)   # t = - R @ p
+    return extrinsic
+
+# def direction_to_view(r, delta_r):
+    
+#     if r.shape[0] == 4:
+#         func = R.from_quat
+#     else:
+#         func = R.from_matrix
+
+#     rot = func(r).as_matrix()
+#     rot = R.from_rotvec(-rad * rot[:, 0]).as_matrix() @ rot
+
+#     lookat = t + rot @ np.array([0, -dist, 0])
+#     up = rot[:, 2] 
+#     front = -rot[:, 1]
+
+def extrinsic_to_view(extrinsic):
+    up = -extrinsic[1, :3]
+    front = -extrinsic[2, :3]
+    lookat = -extrinsic[:3, :3].T @ extrinsic[:3, 3]
+    return lookat, up, front

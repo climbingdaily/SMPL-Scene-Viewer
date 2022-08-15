@@ -153,6 +153,15 @@ class Settings:
             "clearcoat_roughness": 0.287,
             "anisotropy": 0.0
         },
+        # "Transparent": {
+        #     "metallic": 0.0,
+        #     "roughness": 0.15,
+        #     "reflectance": 0.72,
+        #     "transmission": 0.6,
+        #     "thickness": 0.287,
+        #     "absorption_distance": 0.1,
+        #     "absorption_color": np.array([0.82, 0.98, 0.972, 1.0])
+        # },
     }
 
     def __init__(self):
@@ -257,8 +266,12 @@ class AppWindow:
         # space for all its children when open, but only enough for text when
         # closed. This is useful for property pages, so the user can hide sets
         # of properties they rarely use.
-        view_ctrls = gui.CollapsableVert("View controls", 0.25 * em,
-                                         gui.Margins(em, 0, 0, 0))
+
+        _setting_tabs = gui.TabControl()
+
+        # view_ctrls = gui.CollapsableVert("View controls", 0.25 * em,
+        #                                  gui.Margins(em, 0, 0, 0))
+        view_ctrls = gui.Vert()
 
         self._arcball_button = gui.Button("Arcball")
         self._arcball_button.horizontal_padding_em = 0.5
@@ -300,10 +313,21 @@ class AppWindow:
         h.add_stretch()
         view_ctrls.add_child(h)
 
-        self._show_skybox = gui.Checkbox("Show skymap")
+        self._show_skybox = gui.Checkbox("skymap")
         self._show_skybox.set_on_checked(self._on_show_skybox)
-        view_ctrls.add_fixed(separation_height)
-        view_ctrls.add_child(self._show_skybox)
+        
+        self._show_axes = gui.Checkbox("axes")
+        self._show_axes.set_on_checked(self._on_show_axes)
+        # view_ctrls.add_fixed(separation_height)
+        self._show_ground_plane = gui.Checkbox("ground")
+        self._show_ground_plane.set_on_checked(self._on_show_ground_plane)
+        # view_ctrls.add_fixed(separation_height)
+        h = gui.Horiz(0.25 * em)
+        h.add_child(self._show_skybox)
+        h.add_child(self._show_axes)
+        h.add_child(self._show_ground_plane)
+        view_ctrls.add_child(h)
+        h.add_fixed(separation_height)
 
         self._bg_color = gui.ColorEdit()
         self._bg_color.set_on_value_changed(self._on_bg_color)
@@ -313,15 +337,6 @@ class AppWindow:
         grid.add_child(self._bg_color)
         view_ctrls.add_child(grid)
 
-        self._show_axes = gui.Checkbox("Show axes")
-        self._show_axes.set_on_checked(self._on_show_axes)
-        # view_ctrls.add_fixed(separation_height)
-        view_ctrls.add_child(self._show_axes)
-
-        self._show_ground_plane = gui.Checkbox("Show ground")
-        self._show_ground_plane.set_on_checked(self._on_show_ground_plane)
-        # view_ctrls.add_fixed(separation_height)
-        view_ctrls.add_child(self._show_ground_plane)
         
         self._profiles = gui.Combobox()
         for name in sorted(Settings.LIGHTING_PROFILES.keys()):
@@ -331,12 +346,15 @@ class AppWindow:
         view_ctrls.add_fixed(separation_height)
         view_ctrls.add_child(gui.Label("Lighting profiles"))
         view_ctrls.add_child(self._profiles)
-        self._settings_panel.add_fixed(separation_height)
-        self._settings_panel.add_child(view_ctrls)
+        # self._settings_panel.add_fixed(separation_height)
+        _setting_tabs.add_tab('view_ctrls', view_ctrls)
+        # self._settings_panel.add_child(view_ctrls)
 
-        advanced = gui.CollapsableVert("Advanced lighting", 0,
-                                       gui.Margins(em, 0, 0, 0))
-        advanced.set_is_open(False)
+        # advanced = gui.CollapsableVert("Advanced lighting", 0,
+        #                                gui.Margins(em, 0, 0, 0))
+        # advanced.set_is_open(False)
+        advanced = gui.Vert()
+
 
         self._use_ibl = gui.Checkbox("HDR map")
         self._use_ibl.set_on_checked(self._on_use_ibl)
@@ -385,11 +403,13 @@ class AppWindow:
         advanced.add_child(gui.Label("Sun (Directional light)"))
         advanced.add_child(grid)
 
-        self._settings_panel.add_fixed(separation_height)
-        self._settings_panel.add_child(advanced)
+        # self._settings_panel.add_fixed(separation_height)
+        _setting_tabs.add_tab('Lighting', advanced)
+        # self._settings_panel.add_child(advanced)
 
-        material_settings = gui.CollapsableVert("Material settings", 0,
-                                                gui.Margins(em, 0, 0, 0))
+        # material_settings = gui.CollapsableVert("Material settings", 0,
+        #                                         gui.Margins(em, 0, 0, 0))
+        material_settings = gui.Vert()
 
         self._shader = gui.Combobox()
         self._shader.add_item(AppWindow.MATERIAL_NAMES[0])
@@ -419,8 +439,10 @@ class AppWindow:
         grid.add_child(self._point_size)
         material_settings.add_child(grid)
 
-        self._settings_panel.add_fixed(separation_height)
-        self._settings_panel.add_child(material_settings)
+        # self._settings_panel.add_fixed(separation_height)
+        _setting_tabs.add_tab('Material', material_settings)
+        self._settings_panel.add_child(_setting_tabs)
+        # self._settings_panel.add_child(material_settings)
         # ----
 
         # Normally our user interface can be children of all one layout (usually

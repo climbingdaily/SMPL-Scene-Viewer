@@ -214,18 +214,18 @@ class o3dvis():
         ground_plane.paint_uniform_color((1, 1, 1))
         ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
         
-        # self.vis = o3d.visualization.VisualizerWithKeyCallback()
-        self.vis = o3d.visualization.Visualizer()
-        # self.vis.register_key_callback(ord(" "), pause_callback)
-        # self.vis.register_key_callback(ord("Q"), destroy_callback)
-        # # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
-        # self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
-        # # self.vis.register_key_callback(ord("T"), read_dir_traj)
-        # # self.vis.register_key_callback(ord("F"), stream_callback)
-        # self.vis.register_key_callback(ord("F"), save_imgs)
-        # # self.vis.register_key_callback(ord(","), set_view)
-        # self.vis.register_key_callback(ord("N"), press_no)
-        # self.vis.register_key_callback(ord("Y"), press_yes)
+        self.vis = o3d.visualization.VisualizerWithKeyCallback()
+        # self.vis = o3d.visualization.Visualizer()
+        self.vis.register_key_callback(ord(" "), pause_callback)
+        self.vis.register_key_callback(ord("Q"), destroy_callback)
+        # self.vis.register_key_callback(ord("D"), remove_scene_geometry)
+        self.vis.register_key_callback(ord("R"), o3d_callback_rotate)
+        # self.vis.register_key_callback(ord("T"), read_dir_traj)
+        # self.vis.register_key_callback(ord("F"), stream_callback)
+        self.vis.register_key_callback(ord("F"), save_imgs)
+        # self.vis.register_key_callback(ord(","), set_view)
+        self.vis.register_key_callback(ord("N"), press_no)
+        self.vis.register_key_callback(ord("Y"), press_yes)
         self.vis.create_window(window_name=window_name, width=width, height=height)
 
     def get_camera(self):
@@ -254,7 +254,10 @@ class o3dvis():
             self.vis.update_renderer()
             cv2.waitKey(key)
             if Keyword.DESTROY:
-                images_to_video(self.out_dir, delete=True)
+                try:
+                    images_to_video(self.out_dir, delete=True)
+                except:
+                    pass
                 self.vis.destroy_window()
             if not Keyword.PAUSE:
                 break

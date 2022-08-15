@@ -16,8 +16,7 @@ import numpy as np
 import configargparse
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
-# from util import o3dvis
-from test_vis.non_blocking import MultiWinApp as o3dvis
+from util import o3dvis
 import matplotlib.pyplot as plt
 import torch
 import os

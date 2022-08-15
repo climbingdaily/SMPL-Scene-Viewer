@@ -57,7 +57,7 @@ class Menu(GUI_BASE):
         em = self.window.theme.font_size
         dlg = gui.Dialog("Warning")
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label("[Warning]: Please load the scene first"))
+        dlg_layout.add_child(gui.Label("[Warning]: Please load the human data"))
         ok = gui.Button("OK")
         ok.set_on_clicked(self._on_about_ok)
         h = gui.Horiz()
