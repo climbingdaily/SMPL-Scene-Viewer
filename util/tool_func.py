@@ -20,6 +20,7 @@ import time
 def images_to_video(img_dir, filename=None, delete=False):
     if filename is None:
         filename = os.path.basename(img_dir) + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+
     video_path = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.mp4')
     video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
 

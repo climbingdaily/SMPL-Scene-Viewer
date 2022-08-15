@@ -4,7 +4,7 @@ import open3d.visualization.gui as gui
 import sys
 sys.path.append('.')
 sys.path.append('..')
-from menu import Menu
+from .menu import Menu
 
 class Setting_panal(Menu):
 
@@ -12,6 +12,7 @@ class Setting_panal(Menu):
     FRAME = 0
     PAUSE = False
     POV = 'first'
+    RENDER = False
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
@@ -49,8 +50,6 @@ class Setting_panal(Menu):
 
 
         tab2 = gui.Vert()
-        # tab2.add_child(gui.Label("No plugins detected"))
-        
         box = gui.Checkbox('First person view')
         box.set_on_checked(self._on_FPV)
         box.checked = True
@@ -61,8 +60,16 @@ class Setting_panal(Menu):
         # tab2.add_stretch()
         tab2.add_child(box)
 
+
+        tab3 = gui.Vert()
+        box = gui.Checkbox('Auto Render')
+        box.set_on_checked(self.change_render_states)
+        # box.checked = True
+        tab3.add_child(box)
+
         tabs.add_tab("Data", tab1)
         tabs.add_tab("Cameras", tab2)
+        tabs.add_tab("Render Option", tab3)
 
         collapse.add_child(prog_layout)
         collapse.add_child(play_btn)
@@ -76,6 +83,18 @@ class Setting_panal(Menu):
         Setting_panal.FREE_VIEW = show
         print(show)
         
+    def change_render_states(self, render):
+        Setting_panal.RENDER = render
+
+    def _set_slider_value(self, value):
+        self.slider_bar.int_value = value
+        
+    def _get_slider_value(self):
+        return self.slider_bar.int_value
+        
+    def _set_slider_limit(self, min, max):
+        self.slider_bar.set_limits(min, max)
+
     def _on_FPV(self, show):
         Setting_panal.POV = 'first' if show else 'second'
         print(show)
@@ -118,18 +137,24 @@ def creat_plane():
     # ground_plane.rotate(rotate_180)
     ground_plane.translate((-25.0, -25, -0.01))
     ground_plane.paint_uniform_color((1, 1, 1))
-    # ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
+    ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
 
     # Material to make ground plane more interesting - a rough piece of glass
-    # mat_ground = vis.Material("defaultLitSSR")
-    # mat_ground.scalar_properties['roughness'] = 0.15
-    # mat_ground.scalar_properties['reflectance'] = 0.72
-    # mat_ground.scalar_properties['transmission'] = 0.6
-    # mat_ground.scalar_properties['thickness'] = 0.3
-    # mat_ground.scalar_properties['absorption_distance'] = 0.1
-    # mat_ground.vector_properties['absorption_color'] = np.array(
-    #     [0.82, 0.98, 0.972, 1.0])
-    
+    mat_ground = vis.Material("defaultLit")
+    mat_ground.scalar_properties['roughness'] = 0.15
+    mat_ground.scalar_properties['reflectance'] = 0.72
+    mat_ground.scalar_properties['transmission'] = 0.6
+    mat_ground.scalar_properties['thickness'] = 0.3
+    mat_ground.scalar_properties['absorption_distance'] = 0.1
+    mat_ground.vector_properties['absorption_color'] = np.array(
+        [0.82, 0.98, 0.972, 1.0])
+    mat_ground.texture_maps['albedo'] = o3d.t.io.read_image(
+        "demo_scene_assets/WoodFloor050_Color.jpg")
+    mat_ground.texture_maps['roughness'] = o3d.t.io.read_image(
+        "demo_scene_assets/WoodFloor050_Roughness.png")
+    mat_ground.texture_maps['normal'] = o3d.t.io.read_image(
+        "demo_scene_assets/WoodFloor050_NormaDX.jpg")
+    ground_plane.material = mat_ground
     return ground_plane
 
 def main():

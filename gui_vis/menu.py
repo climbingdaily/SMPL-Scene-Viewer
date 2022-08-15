@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation as R
 sys.path.append('.')
 sys.path.append('..')
 
-from base_gui import AppWindow as GUI_BASE
+from .base_gui import AppWindow as GUI_BASE
 
 class Menu(GUI_BASE):
     MENU_SCENE = 31
