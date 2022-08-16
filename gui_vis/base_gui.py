@@ -32,6 +32,7 @@ import open3d.visualization.rendering as rendering
 import os
 import platform
 import sys
+import cv2
 
 isMacOS = (platform.system() == "Darwin")
 
@@ -826,12 +827,13 @@ class AppWindow:
     def export_image(self, path, width, height):
 
         def on_image(image):
-            img = image
-
+            # img = image
+            img = cv2.resize(np.asarray(image), (width, height))
             quality = 9  # png
             if path.endswith(".jpg"):
                 quality = 100
-            o3d.io.write_image(path, img, quality)
+            # o3d.io.write_image(path, img, quality)
+            cv2.imwrite(path, img[..., [2,1,0]])
 
         self._scene.scene.scene.render_to_image(on_image)
 

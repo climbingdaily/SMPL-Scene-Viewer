@@ -127,21 +127,21 @@ class Setting_panal(Menu):
         self.window.add_child(info)
         return info
 
-def creat_plane():
+def creat_plane(lenght = 6, size_x = 24, size_y = 24, material = 'Tiles074'):
     import open3d.visualization as vis
 
     ground_plane = o3d.geometry.TriangleMesh.create_box(
-        50.0, 50, 0.01, create_uv_map=True, map_texture_to_each_face=True)
+        lenght, lenght, 0.01, create_uv_map=True, map_texture_to_each_face=True)
     ground_plane.compute_triangle_normals()
     # rotate_180 = o3d.geometry.get_rotation_matrix_from_xyz((-np.pi, 0, 0))
     # ground_plane.rotate(rotate_180)
-    ground_plane.translate((-25.0, -25, -0.01))
+    ground_plane.translate((-lenght/2, -lenght/2, -0.01))
     ground_plane.paint_uniform_color((1, 1, 1))
     ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
 
     # Material to make ground plane more interesting - a rough piece of glass
     mat_ground = vis.Material("defaultLit")
-    mat_ground.scalar_properties['roughness'] = 0.15
+    mat_ground.scalar_properties['roughness'] = 0.1
     mat_ground.scalar_properties['reflectance'] = 0.72
     mat_ground.scalar_properties['transmission'] = 0.6
     mat_ground.scalar_properties['thickness'] = 0.3
@@ -149,13 +149,25 @@ def creat_plane():
     mat_ground.vector_properties['absorption_color'] = np.array(
         [0.82, 0.98, 0.972, 1.0])
     mat_ground.texture_maps['albedo'] = o3d.t.io.read_image(
-        "demo_scene_assets/WoodFloor050_Color.jpg")
+        f"demo_scene_assets/{material}_Color.jpg")
     mat_ground.texture_maps['roughness'] = o3d.t.io.read_image(
-        "demo_scene_assets/WoodFloor050_Roughness.png")
+        f"demo_scene_assets/{material}_Roughness.png")
     mat_ground.texture_maps['normal'] = o3d.t.io.read_image(
-        "demo_scene_assets/WoodFloor050_NormaDX.jpg")
+        f"demo_scene_assets/{material}_NormaDX.jpg")
     ground_plane.material = mat_ground
-    return ground_plane
+
+    planes = []
+    num_x = size_x//lenght
+    num_y = size_y//lenght
+    for i in range(-(num_x//2), (num_x+1)//2):
+        for j in range(-(num_y//2), (num_y+1)//2):
+
+            g = ground_plane.clone()
+            g.material = mat_ground
+
+            g.translate((i * lenght + (num_x+1) % 2 * lenght/2, j * lenght + (num_y+1) % 2 * lenght/2, 0))
+            planes.append(g)
+    return planes
 
 def main():
     gui.Application.instance.initialize()
