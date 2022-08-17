@@ -191,6 +191,7 @@ class o3dvis(base_gui):
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
+                # geometry.orient_normals_towards_camera_location(np.array([0, 5, 5]))
         except:
             try:
                 if not geometry.has_triangle_normals():
