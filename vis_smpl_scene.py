@@ -130,16 +130,16 @@ def load_vis_data(humans, start=0, end=-1):
     
     f_vert += np.expand_dims(trans.astype(np.float32), 1)
 
-    # vis_data['humans']['First pose'] = f_vert[start: end]
-    # print(f'[SMPL MODEL] First person loaded')
+    vis_data['humans']['First pose'] = f_vert[start: end]
+    print(f'[SMPL MODEL] First person loaded')
 
     load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
 
     if 'second_person' in humans:
         second_person = humans['second_person']    
 
-        # load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
-        #                 'trans', 'mocap_trans', info='Second')
+        load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
+                        'trans', 'mocap_trans', info='Second')
 
         load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
                         'opt_trans', info='Second')

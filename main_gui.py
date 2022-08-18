@@ -43,8 +43,9 @@ class o3dvis(base_gui):
         self.Human_data = HUMAN_DATA(is_remote)
         self.is_done = False
         self.data_names = {}
+        self.archive_data = []
         for i, plane in enumerate(creat_plane()):
-            self.add_geometry(plane, name=f'ground_{i}')
+            self.add_geometry(plane, name=f'ground_{i}', archive=True)
 
     def load_scene(self, scene_path):
         self.window.close_dialog()
@@ -180,7 +181,7 @@ class o3dvis(base_gui):
         # for g in smpl_geometries:
         #     self.remove_geometry(g)
 
-    def add_geometry(self, geometry, name=None, mat=None, reset_bounding_box=True):
+    def add_geometry(self, geometry, name=None, mat=None, reset_bounding_box=True, archive=False):
         if mat is None:
             mat =self.settings.material
         if name is None:
@@ -211,17 +212,21 @@ class o3dvis(base_gui):
         geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
         geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
 
-        if name not in self.data_names.keys():
+        if name not in self.data_names.keys() and not archive:
             box = gui.Checkbox(name)
             box.set_on_checked(self._on_show_geometry)
             box.checked = True
             self.check_boxes.add_child(box)
             self.data_names[name] = box
 
+        elif archive:
+            self.archive_data.append(name)
+            self._scene.scene.add_geometry(name, geometry, mat)
+
         elif self._scene.scene.has_geometry(name):
             self._scene.scene.remove_geometry(name)
-
-        if self.data_names[name].checked:
+        
+        if name in self.data_names and self.data_names[name].checked:
             self._scene.scene.add_geometry(name, geometry, mat)
         
         if reset_bounding_box:
@@ -234,6 +239,8 @@ class o3dvis(base_gui):
     def _on_show_geometry(self, show):
         for name, box in self.data_names.items():
             self._scene.scene.show_geometry(name, box.checked)
+        for name in self.archive_data:
+            self._scene.scene.show_geometry(name, show)
         # self._apply_settings()
 
     def update_geometry(self, geometry, name):

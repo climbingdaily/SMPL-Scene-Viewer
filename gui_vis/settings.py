@@ -43,6 +43,11 @@ class Setting_panal(Menu):
         tab1 = gui.Vert()
 
         try:
+            box = gui.Checkbox('Archive')
+            box.set_on_checked(self._on_show_geometry)
+            box.checked = True
+            tab1.add_child(box)
+
             for box in checkboxes:
                 tab1.add_child(box)
         except:
