@@ -23,6 +23,7 @@ class Setting_panal(Menu):
     POV = 'first'
     RENDER = False
     CLICKED = False
+    PLAY_ONCE = False
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)

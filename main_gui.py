@@ -100,62 +100,44 @@ class o3dvis(base_gui):
             video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
             self.reset_settings()
+            
             while self._get_slider_value() < total_frames:
-            # for i in range(total_frames):
-                i = self._get_slider_value()
-                
-                _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
-
                 time.sleep(0.1)
-                if i in indexes:
-                    index = indexes.index(i)
-                    pointcloud.points = o3d.utility.Vector3dVector(points[index])
-                else:
-                    index = -1
-                    pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+                def fetch_meshs(ind):
 
-                pointcloud.normals = o3d.utility.Vector3dVector()
-                pointcloud.paint_uniform_color(POSE_COLOR['points'])
+                    if ind in indexes:
+                        index = indexes.index(ind)
+                        pointcloud.points = o3d.utility.Vector3dVector(points[index])
+                    else:
+                        index = -1
+                        pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
 
-                for idx, smpl in enumerate(smpl_geometries):
-                    # smpl = o3d.geometry.TriangleMesh()
-                    key = keys[idx]
-                    if 'pred' in key.lower():
-                        if index >= 0:
-                            smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
+                    pointcloud.normals = o3d.utility.Vector3dVector()
+                    pointcloud.paint_uniform_color(POSE_COLOR['points'])
+
+                    for idx, smpl in enumerate(smpl_geometries):
+                        # smpl = o3d.geometry.TriangleMesh()
+                        key = keys[idx]
+                        if 'pred' in key.lower():
+                            if index >= 0:
+                                smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
+                                smpl.vertex_normals = o3d.utility.Vector3dVector()
+                                smpl.triangle_normals = o3d.utility.Vector3dVector()
+                                smpl.compute_vertex_normals()
+                                if len(smpl.vertex_colors) == 0:
+                                    smpl.paint_uniform_color(POSE_COLOR[key])
+                            else:
+                                smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
+                        elif 'first' in key.lower() or 'second' in key.lower():
+                            smpl.vertices = o3d.utility.Vector3dVector(human_data[key][ind])
                             smpl.vertex_normals = o3d.utility.Vector3dVector()
                             smpl.triangle_normals = o3d.utility.Vector3dVector()
                             smpl.compute_vertex_normals()
                             if len(smpl.vertex_colors) == 0:
                                 smpl.paint_uniform_color(POSE_COLOR[key])
-                        else:
-                            smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
-                    elif 'first' in key.lower() or 'second' in key.lower():
-                        smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
-                        smpl.vertex_normals = o3d.utility.Vector3dVector()
-                        smpl.triangle_normals = o3d.utility.Vector3dVector()
-                        smpl.compute_vertex_normals()
-                        if len(smpl.vertex_colors) == 0:
-                            smpl.paint_uniform_color(POSE_COLOR[key])
-                    else :
-                        print('Edit your key in human_data here!')
-
-                if extrinsics is not None:
-                    # vis.set_view(view_list[i])
-                    if i > 0 and o3dvis.FREE_VIEW:
-                        camera_pose = self.get_camera()
-                        relative_trans = -extrinsics[i][:3, :3].T @ extrinsics[i][:3, 3] + extrinsics[i-1][:3, :3].T @ extrinsics[i-1][:3, 3]
-                        
-                        relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
-
-                        camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
-                        camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
-                        self.init_camera(camera_pose)
-                    else:
-                        self.init_camera(extrinsics[i] @ self.COOR_INIT)   
+                        else :
+                            print('Edit your key in human_data here!')
                 
-
-                        
                 def add_first_cloud():
                     self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
                     for si, smpl in enumerate(smpl_geometries):
@@ -168,22 +150,46 @@ class o3dvis(base_gui):
                         self.update_geometry(smpl, name=keys[si])  
                     if o3dvis.RENDER:
                         self.save_imgs(image_dir)
+                frame_index = self._get_slider_value()
+                fetch_meshs(frame_index)
 
+                self.set_camera(extrinsics, i, o3dvis.POV)
+                
                 if not init_param:
                     init_param = True
                     gui.Application.instance.post_to_main_thread(self.window, add_first_cloud)
                 else:
                     gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
 
-                self.waitKey(5, helps=False)
+                while True:
+                    cv2.waitKey(5)
+                    if o3dvis.PLAY_ONCE:
+                        o3dvis.PLAY_ONCE = False
+                        # o3dvis.PAUSE = True
+                        if frame_index != self._get_slider_value():
+                            frame_index = self._get_slider_value()
+                            fetch_meshs(frame_index)
+                            gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
+                        self.set_camera(extrinsics, frame_index, o3dvis.POV)
+
+                    if not o3dvis.PAUSE:
+                        break
                 
                 self._set_slider_value(i+1)
-
                     
             images_to_video(image_dir, video_name, delete=True)
 
-        # for g in smpl_geometries:
-        #     self.remove_geometry(g)
+    def set_camera(self, extrinsics, ind, pov):
+        _, extrinsics = self.Human_data.get_cameras(pov)
+        if i > 0 and o3dvis.FREE_VIEW:
+            camera_pose = self.get_camera()
+            relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
+            relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
+            camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
+            camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
+            self.init_camera(camera_pose)
+        else:
+            self.init_camera(extrinsics[i] @ self.COOR_INIT)  
 
     def add_geometry(self, geometry, name=None, mat=None, reset_bounding_box=True, archive=False):
         if mat is None:
@@ -277,20 +283,19 @@ class o3dvis(base_gui):
         self.export_image(img_path, 1280, 720)
 
     def action(self):
-        if base_gui.CLICKED:
+        if o3dvis.CLICKED:
             try:
                 i = self._get_slider_value()
                 _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
                 self.init_camera(extrinsics[i] @ self.COOR_INIT) 
             except:
                 self.warning_info('[WARNING] please load human date first')
-            base_gui.CLICKED = False
+            o3dvis.CLICKED = False
 
     def waitKey(self, key=0, helps=False):
         while o3dvis.PAUSE:
             cv2.waitKey(key)
             self.action()
-            pass
     
 def main():
     gui.Application.instance.initialize()
