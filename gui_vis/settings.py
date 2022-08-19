@@ -27,6 +27,7 @@ class Setting_panal(Menu):
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
+        self.archive_data = []
         self.create_checkboxes()
 
     def create_checkboxes(self, collapse=None, checkboxes=None):
@@ -56,7 +57,7 @@ class Setting_panal(Menu):
 
         try:
             box = gui.Checkbox('Archive')
-            box.set_on_checked(self._on_show_geometry)
+            box.set_on_checked(self._on_show_archive_geometry)
             box.checked = True
             tab1.add_child(box)
 
@@ -79,7 +80,7 @@ class Setting_panal(Menu):
 
 
         tab3 = gui.Vert()
-        box = gui.Checkbox('Auto Render')
+        box = gui.Checkbox('Auto Render Image')
         box.set_on_checked(self.change_render_states)
         # box.checked = True
         tab3.add_child(box)
@@ -98,8 +99,12 @@ class Setting_panal(Menu):
 
     def _on_free_view(self, show):
         Setting_panal.FREE_VIEW = show
-        print(show)
+        # print(show)
         
+    def _on_show_archive_geometry(self, show):
+        for name in self.archive_data:
+            self._scene.scene.show_geometry(name, show)
+
     def _add_frame(self):
         self.slider_bar.int_value += 1
         self._on_slider(self.slider_bar.int_value)

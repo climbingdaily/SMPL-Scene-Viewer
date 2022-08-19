@@ -247,7 +247,12 @@ def append_alpha(imtmp):
     return im_RGBA
 
 
-def poses_to_vertices(poses, trans=None, batch_size = 1024):
+def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024):
+
+    if not (np.array(beta) != 0).sum():
+        beta = [ 0.13718624, -0.32368565,  0.06066366,  0.22490674, -0.3380233 ,
+       -0.1569234 ,  0.32280767, -0.00115923, -0.04938826,  0.04286334]
+
     poses = poses.astype(np.float32)
     vertices = np.zeros((0, 6890, 3))
 
@@ -260,8 +265,8 @@ def poses_to_vertices(poses, trans=None, batch_size = 1024):
         ub = (i + 1) * batch_size
 
         cur_n = min(ub - lb, n - lb)
-        cur_vertices = smpl(torch.from_numpy(
-            poses[lb:ub]), torch.zeros((cur_n, 10)))
+        cur_vertices = smpl(torch.from_numpy(poses[lb:ub]), 
+                            torch.FloatTensor(beta)[None, :].repeat(cur_n, 1))
         vertices = np.concatenate((vertices, cur_vertices.cpu().numpy()))
 
     if trans is not None:

@@ -25,7 +25,6 @@ class HUMAN_DATA:
         except:
             print(f'There is no first pose in the data')
 
-
         try:
             second_verts = self.vis_data_list['humans']['Second opt_pose']
             second_pose = humans['second_person']['opt_pose']
