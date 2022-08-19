@@ -6,13 +6,23 @@ sys.path.append('.')
 sys.path.append('..')
 from .menu import Menu
 
+def creat_btn(name, func, color=None):
+    btn = gui.Button(name)
+    btn.vertical_padding_em = 0
+    btn.horizontal_padding_em = 0.5
+    if color is not None:
+        btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
+    btn.set_on_clicked(func)
+    return btn
+
 class Setting_panal(Menu):
 
     FREE_VIEW = False
-    FRAME = 0
+    # FRAME = 0
     PAUSE = False
     POV = 'first'
     RENDER = False
+    CLICKED = False
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
@@ -25,18 +35,19 @@ class Setting_panal(Menu):
             collapse = gui.CollapsableVert("Human data", 0.33 * em,
                                             gui.Margins(em, 0, 0, 0))
 
-        play_btn = gui.Button('Play / Stop')
-        play_btn.vertical_padding_em = 0
-        play_btn.background_color = gui.Color(r=0, b=0, g=0.5)
-        play_btn.set_on_clicked(self.change_pause_status)
-        # self._settings_panel.add_child(play_btn)
+        play_btn = creat_btn('Play / Stop', self.change_pause_status, color = [0, 0, 0.5])
 
         slider = gui.Slider(gui.Slider.INT)
         slider.set_limits(0, 1000)
         slider.set_on_value_changed(self._on_slider)
 
         prog_layout = gui.Horiz()
-        prog_layout.add_child(gui.Label("Frames"))
+        minus_btn = creat_btn('-', self._minus_frame)
+        add_btn = creat_btn('+', self._add_frame)
+
+        # prog_layout.add_child(gui.Label("Frames"))
+        prog_layout.add_child(minus_btn)
+        prog_layout.add_child(add_btn)
         prog_layout.add_child(slider)
 
         tabs = gui.TabControl()
@@ -88,11 +99,21 @@ class Setting_panal(Menu):
         Setting_panal.FREE_VIEW = show
         print(show)
         
+    def _add_frame(self):
+        self.slider_bar.int_value += 1
+        self._set_slider_value()
+        self._on_slider(self.slider_bar.int_value)
+        
+    def _minus_frame(self):
+        if self.slider_bar.int_value > 0:
+            self.slider_bar.int_value -= 1
+            self._on_slider(self.slider_bar.int_value)
+
     def change_render_states(self, render):
         Setting_panal.RENDER = render
 
     def _set_slider_value(self, value):
-        self.slider_bar.int_value = value
+        self.slider_bar.int_value = int(value)
         
     def _get_slider_value(self):
         return self.slider_bar.int_value
@@ -102,7 +123,7 @@ class Setting_panal(Menu):
 
     def _on_FPV(self, show):
         Setting_panal.POV = 'first' if show else 'second'
-        print(show)
+        Setting_panal.CLICKED = True
 
     def change_pause_status(self):
         Setting_panal.PAUSE = not Setting_panal.PAUSE
@@ -112,9 +133,9 @@ class Setting_panal(Menu):
         self.play_btn.background_color = color
 
     def _on_slider(self, value):
-        Setting_panal.FRAME = int(value)
         if not Setting_panal.PAUSE:
             self.change_pause_status()
+        Setting_panal.CLICKED = True
         # print(int(value))
 
     def _add_text(self, visible=False):
@@ -131,48 +152,6 @@ class Setting_panal(Menu):
         self.window.set_on_layout(_on_tex_layout)
         self.window.add_child(info)
         return info
-
-def creat_plane(lenght = 6, size_x = 24, size_y = 24, material = 'Tiles074'):
-    import open3d.visualization as vis
-
-    ground_plane = o3d.geometry.TriangleMesh.create_box(
-        lenght, lenght, 0.01, create_uv_map=True, map_texture_to_each_face=True)
-    ground_plane.compute_triangle_normals()
-    # rotate_180 = o3d.geometry.get_rotation_matrix_from_xyz((-np.pi, 0, 0))
-    # ground_plane.rotate(rotate_180)
-    ground_plane.translate((-lenght/2, -lenght/2, -0.01))
-    ground_plane.paint_uniform_color((1, 1, 1))
-    ground_plane = o3d.t.geometry.TriangleMesh.from_legacy(ground_plane)
-
-    # Material to make ground plane more interesting - a rough piece of glass
-    mat_ground = vis.Material("defaultLit")
-    mat_ground.scalar_properties['roughness'] = 0.1
-    mat_ground.scalar_properties['reflectance'] = 0.72
-    mat_ground.scalar_properties['transmission'] = 0.6
-    mat_ground.scalar_properties['thickness'] = 0.3
-    mat_ground.scalar_properties['absorption_distance'] = 0.1
-    mat_ground.vector_properties['absorption_color'] = np.array(
-        [0.82, 0.98, 0.972, 1.0])
-    mat_ground.texture_maps['albedo'] = o3d.t.io.read_image(
-        f"demo_scene_assets/{material}_Color.jpg")
-    mat_ground.texture_maps['roughness'] = o3d.t.io.read_image(
-        f"demo_scene_assets/{material}_Roughness.png")
-    mat_ground.texture_maps['normal'] = o3d.t.io.read_image(
-        f"demo_scene_assets/{material}_NormaDX.jpg")
-    ground_plane.material = mat_ground
-
-    planes = []
-    num_x = size_x//lenght
-    num_y = size_y//lenght
-    for i in range(-(num_x//2), (num_x+1)//2):
-        for j in range(-(num_y//2), (num_y+1)//2):
-
-            g = ground_plane.clone()
-            g.material = mat_ground
-
-            g.translate((i * lenght + (num_x+1) % 2 * lenght/2, j * lenght + (num_y+1) % 2 * lenght/2, 0))
-            planes.append(g)
-    return planes
 
 def main():
     gui.Application.instance.initialize()

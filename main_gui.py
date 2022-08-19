@@ -23,7 +23,7 @@ import time
 sys.path.append('.')
 sys.path.append('..')
 
-from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_plane
+from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_plane, create_ground, creat_chessboard
 from util import load_scene as load_pts, images_to_video
 from vis_smpl_scene import POSE_COLOR
 from smpl import sample_path
@@ -44,7 +44,7 @@ class o3dvis(base_gui):
         self.is_done = False
         self.data_names = {}
         self.archive_data = []
-        for i, plane in enumerate(creat_plane()):
+        for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
 
     def load_scene(self, scene_path):
@@ -103,7 +103,6 @@ class o3dvis(base_gui):
             while self._get_slider_value() < total_frames:
             # for i in range(total_frames):
                 i = self._get_slider_value()
-                self._set_slider_value(i+1)
                 
                 _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
 
@@ -154,6 +153,8 @@ class o3dvis(base_gui):
                         self.init_camera(camera_pose)
                     else:
                         self.init_camera(extrinsics[i] @ self.COOR_INIT)   
+                
+
                         
                 def add_first_cloud():
                     self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
@@ -175,6 +176,9 @@ class o3dvis(base_gui):
                     gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
 
                 self.waitKey(5, helps=False)
+                
+                self._set_slider_value(i+1)
+
                     
             images_to_video(image_dir, video_name, delete=True)
 
@@ -268,14 +272,24 @@ class o3dvis(base_gui):
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
-        frame = self._scene.frame
         img_path = os.path.join(img_dir, f'{o3dvis.IMG_COUNT:04d}.jpg')
         o3dvis.IMG_COUNT += 1
         self.export_image(img_path, 1280, 720)
 
+    def action(self):
+        if base_gui.CLICKED:
+            try:
+                i = self._get_slider_value()
+                _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
+                self.init_camera(extrinsics[i] @ self.COOR_INIT) 
+            except:
+                self.warning_info('[WARNING] please load human date first')
+            base_gui.CLICKED = False
+
     def waitKey(self, key=0, helps=False):
         while o3dvis.PAUSE:
             cv2.waitKey(key)
+            self.action()
             pass
     
 def main():
