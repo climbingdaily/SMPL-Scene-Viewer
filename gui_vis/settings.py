@@ -23,7 +23,7 @@ class Setting_panal(Menu):
     POV = 'first'
     RENDER = False
     CLICKED = False
-    PLAY_ONCE = False
+    # PLAY_ONCE = False
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
@@ -102,7 +102,6 @@ class Setting_panal(Menu):
         
     def _add_frame(self):
         self.slider_bar.int_value += 1
-        self._set_slider_value()
         self._on_slider(self.slider_bar.int_value)
         
     def _minus_frame(self):
@@ -112,6 +111,10 @@ class Setting_panal(Menu):
 
     def change_render_states(self, render):
         Setting_panal.RENDER = render
+
+    def _clicked(self):
+        Setting_panal.CLICKED = False
+
 
     def _set_slider_value(self, value):
         self.slider_bar.int_value = int(value)

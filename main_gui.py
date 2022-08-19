@@ -150,10 +150,10 @@ class o3dvis(base_gui):
                         self.update_geometry(smpl, name=keys[si])  
                     if o3dvis.RENDER:
                         self.save_imgs(image_dir)
+
                 frame_index = self._get_slider_value()
                 fetch_meshs(frame_index)
-
-                self.set_camera(extrinsics, i, o3dvis.POV)
+                self.set_camera(frame_index, o3dvis.POV)
                 
                 if not init_param:
                     init_param = True
@@ -163,25 +163,25 @@ class o3dvis(base_gui):
 
                 while True:
                     cv2.waitKey(5)
-                    if o3dvis.PLAY_ONCE:
-                        o3dvis.PLAY_ONCE = False
-                        # o3dvis.PAUSE = True
+                    if o3dvis.CLICKED:
                         if frame_index != self._get_slider_value():
                             frame_index = self._get_slider_value()
                             fetch_meshs(frame_index)
                             gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
-                        self.set_camera(extrinsics, frame_index, o3dvis.POV)
+                        self.set_camera(frame_index, o3dvis.POV)
+
+                        self._clicked()
 
                     if not o3dvis.PAUSE:
                         break
                 
-                self._set_slider_value(i+1)
+                self._set_slider_value(frame_index+1)
                     
             images_to_video(image_dir, video_name, delete=True)
 
-    def set_camera(self, extrinsics, ind, pov):
+    def set_camera(self, ind, pov):
         _, extrinsics = self.Human_data.get_cameras(pov)
-        if i > 0 and o3dvis.FREE_VIEW:
+        if ind > 0 and o3dvis.FREE_VIEW:
             camera_pose = self.get_camera()
             relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
             relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
@@ -189,7 +189,7 @@ class o3dvis(base_gui):
             camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
             self.init_camera(camera_pose)
         else:
-            self.init_camera(extrinsics[i] @ self.COOR_INIT)  
+            self.init_camera(extrinsics[ind] @ self.COOR_INIT)  
 
     def add_geometry(self, geometry, name=None, mat=None, reset_bounding_box=True, archive=False):
         if mat is None:
@@ -282,20 +282,8 @@ class o3dvis(base_gui):
         o3dvis.IMG_COUNT += 1
         self.export_image(img_path, 1280, 720)
 
-    def action(self):
-        if o3dvis.CLICKED:
-            try:
-                i = self._get_slider_value()
-                _, extrinsics = self.Human_data.get_cameras(o3dvis.POV)
-                self.init_camera(extrinsics[i] @ self.COOR_INIT) 
-            except:
-                self.warning_info('[WARNING] please load human date first')
-            o3dvis.CLICKED = False
-
     def waitKey(self, key=0, helps=False):
-        while o3dvis.PAUSE:
-            cv2.waitKey(key)
-            self.action()
+        pass
     
 def main():
     gui.Application.instance.initialize()
