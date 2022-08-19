@@ -80,7 +80,7 @@ class Setting_panal(Menu):
 
 
         tab3 = gui.Vert()
-        box = gui.Checkbox('Auto Render')
+        box = gui.Checkbox('Auto Render Image')
         box.set_on_checked(self.change_render_states)
         # box.checked = True
         tab3.add_child(box)

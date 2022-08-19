@@ -101,7 +101,7 @@ class o3dvis(base_gui):
             self.reset_settings()
             
             while self._get_slider_value() < total_frames:
-                time.sleep(0.1)
+                time.sleep(0.05)
                 def fetch_meshs(ind):
 
                     if ind in indexes:

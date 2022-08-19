@@ -49,22 +49,6 @@ def vertices_to_head(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
 
-def load_pred_smpl(file_path, start=0, end=-1, pose='pred_rotmats', trans=None, remote=False):
-    import pickle
-
-    pred_vertices = np.zeros((0, 6890, 3))
-    load_data_class = load_data_remote(remote)
-    humans = load_data_class.load_pkl(file_path)
-
-    for k,v in humans.items():    
-        pred_pose = v[pose]
-        if end == -1:
-            end = pred_pose.shape[0]
-        pred_pose = pred_pose[start:end]
-        pred_vertices = np.concatenate((pred_vertices, poses_to_vertices(pred_pose, trans)))
-
-    return pred_vertices
-
 def get_head_global_rots(pose):
     if pose.shape[1] == 72:
         pose = pose.reshape(-1, 24, 3)
@@ -79,11 +63,12 @@ def get_head_global_rots(pose):
 def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
+        beta = human_data['beta'].copy()
         if tran_str in human_data:
             trans = human_data[tran_str].copy()
         else:
             trans = human_data[trans_str2].copy()
-        vert = poses_to_vertices(pose, trans)
+        vert = poses_to_vertices(pose, trans, beta=beta)
         verts_list[f'{info} {pose_str}'] = vert[start:end]
         print(f'[SMPL MODEL] {info} {pose_str} loaded')
 
@@ -105,13 +90,14 @@ def load_vis_data(humans, start=0, end=-1):
 
     first_person = humans['first_person']
     pose = first_person['pose'].copy()
+    beta = first_person['beta'].copy()
     end = pose.shape[0] if end <= 0 else end 
     if 'mocap_trans' in first_person:
         trans = first_person['mocap_trans'].copy()
     else:
         trans = first_person['trans'].copy()
 
-    f_vert = poses_to_vertices(pose)
+    f_vert = poses_to_vertices(pose, beta=beta)
 
     # load first person
     if 'lidar_traj' in first_person:
@@ -159,7 +145,7 @@ def load_vis_data(humans, start=0, end=-1):
                 else:
                     trans = second_person['trans'].copy()
                 local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
-                vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx])
+                vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
                 print(f'[SMPL MODEL] Predicted person loaded')
 
     return vis_data
@@ -215,6 +201,7 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
             index = -1
             pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
 
+        pointcloud.normals = o3d.utility.Vector3dVector()
         pointcloud.paint_uniform_color(POSE_COLOR['points'])
 
         for idx, smpl in enumerate(smpl_geometries):
@@ -231,6 +218,8 @@ def vis_pt_and_smpl(vis, vis_data, extrinsics=None, video_name=None, freeviewpoi
             elif 'second' in key.lower():
                 smpl.vertices = o3d.utility.Vector3dVector(human_data[key][i])
                 smpl.paint_uniform_color(POSE_COLOR[key])
+            
+            smpl.vertex_normals = o3d.utility.Vector3dVector()
             smpl.compute_vertex_normals()
 
         if extrinsics is not None:
