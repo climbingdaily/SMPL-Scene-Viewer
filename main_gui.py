@@ -31,7 +31,7 @@ from smpl import sample_path
 class o3dvis(base_gui):
     # PAUSE = False
     IMG_COUNT = 0
-    SCALE = 1.0
+    SCALE = 5
 
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
@@ -43,7 +43,6 @@ class o3dvis(base_gui):
         self.Human_data = HUMAN_DATA(is_remote)
         self.is_done = False
         self.data_names = {}
-        self.archive_data = []
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
 
@@ -249,12 +248,9 @@ class o3dvis(base_gui):
     def _on_show_geometry(self, show):
         for name, box in self.data_names.items():
             self._scene.scene.show_geometry(name, box.checked)
-        for name in self.archive_data:
-            self._scene.scene.show_geometry(name, show)
         # self._apply_settings()
 
     def update_geometry(self, geometry, name):
-        # self.remove_geometry(name)
         self.add_geometry(geometry, name, reset_bounding_box=False)
 
     def remove_geometry(self, name):
