@@ -15,7 +15,6 @@
 import numpy as np
 import configargparse
 import open3d as o3d
-from scipy.spatial.transform import Rotation as R
 from util import o3dvis
 import matplotlib.pyplot as plt
 import torch
@@ -23,7 +22,7 @@ import os
 import time
 
 from smpl import SMPL, poses_to_vertices
-from util import load_data_remote, generate_views, load_scene, images_to_video
+from util import load_data_remote, generate_views, load_scene, images_to_video, get_head_global_rots
 
 view = {
 	"trajectory" : 
@@ -48,17 +47,6 @@ for i, color in enumerate(POSE_KEY):
 def vertices_to_head(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
-
-def get_head_global_rots(pose):
-    if pose.shape[1] == 72:
-        pose = pose.reshape(-1, 24, 3)
-
-    head_parents = [0, 3, 6, 9, 12, 15]
-    head_rots = np.eye(3)
-    for r in head_parents[::-1]:
-        head_rots = R.from_rotvec(pose[:, r]).as_matrix() @ head_rots
-    head_rots = head_rots @ np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]]).T
-    return head_rots
 
 def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
     if pose_str in human_data:
@@ -117,7 +105,7 @@ def load_vis_data(humans, start=0, end=-1):
     f_vert += np.expand_dims(trans.astype(np.float32), 1)
 
     vis_data['humans']['First pose'] = f_vert[start: end]
-    print(f'[SMPL MODEL] First person loaded')
+    print(f'[SMPL MODEL] First pose loaded')
 
     load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
 

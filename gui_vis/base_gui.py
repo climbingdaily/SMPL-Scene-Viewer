@@ -243,6 +243,10 @@ class AppWindow:
         self._scene.scene = rendering.Open3DScene(w.renderer)
         self._scene.set_on_sun_direction_changed(self._on_sun_dir)
 
+        # geometry type list
+        self.point_list = []
+        self.mesh_list = []
+
         # ---- Settings panel ----
         # Rather than specifying sizes in pixels, which may vary in size based
         # on the monitor, especially on macOS which has 220 dpi monitors, use
@@ -442,12 +446,12 @@ class AppWindow:
         self.mesh_box.set_on_checked(empty)
         self.mesh_box.checked = True
         
-        grid = gui.VGrid(2, 0.25 * em)
-        grid.add_child(gui.Label("Update geometry type"))
-        grid.add_child(gui.Label(" "))
-        grid.add_child(self.point_box)
+        material_settings.add_child(gui.Label("Update geometry type"))
+        grid = gui.Horiz(0.25 * em)
         grid.add_child(self.mesh_box)
+        grid.add_child(self.point_box)
         material_settings.add_child(grid)
+        material_settings.add_fixed(separation_height)
 
         grid = gui.VGrid(2, 0.25 * em)
         grid.add_child(gui.Label("Type"))
@@ -566,12 +570,17 @@ class AppWindow:
         self._scene.scene.scene.enable_sun_light(self.settings.use_sun)
 
         if self.settings.apply_material:
-            self._scene.scene.update_material(self.settings.material)
+            # self._scene.scene.update_material(self.settings.material)
+            # update material for point cloud
+            if self.point_box.checked:
+                for name in self.point_list:
+                    self._scene.scene.modify_geometry_material(name, self.settings.material)
+            # update material for mesh
+            if self.mesh_box.checked:
+                for name in self.mesh_list:
+                    self._scene.scene.modify_geometry_material(name, self.settings.material)
             self.settings.apply_material = False
 
-        # update material for point cloud
-
-        # update material for mesh
 
         self._bg_color.color_value = self.settings.bg_color
         self._show_skybox.checked = self.settings.show_skybox
@@ -802,7 +811,7 @@ class AppWindow:
     def _on_about_ok(self):
         self.window.close_dialog()
 
-    def load(self, path):
+    def load(self, path, name='__model__'):
         # self._scene.scene.clear_geometry()
 
         geometry = None
@@ -822,6 +831,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
+                self.mesh_list.append(name)
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -841,6 +851,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
+                self.point_list.append(name)
             else:
                 print("[WARNING] Failed to read points", path)
 
@@ -848,7 +859,7 @@ class AppWindow:
             geometry.transform(self.COOR_INIT)
 
             try:
-                self._scene.scene.add_geometry("__model__", geometry,
+                self._scene.scene.add_geometry(name, geometry,
                                                self.settings.material)
                 bounds = geometry.get_axis_aligned_bounding_box()
                 self._scene.setup_camera(60, bounds, bounds.get_center())

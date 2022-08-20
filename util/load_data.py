@@ -167,9 +167,12 @@ def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
         print('No scene data!!!')
         return None
 
-    vis.set_view(view)
-    vis.add_geometry(scene)
-
+    try:
+        vis.set_view(view)
+        vis.add_geometry(scene)
+    except Exception as e:
+        print(e)
+        
     return scene
 
 

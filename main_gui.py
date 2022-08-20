@@ -23,7 +23,7 @@ import time
 sys.path.append('.')
 sys.path.append('..')
 
-from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_plane, create_ground, creat_chessboard
+from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_chessboard
 from util import load_scene as load_pts, images_to_video
 from vis_smpl_scene import POSE_COLOR
 from smpl import sample_path
@@ -36,9 +36,6 @@ class o3dvis(base_gui):
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
         self.COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-        self.intrinsic = np.array([[623.53829072,   0.        , 639.5       ],
-                                    [  0.        , 623.53829072, 359.5       ],
-                                    [  0.        ,   0.        ,   1.        ]])
         # self._scene.scene.view.set_shadowing(1)
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
@@ -46,6 +43,17 @@ class o3dvis(base_gui):
         self.data_names = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
+        
+
+    def load_data(self, path):
+        self.window.close_dialog()
+        if not os.path.isfile(path):
+            print(f'{path} is not a valid file')
+            return
+        name = os.path.basename(path).split('.')[0]
+        # self._on_load_dialog_done(scene_path)
+        geometry = load_pts(None, pcd_path=path)
+        self.add_geometry(geometry, name=name)
 
     def load_scene(self, scene_path):
         self.window.close_dialog()
@@ -58,7 +66,11 @@ class o3dvis(base_gui):
     def _on_load_smpl_done(self, filename):
         self.window.close_dialog()
         self.Human_data.load(filename) 
-        self.Human_data.set_cameras(offset_center = -0.3)
+
+        cams = self.Human_data.set_cameras(offset_center = -0.3)
+        for cam in cams:
+            self.camera_setting.add_item(cam)
+        self._on_select_camera(cams[0], 0)
 
         if self.Human_data:
             threading.Thread(target=self.update_thread).start()
@@ -188,7 +200,7 @@ class o3dvis(base_gui):
                 self.change_pause_status()
 
     def set_camera(self, ind, pov):
-        _, extrinsics = self.Human_data.get_cameras(pov)
+        _, extrinsics = self.Human_data.get_extrinsic(pov)
         if ind > 0 and o3dvis.FREE_VIEW:
             camera_pose = self.get_camera()
             relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
@@ -207,13 +219,16 @@ class o3dvis(base_gui):
             mat =self.settings.material
         if name is None:
             name = self.scene_name
-
+        geometry_type = ''
         try: 
             if geometry.has_points():
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
-                # geometry.orient_normals_towards_camera_location(np.array([0, 5, 5]))
+                if name not in self.point_list:
+                    self.point_list.append(name)
+                geometry_type = 'point'
+
         except:
             try:
                 if not geometry.has_triangle_normals():
@@ -224,25 +239,28 @@ class o3dvis(base_gui):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-
+                if name not in self.mesh_list:
+                    self.mesh_list.append(name)
+                geometry_type = 'mesh'
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
-            except:
+            except Exception as e:
+                print(e)
                 print("[Info]", "not pointcloud or mehs.")
 
         geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
         geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
 
-        if name not in self.data_names.keys() and not archive:
+        if archive:
+            self.archive_data.append(name)
+            self._scene.scene.add_geometry(name, geometry, mat)
+
+        elif name not in self.data_names.keys():
             box = gui.Checkbox(name)
             box.set_on_checked(self._on_show_geometry)
             box.checked = True
             self.check_boxes.add_child(box)
             self.data_names[name] = box
-
-        elif archive:
-            self.archive_data.append(name)
-            self._scene.scene.add_geometry(name, geometry, mat)
 
         elif self._scene.scene.has_geometry(name):
             self._scene.scene.remove_geometry(name)
@@ -250,8 +268,13 @@ class o3dvis(base_gui):
         if name in self.data_names and self.data_names[name].checked:
             if freeze:
                 ss = time.time()
-                self.freeze_data.append(f'{name}_freeze_{ss}')
-                self._scene.scene.add_geometry(f'{name}_freeze_{ss}', geometry, mat)
+                fname = f'{name}_freeze_{ss}'
+                self.freeze_data.append(fname)
+                self._scene.scene.add_geometry(fname, geometry, mat)
+                if geometry_type == 'point':
+                    self.point_list.append(fname)
+                elif geometry_type == 'mesh':
+                    self.mesh_list.append(fname)
             else:
                 self._scene.scene.add_geometry(name, geometry, mat)
         
@@ -286,7 +309,13 @@ class o3dvis(base_gui):
     def init_camera(self, extrinsic_matrix): 
         bounds = self._scene.scene.bounding_box
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
-        self._scene.setup_camera(self.intrinsic, extrinsic_matrix, 1280, 720, bounds)
+        
+        x = self.window.content_rect.width
+        y = self.window.content_rect.height
+        self.intrinsic = np.array([[x/2,   0.        , x/2       ],
+                                    [  0.        , x/2, y/2       ],
+                                    [  0.        ,   0.        ,   1.        ]])
+        self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
@@ -302,7 +331,8 @@ def main():
     gui.Application.instance.initialize()
 
     w = o3dvis(1280, 720)
-
+    w.load_data(sample_path)
+    
     gui.Application.instance.run()
 
 if __name__ == "__main__":

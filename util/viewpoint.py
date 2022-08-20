@@ -35,6 +35,27 @@ def make_cloud_in_vis_center(point_cloud):
 
     return rt, center
 
+def get_head_global_rots(pose, parents=[0, 3, 6, 9, 12, 15]):
+    """
+    It takes a pose (a 3D array of shape (n_frames, 24, 3)) and returns a 3D array of shape (n_frames,
+    3, 3) where each 3x3 matrix is the rotation matrix of the head in the global coordinate system
+    
+    Args:
+      pose: the pose to be transformed
+      parents: The indices of the parent joints.
+    
+    Returns:
+      The global rotation matrix of the head.
+    """
+    if pose.shape[1] == 72:
+        pose = pose.reshape(-1, 24, 3)
+
+    rots = np.eye(3)
+    for r in parents[::-1]:
+        rots = R.from_rotvec(pose[:, r]).as_matrix() @ rots
+    rots = rots @ np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]]).T
+    return rots
+
 def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 0.2):
     """
     > Given a list of positions and directions, generate a list of views and extrinsics
