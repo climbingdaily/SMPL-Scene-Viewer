@@ -347,14 +347,16 @@ class AppWindow:
         view_ctrls.add_fixed(separation_height)
         view_ctrls.add_child(gui.Label("Lighting profiles"))
         view_ctrls.add_child(self._profiles)
+        view_ctrls.add_fixed(separation_height)
         # self._settings_panel.add_fixed(separation_height)
         _setting_tabs.add_tab('view_ctrls', view_ctrls)
+        
         # self._settings_panel.add_child(view_ctrls)
 
-        # advanced = gui.CollapsableVert("Advanced lighting", 0,
-        #                                gui.Margins(em, 0, 0, 0))
+        advanced = gui.CollapsableVert("Advanced lighting", 0,
+                                       gui.Margins(em, 0, 0, 0))
         # advanced.set_is_open(False)
-        advanced = gui.Vert()
+        # advanced = gui.Vert()
 
 
         self._use_ibl = gui.Checkbox("HDR map")
@@ -405,7 +407,8 @@ class AppWindow:
         advanced.add_child(grid)
 
         # self._settings_panel.add_fixed(separation_height)
-        _setting_tabs.add_tab('Lighting', advanced)
+        # _setting_tabs.add_tab('Lighting', advanced)
+        view_ctrls.add_child(advanced)
         # self._settings_panel.add_child(advanced)
 
         # material_settings = gui.CollapsableVert("Material settings", 0,
@@ -429,6 +432,23 @@ class AppWindow:
         self._point_size.set_limits(1, 10)
         self._point_size.set_on_value_changed(self._on_point_size)
 
+        def empty(show):
+            pass
+
+        self.point_box = gui.Checkbox("Point cloud")
+        self.point_box.set_on_checked(empty)
+        self.point_box.checked = True
+        self.mesh_box = gui.Checkbox("Mesh")
+        self.mesh_box.set_on_checked(empty)
+        self.mesh_box.checked = True
+        
+        grid = gui.VGrid(2, 0.25 * em)
+        grid.add_child(gui.Label("Update geometry type"))
+        grid.add_child(gui.Label(" "))
+        grid.add_child(self.point_box)
+        grid.add_child(self.mesh_box)
+        material_settings.add_child(grid)
+
         grid = gui.VGrid(2, 0.25 * em)
         grid.add_child(gui.Label("Type"))
         grid.add_child(self._shader)
@@ -439,6 +459,13 @@ class AppWindow:
         grid.add_child(gui.Label("Point size"))
         grid.add_child(self._point_size)
         material_settings.add_child(grid)
+
+
+        # view_ctrls.add_fixed(separation_height)
+        h = gui.Horiz(0.25 * em)
+        h.add_child(self._show_skybox)
+        h.add_child(self._show_axes)
+        h.add_child(self._show_ground_plane)
 
         # self._settings_panel.add_fixed(separation_height)
         _setting_tabs.add_tab('Material', material_settings)
@@ -541,6 +568,10 @@ class AppWindow:
         if self.settings.apply_material:
             self._scene.scene.update_material(self.settings.material)
             self.settings.apply_material = False
+
+        # update material for point cloud
+
+        # update material for mesh
 
         self._bg_color.color_value = self.settings.bg_color
         self._show_skybox.checked = self.settings.show_skybox

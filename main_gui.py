@@ -31,7 +31,7 @@ from smpl import sample_path
 class o3dvis(base_gui):
     # PAUSE = False
     IMG_COUNT = 0
-    SCALE = 5
+    SCALE = 1
 
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
@@ -39,6 +39,7 @@ class o3dvis(base_gui):
         self.intrinsic = np.array([[623.53829072,   0.        , 639.5       ],
                                     [  0.        , 623.53829072, 359.5       ],
                                     [  0.        ,   0.        ,   1.        ]])
+        # self._scene.scene.view.set_shadowing(1)
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
         self.is_done = False
@@ -57,6 +58,7 @@ class o3dvis(base_gui):
     def _on_load_smpl_done(self, filename):
         self.window.close_dialog()
         self.Human_data.load(filename) 
+        self.Human_data.set_cameras(offset_center = -0.3)
 
         if self.Human_data:
             threading.Thread(target=self.update_thread).start()
@@ -75,8 +77,6 @@ class o3dvis(base_gui):
         """
         vis_data = self.Human_data.vis_data_list
 
-        video_name = self.scene_name
-
         pointcloud = o3d.geometry.PointCloud()
         smpl_geometries = []
         human_data = vis_data['humans']
@@ -93,14 +93,15 @@ class o3dvis(base_gui):
 
         total_frames = human_data[keys[0]].shape[0]
 
-        self._set_slider_limit(0, total_frames)
+        self._set_slider_limit(0, total_frames - 1)
 
         while True:
-            video_name += time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+            video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
             self.reset_settings()
+            self._set_slider_value(0)
             
-            while self._get_slider_value() < total_frames:
+            while self._get_slider_value() < total_frames - 1:
                 time.sleep(0.05)
                 def fetch_meshs(ind):
 
@@ -141,14 +142,16 @@ class o3dvis(base_gui):
                     self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
                     for si, smpl in enumerate(smpl_geometries):
                         self.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
-                    self.change_pause_status()
 
                 def updata_cloud():
-                    self.update_geometry(pointcloud,  name='human points') 
+                    freeze = o3dvis.FREEZE
+                    self.update_geometry(pointcloud,  name='human points', freeze=freeze) 
                     for si, smpl in enumerate(smpl_geometries):
-                        self.update_geometry(smpl, name=keys[si])  
-                    if o3dvis.RENDER:
-                        self.save_imgs(image_dir)
+                        self.update_geometry(smpl, name=keys[si], freeze=freeze)  
+                    self._unfreeze()
+
+                def save_img():
+                    self.save_imgs(image_dir)
 
                 frame_index = self._get_slider_value()
                 fetch_meshs(frame_index)
@@ -157,13 +160,17 @@ class o3dvis(base_gui):
                 if not init_param:
                     init_param = True
                     gui.Application.instance.post_to_main_thread(self.window, add_first_cloud)
+                    self.change_pause_status()
                 else:
                     gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
+
+                if o3dvis.RENDER:
+                    gui.Application.instance.post_to_main_thread(self.window, save_img)
 
                 while True:
                     cv2.waitKey(5)
                     if o3dvis.CLICKED:
-                        if frame_index != self._get_slider_value():
+                        if frame_index != self._get_slider_value() or o3dvis.FREEZE:
                             frame_index = self._get_slider_value()
                             fetch_meshs(frame_index)
                             gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
@@ -177,6 +184,8 @@ class o3dvis(base_gui):
                 self._set_slider_value(frame_index+1)
                     
             images_to_video(image_dir, video_name, delete=True)
+            if not o3dvis.PAUSE:
+                self.change_pause_status()
 
     def set_camera(self, ind, pov):
         _, extrinsics = self.Human_data.get_cameras(pov)
@@ -190,7 +199,10 @@ class o3dvis(base_gui):
         else:
             self.init_camera(extrinsics[ind] @ self.COOR_INIT)  
 
-    def add_geometry(self, geometry, name=None, mat=None, reset_bounding_box=True, archive=False):
+    def add_geometry(self, geometry, name=None, mat=None, 
+                        reset_bounding_box=True, 
+                        archive=False, 
+                        freeze=False):
         if mat is None:
             mat =self.settings.material
         if name is None:
@@ -236,7 +248,12 @@ class o3dvis(base_gui):
             self._scene.scene.remove_geometry(name)
         
         if name in self.data_names and self.data_names[name].checked:
-            self._scene.scene.add_geometry(name, geometry, mat)
+            if freeze:
+                ss = time.time()
+                self.freeze_data.append(f'{name}_freeze_{ss}')
+                self._scene.scene.add_geometry(f'{name}_freeze_{ss}', geometry, mat)
+            else:
+                self._scene.scene.add_geometry(name, geometry, mat)
         
         if reset_bounding_box:
             try:
@@ -250,8 +267,8 @@ class o3dvis(base_gui):
             self._scene.scene.show_geometry(name, box.checked)
         # self._apply_settings()
 
-    def update_geometry(self, geometry, name):
-        self.add_geometry(geometry, name, reset_bounding_box=False)
+    def update_geometry(self, geometry, name, freeze=False):
+        self.add_geometry(geometry, name, reset_bounding_box=False, freeze=freeze)
 
     def remove_geometry(self, name):
         self._scene.scene.remove_geometry(name)

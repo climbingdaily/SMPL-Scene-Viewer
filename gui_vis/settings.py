@@ -8,15 +8,20 @@ from .menu import Menu
 
 def creat_btn(name, func, color=None):
     btn = gui.Button(name)
-    btn.vertical_padding_em = 0
     btn.horizontal_padding_em = 0.5
+    btn.vertical_padding_em = 0
     if color is not None:
         btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
     btn.set_on_clicked(func)
     return btn
 
+def add_box(layout, name, func, checked=False):
+    box = gui.Checkbox(name)
+    box.set_on_checked(func)
+    box.checked = checked
+    layout.add_child(box)
 class Setting_panal(Menu):
-
+    FREEZE = False
     FREE_VIEW = False
     # FRAME = 0
     PAUSE = False
@@ -28,6 +33,7 @@ class Setting_panal(Menu):
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
         self.archive_data = []
+        self.freeze_data = []
         self.create_checkboxes()
 
     def create_checkboxes(self, collapse=None, checkboxes=None):
@@ -36,73 +42,81 @@ class Setting_panal(Menu):
         if collapse is None:
             collapse = gui.CollapsableVert("Human data", 0.33 * em,
                                             gui.Margins(em, 0, 0, 0))
-
-        play_btn = creat_btn('Play / Stop', self.change_pause_status, color = [0, 0, 0.5])
-
         slider = gui.Slider(gui.Slider.INT)
         slider.set_limits(0, 1000)
         slider.set_on_value_changed(self._on_slider)
 
-        prog_layout = gui.Horiz()
-        minus_btn = creat_btn('-', self._minus_frame)
-        add_btn = creat_btn('+', self._add_frame)
+        minus_btn    = creat_btn('-', self._minus_frame)
+        add_btn      = creat_btn('+', self._add_frame)
+        play_btn     = creat_btn('Play / Stop', self.change_pause_status, color = [0, 0, 0.5])
+        freeze_btn   = creat_btn('Freeze frame', self._freeze_frame)
+        clear_freeze_btn   = creat_btn('Clear freeze data', self._clear_freeze)
 
-        # prog_layout.add_child(gui.Label("Frames"))
+        prog_layout = gui.Horiz(0.15 * em)
         prog_layout.add_child(minus_btn)
         prog_layout.add_child(add_btn)
         prog_layout.add_child(slider)
+
+        horiz_layout = gui.Horiz(0.15 * em)
+        horiz_layout.add_stretch()
+        # horiz_layout.add_child(minus_btn)
+        horiz_layout.add_child(play_btn)
+        # horiz_layout.add_child(add_btn)
+        horiz_layout.add_child(freeze_btn)
+        horiz_layout.add_stretch()
 
         tabs = gui.TabControl()
         tab1 = gui.Vert()
 
         try:
-            box = gui.Checkbox('Archive')
-            box.set_on_checked(self._on_show_archive_geometry)
-            box.checked = True
-            tab1.add_child(box)
-
+            add_box(tab1, 'Chess Board', self._on_show_archive_geometry, True)
+            add_box(tab1, 'Freezed data', self._on_show_freeze_geometry)
             for box in checkboxes:
                 tab1.add_child(box)
         except:
             pass
 
-
         tab2 = gui.Vert()
-        box = gui.Checkbox('First person view')
-        box.set_on_checked(self._on_FPV)
-        box.checked = True
-        tab2.add_child(box)
-        
-        box = gui.Checkbox('Free view')
-        box.set_on_checked(self._on_free_view)
-        # tab2.add_stretch()
-        tab2.add_child(box)
-
+        add_box(tab2, 'First person view', self._on_FPV, True)
+        add_box(tab2, 'Free view', self._on_free_view)
 
         tab3 = gui.Vert()
-        box = gui.Checkbox('Auto Render Image')
-        box.set_on_checked(self.change_render_states)
-        # box.checked = True
-        tab3.add_child(box)
+        add_box(tab3, 'Auto Render Image', self.change_render_states)
+        tab3.add_child(clear_freeze_btn)
 
-        tabs.add_tab("Data", tab1)
+        tabs.add_tab("Show Data", tab1)
         tabs.add_tab("Cameras", tab2)
         tabs.add_tab("Render Option", tab3)
 
         collapse.add_child(prog_layout)
-        collapse.add_child(play_btn)
+        collapse.add_child(horiz_layout)
         collapse.add_child(tabs)
+
         self._settings_panel.add_child(collapse)
-        # self.window.set_on_layout(self._on_layout)
 
         self.check_boxes, self.camera_setting, self.slider_bar, self.play_btn = tab1, tab2, slider, play_btn
+
+    def _clear_freeze(self):
+        for name in self.freeze_data:
+            self._scene.scene.remove_geometry(name)
 
     def _on_free_view(self, show):
         Setting_panal.FREE_VIEW = show
         # print(show)
         
+    def _freeze_frame(self):
+        Setting_panal.FREEZE = True
+        Setting_panal.CLICKED = True
+    
+    def _unfreeze(self):
+        Setting_panal.FREEZE = False
+
     def _on_show_archive_geometry(self, show):
         for name in self.archive_data:
+            self._scene.scene.show_geometry(name, show)
+
+    def _on_show_freeze_geometry(self, show):
+        for name in self.freeze_data:
             self._scene.scene.show_geometry(name, show)
 
     def _add_frame(self):
@@ -136,9 +150,9 @@ class Setting_panal(Menu):
 
     def change_pause_status(self):
         Setting_panal.PAUSE = not Setting_panal.PAUSE
-        text = 'Stoped' if Setting_panal.PAUSE else 'Playing'
+        text = '||' if Setting_panal.PAUSE else '|>>'
         color = gui.Color(r=0.5, b=0, g=0) if Setting_panal.PAUSE else gui.Color(r=0, b=0, g=0.5)
-        self.play_btn.text = f'>|| ({text})'
+        self.play_btn.text = f'   {text}   '
         self.play_btn.background_color = color
 
     def _on_slider(self, value):

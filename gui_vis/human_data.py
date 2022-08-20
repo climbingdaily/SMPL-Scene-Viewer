@@ -13,11 +13,12 @@ class HUMAN_DATA:
 
     def load(self, filename):
         load_data_class = load_data_remote(self.is_remote)
-        humans = load_data_class.load_pkl(filename)
-        self.vis_data_list = load_vis_data(humans)
-        self.set_cameras(humans)
+        self.humans = load_data_class.load_pkl(filename)
+        self.vis_data_list = load_vis_data(self.humans)
+        # self.set_cameras()
 
-    def set_cameras(self, humans, offset_center=-0.2):
+    def set_cameras(self, offset_center=-0.2):
+        humans = self.humans
         try:
             self.cameras['first'] = generate_views(humans['first_person']['lidar_traj']
                                 [:, 1:4], get_head_global_rots(humans['first_person']['pose']), dist=offset_center)
