@@ -32,11 +32,13 @@ def add_box(layout, name, func, checked=False):
 class Setting_panal(Menu):
     FREEZE = False
     FREE_VIEW = False
+    FIX_CAMERA = False
     # FRAME = 0
     PAUSE = False
     POV = 'first'
     RENDER = False
     CLICKED = False
+    INTRINSIC_FACTOR = 1
     # PLAY_ONCE = False
 
     def __init__(self, width=1280, height=720):
@@ -47,13 +49,19 @@ class Setting_panal(Menu):
 
     def create_checkboxes(self, collapse=None, checkboxes=None):
         em = self.window.theme.font_size
+        separation_height = int(round(0.5 * em))
 
         if collapse is None:
             collapse = gui.CollapsableVert("Human data", 0.33 * em,
                                             gui.Margins(em, 0, 0, 0))
-        slider = gui.Slider(gui.Slider.INT)
-        slider.set_limits(0, 1000)
-        slider.set_on_value_changed(self._on_slider)
+        frame_slider = gui.Slider(gui.Slider.INT)
+        frame_slider.set_limits(0, 1000)
+        frame_slider.set_on_value_changed(self._on_slider)
+        
+        factor_slider = gui.Slider(gui.Slider.INT)
+        factor_slider.set_limits(1, 40)
+        factor_slider.int_value = 10
+        factor_slider.set_on_value_changed(self._on_factor_slider)
 
         minus_btn    = creat_btn('-', self._minus_frame)
         add_btn      = creat_btn('+', self._add_frame)
@@ -64,7 +72,7 @@ class Setting_panal(Menu):
         prog_layout = gui.Horiz(0.15 * em)
         prog_layout.add_child(minus_btn)
         prog_layout.add_child(add_btn)
-        prog_layout.add_child(slider)
+        prog_layout.add_child(frame_slider)
 
         horiz_layout = gui.Horiz(em)
         horiz_layout.add_child(play_btn)
@@ -73,6 +81,7 @@ class Setting_panal(Menu):
 
         tabs = gui.TabControl()
         tab1 = gui.Vert(0.15 * em)
+        tab1.add_fixed(separation_height)
 
         try:
             add_box(tab1, 'Chess Board', self._on_show_archive_geometry, True)
@@ -82,16 +91,20 @@ class Setting_panal(Menu):
             pass
 
         cameras = create_combobox(self._on_select_camera)
-        cam_grid = gui.Horiz(0.25 * em)
+        cam_grid = gui.VGrid(2, 0.25 * em)
+        cam_grid.add_child(gui.Label('POV'))
         cam_grid.add_child(cameras)
-        add_box(cam_grid, 'Free view', self._on_free_view)
+        cam_grid.add_child(gui.Label('Focal factor'))
+        cam_grid.add_child(factor_slider)
 
-        tab2 = gui.Vert()
-        # add_box(tab2, 'First person view', self._on_FPV, True)
-        tab2.add_child(gui.Label('Cameras'))
+        tab2 = gui.Vert(0.25 * em)
+        tab2.add_fixed(separation_height)
         tab2.add_child(cam_grid)
+        add_box(tab2, 'Relative view', self._on_free_view)
+        add_box(tab2, 'Fixed camera', self._on_fix_view)
 
         tab3 = gui.Vert(0.15 * em)
+        tab3.add_fixed(separation_height)
         add_box(tab3, 'Show freezed data', self._on_show_freeze_geometry, True)
         temp_layout = gui.Horiz(0.15 * em)
         temp_layout.add_child(freeze_btn)
@@ -108,8 +121,10 @@ class Setting_panal(Menu):
 
         self._settings_panel.add_child(collapse)
 
-        self.check_boxes, self.camera_setting, self.slider_bar, self.play_btn = tab1, cameras, slider, play_btn
+        self.check_boxes, self.camera_setting, self.frame_slider_bar, self.play_btn = tab1, cameras, frame_slider, play_btn
 
+    def _on_fix_view(self, show):
+        Setting_panal.FIX_CAMERA = show
 
     def _on_select_camera(self, name, index):
         Setting_panal.POV = name
@@ -139,13 +154,13 @@ class Setting_panal(Menu):
             self._scene.scene.show_geometry(name, show)
 
     def _add_frame(self):
-        self.slider_bar.int_value += 1
-        self._on_slider(self.slider_bar.int_value)
+        self.frame_slider_bar.int_value += 1
+        self._on_slider(self.frame_slider_bar.int_value)
         
     def _minus_frame(self):
-        if self.slider_bar.int_value > 0:
-            self.slider_bar.int_value -= 1
-            self._on_slider(self.slider_bar.int_value)
+        if self.frame_slider_bar.int_value > 0:
+            self.frame_slider_bar.int_value -= 1
+            self._on_slider(self.frame_slider_bar.int_value)
 
     def change_render_states(self, render):
         Setting_panal.RENDER = render
@@ -155,13 +170,13 @@ class Setting_panal(Menu):
 
 
     def _set_slider_value(self, value):
-        self.slider_bar.int_value = int(value)
+        self.frame_slider_bar.int_value = int(value)
         
     def _get_slider_value(self):
-        return self.slider_bar.int_value
+        return self.frame_slider_bar.int_value
         
     def _set_slider_limit(self, min, max):
-        self.slider_bar.set_limits(min, max)
+        self.frame_slider_bar.set_limits(min, max)
 
     def _on_FPV(self, show):
         Setting_panal.POV = 'first' if show else 'second'
@@ -178,7 +193,11 @@ class Setting_panal(Menu):
         if not Setting_panal.PAUSE:
             self.change_pause_status()
         Setting_panal.CLICKED = True
-        # print(int(value))
+
+    def _on_factor_slider(self, value):
+        Setting_panal.INTRINSIC_FACTOR = value/10
+        print(Setting_panal.INTRINSIC_FACTOR)
+        Setting_panal.CLICKED = True
 
     def _add_text(self, visible=False):
 

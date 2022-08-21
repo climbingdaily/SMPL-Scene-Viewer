@@ -125,9 +125,11 @@ def vis_pt_and_smpl(pred_smpl, pc, gt_smpl= None, video_name=None):
         rt[:3, 3] = np.array([5, -0.5, 0])
         if gt_smpl is not None:
             gt.transform(rt)
+            gt.vertex_normals = o3d.utility.Vector3dVector()
             gt.compute_vertex_normals()
         pred.transform(rt)
 
+        pred.vertex_normals = o3d.utility.Vector3dVector()
         pred.compute_vertex_normals()
 
         # add to visualization

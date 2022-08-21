@@ -46,7 +46,7 @@ class Menu(GUI_BASE):
         dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pkl file to load",
                              self.window.theme)
         dlg.add_filter(
-            ".pkl",
+            ".pkl .hdf5 .h5py",
             "SMPL files")
 
         dlg.set_on_cancel(self._on_file_dialog_cancel)

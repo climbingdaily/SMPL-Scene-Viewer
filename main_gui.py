@@ -307,14 +307,17 @@ class o3dvis(base_gui):
         return view
 
     def init_camera(self, extrinsic_matrix): 
+        if o3dvis.FIX_CAMERA:
+            return
         bounds = self._scene.scene.bounding_box
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
-        
         x = self.window.content_rect.width
         y = self.window.content_rect.height
-        self.intrinsic = np.array([[x/2,   0.        , x/2       ],
-                                    [  0.        , x/2, y/2       ],
-                                    [  0.        ,   0.        ,   1.        ]])
+        cx, cy = x/2, y/2
+        fx = fy = cx * o3dvis.INTRINSIC_FACTOR
+        self.intrinsic = np.array([[fx, 0., cx],
+                                    [0. , fy, cy],
+                                    [0. , 0., 1.]])
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
     def save_imgs(self, img_dir):
@@ -332,7 +335,7 @@ def main():
 
     w = o3dvis(1280, 720)
     w.load_data(sample_path)
-    
+
     gui.Application.instance.run()
 
 if __name__ == "__main__":

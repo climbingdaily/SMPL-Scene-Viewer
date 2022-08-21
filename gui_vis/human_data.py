@@ -1,8 +1,14 @@
 
 import numpy as np
+import torch
 from scipy.spatial.transform import Rotation as R
-from util import load_data_remote, generate_views
-from vis_smpl_scene import load_vis_data, get_head_global_rots, vertices_to_head
+
+from util import load_data_remote, generate_views, get_head_global_rots
+from smpl import SMPL, poses_to_vertices
+
+def vertices_to_head(vertices, index = 15):
+    smpl = SMPL()
+    return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
 
 def make_3rd_view(positions, rots, rotz=0, lookdown=32):
     """
@@ -15,29 +21,137 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=32):
       rotz: rotation around the z axis. Defaults to 0
       lookdown: the angle of the camera, in degrees. Defaults to 32
     """
-    # lookdown = R.from_rotvec(np.deg2rad(lookdown) * np.array([0, 0, 1])).as_matrix()
+    lookdown = R.from_rotvec(np.deg2rad(-lookdown) * np.array([1, 0, 0])).as_matrix()
     rotz = R.from_rotvec(np.deg2rad(rotz) * np.array([0, 0, 1])).as_matrix()
     move = rotz @ np.array([0.5, -1, 1.2])
 
     rots = np.zeros_like(rots)
     for i in range(rots.shape[0]):
-        rots[i] =  rotz
-    views = generate_views(positions + move, rots, dist=0, rad=np.deg2rad(lookdown))
+        rots[i] =  rotz @ lookdown
+    views = generate_views(positions + move, rots, dist=0, rad=np.deg2rad(0))
     return views
+
+def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
+    if pose_str in human_data:
+        pose = human_data[pose_str].copy()
+        beta = human_data['beta'].copy()
+        if tran_str in human_data:
+            trans = human_data[tran_str].copy()
+        else:
+            trans = human_data[trans_str2].copy()
+        vert = poses_to_vertices(pose, trans, beta=beta)
+        verts_list[f'{info} {pose_str}'] = vert[start:end]
+        print(f'[SMPL MODEL] {info} {pose_str} loaded')
+
+def load_vis_data(humans, start=0, end=-1):
+    """
+    It loads the data from the pickle file into a dictionary
+    
+    Args:
+      humans: the dictionary containing the data
+      start: the first frame to load. Defaults to 0
+      end: the last frame to be visualized
+    
+    Returns:
+      vis_data
+    """
+
+    vis_data = {}
+    vis_data['humans'] = {}
+
+    first_person = humans['first_person']
+    pose = first_person['pose'].copy()
+    beta = first_person['beta'].copy()
+    end = pose.shape[0] if end <= 0 else end 
+    if 'mocap_trans' in first_person:
+        trans = first_person['mocap_trans'].copy()
+    else:
+        trans = first_person['trans'].copy()
+
+    f_vert = poses_to_vertices(pose, beta=beta)
+
+    # load first person
+    if 'lidar_traj' in first_person:
+        lidar_traj = first_person['lidar_traj'][:, 1:4]
+        head = vertices_to_head(f_vert, 15)
+        root = vertices_to_head(f_vert, 0)
+        head_to_root = (root - head).numpy()
+        
+        head_rots = get_head_global_rots(pose)
+
+        lidar_to_head =  head[0] - lidar_traj[0] + trans[0] 
+        lidar_to_head = head_rots @ head_rots[0].T @ lidar_to_head.numpy()
+
+        trans = lidar_traj + lidar_to_head + head_to_root
+        # trans = lidar_traj[:, 1:4]
+    
+    f_vert += np.expand_dims(trans.astype(np.float32), 1)
+
+    vis_data['humans']['First pose'] = f_vert[start: end]
+    print(f'[SMPL MODEL] First pose loaded')
+
+    load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
+
+    if 'second_person' in humans:
+        second_person = humans['second_person']    
+
+        load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
+                        'trans', 'mocap_trans', info='Second')
+
+        load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
+                        'opt_trans', info='Second')
+
+        if 'point_clouds' in second_person:
+            global_frame_id = second_person['point_frame']
+            global_frame_id = set(global_frame_id).intersection(humans['frame_num'][start: end])
+            valid_idx = [humans['frame_num'].index(l) for l in global_frame_id]
+
+            vis_data['point cloud'] = [second_person['point_clouds'], valid_idx]
+            print(f'[PointCloud] Second point cloud loaded')
+
+            if 'pred_pose' in second_person:
+                pose = second_person['pred_pose'].copy()
+                if 'opt_trans' in second_person:
+                    trans = second_person['opt_trans'].copy()
+                else:
+                    trans = second_person['trans'].copy()
+                local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
+                vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
+                print(f'[SMPL MODEL] Predicted person loaded')
+
+    return vis_data
 
 class HUMAN_DATA:
     FOV = 'first'
     FREE_VIEW = False
 
-    def __init__(self, is_remote):
+    def __init__(self, is_remote=False):
         self.is_remote = is_remote
         self.cameras = {}
 
     def load(self, filename):
         load_data_class = load_data_remote(self.is_remote)
-        self.humans = load_data_class.load_pkl(filename)
+        try:
+            self.humans = load_data_class.load_pkl(filename)
+        except Exception as e:
+            print(e)
+            """
+            implement your function here
+            self.humans = 
+              {
+                'first_person': {'pose':[N, 72], 'trans':[N, 3], 'beta':[10] }
+                'second_person': {'pred_pose':[optional], 'trans':[optional], 'point_clouds':[N, x, 3], 'point_frame'[range(N)], 'beta':[10] }
+                'frame_num': {[range(N)] }
+              }
+            # second_person is optional
+            """
         self.vis_data_list = load_vis_data(self.humans)
         # self.set_cameras()
+
+    def load_hdf5(self, filename):
+        load_data_class = load_data_remote(self.is_remote)
+
+        self.vis_data_list = load_vis_data(self.humans)
 
     def set_cameras(self, offset_center=-0.2):
         humans_verts = self.humans
@@ -54,11 +168,13 @@ class HUMAN_DATA:
             verts = self.vis_data_list['humans']['First pose']
             root_position = vertices_to_head(verts, 0)
             root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
+
             self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
             self.cameras['3rd View +Y'] = make_3rd_view(root_position, root_rots, rotz=0)
             self.cameras['3rd View -X'] = make_3rd_view(root_position, root_rots, rotz=90)
             self.cameras['3rd View -Y'] = make_3rd_view(root_position, root_rots, rotz=180)
             self.cameras['3rd View +X'] = make_3rd_view(root_position, root_rots, rotz=270)
+            self.cameras['3rd View +Z'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=90)
 
         except Exception as e:
             print(e)
