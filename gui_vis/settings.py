@@ -59,7 +59,7 @@ class Setting_panal(Menu):
         frame_slider.set_on_value_changed(self._on_slider)
         
         factor_slider = gui.Slider(gui.Slider.INT)
-        factor_slider.set_limits(1, 40)
+        factor_slider.set_limits(2, 60)
         factor_slider.int_value = 10
         factor_slider.set_on_value_changed(self._on_factor_slider)
 

@@ -35,8 +35,7 @@ class Menu(GUI_BASE):
                 self.window.theme)
         dlg.add_filter(
             ".xyz .xyzn .xyzrgb .ply .pcd .pts",
-            "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, "
-            ".pcd, .pts)")
+            "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, .pcd, .pts)")
 
         dlg.set_on_cancel(self._on_file_dialog_cancel)
         dlg.set_on_done(self.load_scene)
@@ -45,9 +44,8 @@ class Menu(GUI_BASE):
     def _on_menu_smpl(self):
         dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pkl file to load",
                              self.window.theme)
-        dlg.add_filter(
-            ".pkl .hdf5 .h5py",
-            "SMPL files")
+        dlg.add_filter(".pkl", "SMPL files (.pkl)")
+        dlg.add_filter(".hdf5 .h5py, ", "H5PY format (.hdf5, .h5py)")
 
         dlg.set_on_cancel(self._on_file_dialog_cancel)
         dlg.set_on_done(self._on_load_smpl_done)

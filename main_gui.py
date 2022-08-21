@@ -19,14 +19,19 @@ import cv2
 import threading
 import os
 import time
+import matplotlib.pyplot as plt
 
 sys.path.append('.')
 sys.path.append('..')
 
 from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_chessboard
 from util import load_scene as load_pts, images_to_video
-from vis_smpl_scene import POSE_COLOR
-from smpl import sample_path
+sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
+
+POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
+POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
+for i, color in enumerate(POSE_KEY):
+    POSE_COLOR[color] = plt.get_cmap("Pastel1")(i)[:3]
 
 class o3dvis(base_gui):
     # PAUSE = False
