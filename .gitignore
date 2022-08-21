@@ -130,7 +130,7 @@ dmypy.json
 
 .vscode/
 /temp*
-demo_scene_assets/
+demo_scene_assets/  
 vis_data/
 *.avi
 *.mp4

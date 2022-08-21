@@ -529,12 +529,18 @@ class filter_tracking_by_interactive():
                     self.filter_human(frameid, humanid, tracking_results, scene_paths, filtered)
         if tracking:
             pre_frameids = [k for k in self.trajectory.keys()]
+
+            # center pos
             trajectory = np.array(
                 [self.trajectory[fid]['box'][:3] for fid in pre_frameids]).astype(np.float32)
+
+            # humanid
             append = np.array([self.trajectory[fid]['humanid']
                                 for fid in pre_frameids]).astype(np.float32)
+
+            # frameid
             save_traj = np.concatenate(
-                (trajectory.reshape(-1, 3), append.reshape(-1, 1)), axis=1)
+                (trajectory.reshape(-1, 3), append.reshape(-1, 1), np.array(pre_frameids).reshape(-1, 1)), axis=1)
             self.load_data.write_txt(tracking_traj_path, save_traj)
         self.copy_save_files()
 
