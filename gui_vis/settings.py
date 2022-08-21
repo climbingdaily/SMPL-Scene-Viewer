@@ -1,5 +1,16 @@
-import numpy as np
-import open3d as o3d
+################################################################################
+# File: \settings.py                                                           #
+# Created Date: Saturday August 13th 2022                                      #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import open3d.visualization.gui as gui
 import sys
 sys.path.append('.')

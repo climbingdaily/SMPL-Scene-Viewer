@@ -1,6 +1,18 @@
+################################################################################
+# File: \menu.py                                                               #
+# Created Date: Saturday August 13th 2022                                      #
+# Author: climbingdaily                                                        #
+# -----                                                                        #
+# Modified By: the developer climbingdaily at yudidai@stu.xmu.edu.cn           #
+# https://github.com/climbingdaily                                             #
+# -----                                                                        #
+# Copyright (c) 2022 yudidai                                                   #
+# -----                                                                        #
+# HISTORY:                                                                     #
+################################################################################
+
 import open3d.visualization.gui as gui
 import sys
-from scipy.spatial.transform import Rotation as R
 
 sys.path.append('.')
 sys.path.append('..')
