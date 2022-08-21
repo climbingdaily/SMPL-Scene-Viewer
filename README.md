@@ -1,6 +1,6 @@
 # vis_lidar_human_scene
 
-![](rendered.png)
+![](imgs/gui.jpg)
 Visualization tool for SMPL and lidar data
 
    
@@ -14,7 +14,7 @@ Visualization tool for SMPL and lidar data
 python vis_pred_smpl.py -F "/path/to/your/file"
 ```
 
-## 2. Visulize humans and the scene. 
+## 2. Visulize humans and the scene. (GUI)
 - Human data file structure
   ```
   pkl/
@@ -36,10 +36,11 @@ python vis_pred_smpl.py -F "/path/to/your/file"
   - *a = 72 or [24, 3, 3]*
   - *b = any number*
   
+<!-- ![](imgs/sample.png) -->
 ```
-python vis_smpl_scene.py --smpl_file_path /path/to/pkl_file --scene_path /path/to/scene_pcd  --viewpoint_type third
+python main_gui.py
 ```
-- *Set `remote` to `False` in `config.py` if your data is on local machine*
+<!-- - *Set `remote` to `False` in `config.py` if your data is on local machine* -->
   
 ## Requirements
 Download the required body model `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl` from http://smpl.is.tue.mpg.de and placed it in `smpl` directory of this repository.
