@@ -138,3 +138,4 @@ vis_data/
 *.pcd
 *.tgz
 interactive.ipynb
+*_test.*

@@ -244,8 +244,8 @@ class AppWindow:
         self._scene.set_on_sun_direction_changed(self._on_sun_dir)
 
         # geometry type list
-        self.point_list = []
-        self.mesh_list = []
+        self.point_list = {}
+        self.mesh_list = {}
 
         # ---- Settings panel ----
         # Rather than specifying sizes in pixels, which may vary in size based
@@ -831,7 +831,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
-                self.mesh_list.append(name)
+                self.mesh_list[name] = geometry
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -851,7 +851,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
-                self.point_list.append(name)
+                self.point_list[name] = geometry
             else:
                 print("[WARNING] Failed to read points", path)
 

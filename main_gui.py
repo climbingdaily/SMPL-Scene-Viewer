@@ -22,9 +22,8 @@ import time
 import matplotlib.pyplot as plt
 
 sys.path.append('.')
-sys.path.append('..')
 
-from gui_vis import HUMAN_DATA, Setting_panal as base_gui, creat_chessboard
+from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
 from util import load_scene as load_pts, images_to_video
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
@@ -33,10 +32,9 @@ POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("Pastel1")(i)[:3]
 
-class o3dvis(base_gui):
+class o3dvis(setting, Menu):
     # PAUSE = False
     IMG_COUNT = 0
-    SCALE = 1
 
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
@@ -48,16 +46,18 @@ class o3dvis(base_gui):
         self.data_names = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
-        
+        self.load_data(sample_path, [0,0,0.16])
+        self.window.set_needs_layout()
 
-    def load_data(self, path):
+    def load_data(self, path, translate=[0,0,0], load_data_class=None):
         self.window.close_dialog()
         if not os.path.isfile(path):
             print(f'{path} is not a valid file')
             return
         name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
-        geometry = load_pts(None, pcd_path=path)
+        geometry = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+        geometry.translate(translate)
         self.add_geometry(geometry, name=name)
 
     def load_scene(self, scene_path):
@@ -75,6 +75,8 @@ class o3dvis(base_gui):
         cams = self.Human_data.set_cameras(offset_center = -0.3)
         for cam in cams:
             self.camera_setting.add_item(cam)
+        self.window.set_needs_layout()
+
         self._on_select_camera(cams[0], 0)
 
         if self.Human_data:
@@ -231,7 +233,7 @@ class o3dvis(base_gui):
                     geometry.estimate_normals()
                 geometry.normalize_normals()
                 if name not in self.point_list:
-                    self.point_list.append(name)
+                    self.point_list[name] = geometry
                 geometry_type = 'point'
 
         except:
@@ -245,7 +247,7 @@ class o3dvis(base_gui):
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
                 if name not in self.mesh_list:
-                    self.mesh_list.append(name)
+                    self.mesh_list[name] = geometry
                 geometry_type = 'mesh'
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
@@ -266,6 +268,7 @@ class o3dvis(base_gui):
             box.checked = True
             self.check_boxes.add_child(box)
             self.data_names[name] = box
+            self.window.set_needs_layout()
 
         elif self._scene.scene.has_geometry(name):
             self._scene.scene.remove_geometry(name)
@@ -277,9 +280,9 @@ class o3dvis(base_gui):
                 self.freeze_data.append(fname)
                 self._scene.scene.add_geometry(fname, geometry, mat)
                 if geometry_type == 'point':
-                    self.point_list.append(fname)
+                    self.point_list[name] = geometry
                 elif geometry_type == 'mesh':
-                    self.mesh_list.append(fname)
+                    self.mesh_list[name] = geometry
             else:
                 self._scene.scene.add_geometry(name, geometry, mat)
         
@@ -295,7 +298,7 @@ class o3dvis(base_gui):
             self._scene.scene.show_geometry(name, box.checked)
         # self._apply_settings()
 
-    def update_geometry(self, geometry, name, freeze=False):
+    def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=True):
         self.add_geometry(geometry, name, reset_bounding_box=False, freeze=freeze)
 
     def remove_geometry(self, name):
@@ -311,11 +314,12 @@ class o3dvis(base_gui):
         view[:3, 3] /= o3dvis.SCALE 
         return view
 
-    def init_camera(self, extrinsic_matrix): 
-        if o3dvis.FIX_CAMERA:
-            return
+    def get_camera_pos(self):
+        ex = self.get_camera()
+        return -ex[:3, :3].T @ ex[:3, 3]
+
+    def init_camera(self, extrinsic_matrix=None): 
         bounds = self._scene.scene.bounding_box
-        extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         x = self.window.content_rect.width
         y = self.window.content_rect.height
         cx, cy = x/2, y/2
@@ -323,6 +327,9 @@ class o3dvis(base_gui):
         self.intrinsic = np.array([[fx, 0., cx],
                                     [0. , fy, cy],
                                     [0. , 0., 1.]])
+        if o3dvis.FIX_CAMERA or extrinsic_matrix is None:
+            extrinsic_matrix = self.get_camera()
+        extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
     def save_imgs(self, img_dir):
@@ -339,7 +346,6 @@ def main():
     gui.Application.instance.initialize()
 
     w = o3dvis(1280, 720)
-    w.load_data(sample_path)
 
     gui.Application.instance.run()
 
