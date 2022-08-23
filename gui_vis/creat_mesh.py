@@ -47,7 +47,7 @@ def creat_chessboard(lenght = 2, size_x = 50, size_y = 50, white = [1,1,1], blac
             g.paint_uniform_color(color)
             boards += g
     boards.compute_triangle_normals()
-    boards.translate((-size_x/2, -size_y/2, 0))
+    boards.translate((-size_x/2, -size_y/2, -0.01))
     return [boards]
 
 def creat_plane(lenght = 6, size_x = 24, size_y = 24, material = 'Tiles074'):

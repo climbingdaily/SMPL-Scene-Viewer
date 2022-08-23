@@ -15,7 +15,6 @@ import open3d.visualization.gui as gui
 import sys
 sys.path.append('.')
 sys.path.append('..')
-from .menu import Menu
 from .base_gui import AppWindow as GUI_BASE
 
 def create_combobox(func, names=None):
@@ -68,11 +67,11 @@ class Setting_panal(GUI_BASE):
 
         stream_setting = self.create_stream_settings()
         human_setting, camera_setting = self.create_humandata_settings()
-        tracking_setting = self.tracking_tool_setting()
+        self.tracking_setting = self.tracking_tool_setting()
         
         tabs = gui.TabControl()
         tabs.add_tab('SMPL data', human_setting)
-        tabs.add_tab('Tracking tool', tracking_setting)
+        tabs.add_tab('Tracking tool', self.tracking_setting)
         tabs.add_tab('Cameras', camera_setting)
 
         collapse = gui.CollapsableVert("My settings", 0.33 * em,
@@ -80,6 +79,7 @@ class Setting_panal(GUI_BASE):
         collapse.add_child(stream_setting)
         collapse.add_child(tabs)
 
+        self.tracking_setting.visible = False
         self._settings_panel.add_child(collapse)
 
     def create_stream_settings(self):
@@ -287,6 +287,7 @@ class Setting_panal(GUI_BASE):
         collapse.add_child(tabs)
 
         self.check_boxes, self.camera_setting = tab1, cameras
+        self.camera_setting.enabled = False
 
         return collapse, tab2
 

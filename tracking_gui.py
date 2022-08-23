@@ -12,21 +12,17 @@
 ################################################################################
 
 import numpy as np
-import open3d as o3d
 import open3d.visualization.gui as gui
 import sys
 import cv2
 import threading
 import os
 import time
-import matplotlib.pyplot as plt
 
 sys.path.append('.')
 
 from main_gui import o3dvis as base_gui
-from gui_vis import Setting_panal
-from util import list_dir_remote, load_data_remote
-from tracking_filter_tools import filter_tracking_by_interactive as tracking_tool
+from util import load_data_remote
 
 class trackingVis(base_gui):
     FRAME = 1
@@ -36,6 +32,7 @@ class trackingVis(base_gui):
         self.tracked_frame = {}
         self.remote = is_remote
         self._scene.set_on_mouse(self._on_mouse_widget3d)
+        self.tracking_setting.visible = True
         self.window.set_needs_layout()
 
     def _start_tracking(self, path):

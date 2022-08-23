@@ -85,17 +85,19 @@ def load_vis_data(humans, start=0, end=-1):
     # load first person
     if 'lidar_traj' in first_person:
         lidar_traj = first_person['lidar_traj'][:, 1:4]
-        head = vertices_to_head(f_vert, 15)
-        root = vertices_to_head(f_vert, 0)
-        head_to_root = (root - head).numpy()
-        
+        head = vertices_to_head(f_vert, 15).numpy()
+        root = vertices_to_head(f_vert, 0).numpy()
         head_rots = get_head_global_rots(pose)
 
-        lidar_to_head =  head[0] - lidar_traj[0] + trans[0] 
-        lidar_to_head = head_rots @ head_rots[0].T @ lidar_to_head.numpy()
+        def lidar2head(i):
+            return head_rots[i].T @ (head[i] - lidar_traj[i] + trans[i])
 
-        trans = lidar_traj + lidar_to_head + head_to_root
-        # trans = lidar_traj[:, 1:4]
+        lidar_to_head = head_rots @ lidar2head(0)
+
+        ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ### !!!   It's very important: -root[0]   !!
+        ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        trans = lidar_traj + lidar_to_head - head + root - root[0]  
     
     f_vert += np.expand_dims(trans.astype(np.float32), 1)
 

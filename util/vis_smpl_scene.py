@@ -99,7 +99,7 @@ def load_vis_data(humans, start=0, end=-1):
         lidar_to_head =  head[0] - lidar_traj[0] + trans[0] 
         lidar_to_head = head_rots @ head_rots[0].T @ lidar_to_head.numpy()
 
-        trans = lidar_traj + lidar_to_head + head_to_root
+        trans = lidar_traj + lidar_to_head + head_to_root - root[0]
         # trans = lidar_traj[:, 1:4]
     
     f_vert += np.expand_dims(trans.astype(np.float32), 1)

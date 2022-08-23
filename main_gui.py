@@ -28,9 +28,9 @@ from util import load_scene as load_pts, images_to_video
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
-POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
+POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
-    POSE_COLOR[color] = plt.get_cmap("Pastel1")(i)[:3]
+    POSE_COLOR[color] = plt.get_cmap("Pastel2")(i)[:3]
 
 class o3dvis(setting, Menu):
     # PAUSE = False
@@ -75,6 +75,7 @@ class o3dvis(setting, Menu):
         cams = self.Human_data.set_cameras(offset_center = -0.3)
         for cam in cams:
             self.camera_setting.add_item(cam)
+        self.camera_setting.enabled = True
         self.window.set_needs_layout()
 
         self._on_select_camera(cams[0], 0)
@@ -96,11 +97,15 @@ class o3dvis(setting, Menu):
         """
         vis_data = self.Human_data.vis_data_list
 
-        pointcloud = o3d.geometry.PointCloud()
         smpl_geometries = []
         human_data = vis_data['humans']
-        points = vis_data['point cloud'][0]
-        indexes = vis_data['point cloud'][1]
+
+        pointcloud = o3d.geometry.PointCloud()
+        if 'point cloud' in vis_data:
+            points = vis_data['point cloud'][0]
+            indexes = vis_data['point cloud'][1]
+        else:
+            indexes = []
 
         for i in human_data:
             smpl = o3d.io.read_triangle_mesh(sample_path)
