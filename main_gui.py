@@ -24,13 +24,14 @@ import matplotlib.pyplot as plt
 sys.path.append('.')
 
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
-from util import load_scene as load_pts, images_to_video
+from util import load_scene as load_pts, images_to_video, icp_mesh_and_point
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
+
 
 POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
 POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
-    POSE_COLOR[color] = plt.get_cmap("Pastel2")(i)[:3]
+    POSE_COLOR[color] = plt.get_cmap("Paired")(i*2)[:3]
 
 class o3dvis(setting, Menu):
     # PAUSE = False
@@ -72,7 +73,7 @@ class o3dvis(setting, Menu):
         self.window.close_dialog()
         self.Human_data.load(filename) 
 
-        cams = self.Human_data.set_cameras(offset_center = -0.3)
+        cams = self.Human_data.set_cameras(offset_center = -0.2)
         for cam in cams:
             self.camera_setting.add_item(cam)
         self.camera_setting.enabled = True
@@ -126,7 +127,6 @@ class o3dvis(setting, Menu):
             self._set_slider_value(0)
             
             while self._get_slider_value() < total_frames - 1:
-                time.sleep(0.05)
                 def fetch_meshs(ind):
 
                     if ind in indexes:
@@ -147,6 +147,9 @@ class o3dvis(setting, Menu):
                                 smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
                                 smpl.vertex_normals = o3d.utility.Vector3dVector()
                                 smpl.triangle_normals = o3d.utility.Vector3dVector()
+                                # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
+                                # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
+                                # smpl.translate(delta)
                                 smpl.compute_vertex_normals()
                                 if len(smpl.vertex_colors) == 0:
                                     smpl.paint_uniform_color(POSE_COLOR[key])
@@ -156,6 +159,10 @@ class o3dvis(setting, Menu):
                             smpl.vertices = o3d.utility.Vector3dVector(human_data[key][ind])
                             smpl.vertex_normals = o3d.utility.Vector3dVector()
                             smpl.triangle_normals = o3d.utility.Vector3dVector()
+                            # if 'second' in key.lower() and index > 0:
+                            #     rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
+                            #     _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
+                            #     smpl.translate(delta)
                             smpl.compute_vertex_normals()
                             if len(smpl.vertex_colors) == 0:
                                 smpl.paint_uniform_color(POSE_COLOR[key])
@@ -190,9 +197,10 @@ class o3dvis(setting, Menu):
 
                 if o3dvis.RENDER:
                     gui.Application.instance.post_to_main_thread(self.window, save_img)
+                time.sleep(0.05)
 
                 while True:
-                    cv2.waitKey(5)
+                    cv2.waitKey(10)
                     if o3dvis.CLICKED:
                         if frame_index != self._get_slider_value() or o3dvis.FREEZE:
                             frame_index = self._get_slider_value()
