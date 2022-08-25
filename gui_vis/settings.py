@@ -13,6 +13,9 @@
 
 import open3d.visualization.gui as gui
 import sys
+import time
+import cv2
+
 sys.path.append('.')
 sys.path.append('..')
 from .base_gui import AppWindow as GUI_BASE
@@ -57,6 +60,7 @@ class Setting_panal(GUI_BASE):
     CLICKED = False
     INTRINSIC_FACTOR = 1
     SCALE = 1
+    MYTHREAD = None
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
@@ -94,23 +98,39 @@ class Setting_panal(GUI_BASE):
         add_btn      = creat_btn('+', self._add_frame)
         play_btn     = creat_btn('  >>|| (Play / Stop)  ', self.change_pause_status, color = [0, 0, 0.5])
 
+        frame_edit = gui.NumberEdit(gui.NumberEdit.INT)
+        frame_edit.int_value = 0
+        frame_edit.set_limits(0, 100)  # value coerced to 1
+        frame_edit.set_on_value_changed(self._on_slider)
+        
+        text_frames = gui.TextEdit()
+        text_frames.set_on_value_changed(self._on_slider)
+
         frame_slider = gui.Slider(gui.Slider.INT)
         frame_slider.set_limits(0, 1000)
         frame_slider.set_on_value_changed(self._on_slider)
 
-        # horiz_layout = gui.Horiz(em)
-        # horiz_layout.add_child(play_btn)
+        # horiz_layout = gui.Horiz(0.15 * em)
+        # horiz_layout.add_child(intedit)
         # horiz_layout.add_stretch()
+        # horiz_layout.add_child(gui.Label('frames'))
+        # horiz_layout.add_child(text_frames)
 
         prog_layout = gui.Horiz(0.15 * em)
-        prog_layout.add_child(minus_btn)
-        prog_layout.add_child(add_btn)
+        prog_layout.add_child(frame_edit)
+        # prog_layout.add_child(minus_btn)
+        # prog_layout.add_child(add_btn)
         prog_layout.add_child(frame_slider)
         
+        # collapse.add_child(horiz_layout)
         collapse.add_child(prog_layout)
         collapse.add_child(play_btn)
+        add_Switch(collapse, 'Auto Render', self.change_render_states)
 
-        self.frame_slider_bar, self.play_btn = frame_slider, play_btn
+        frame_slider.enabled = False
+        frame_edit.enabled = False
+        play_btn.enabled = False
+        self.frame_slider_bar, self.play_btn, self.frame_edit = frame_slider, play_btn, frame_edit
 
         return collapse
 
@@ -149,30 +169,28 @@ class Setting_panal(GUI_BASE):
         remote_layout.add_child(filedlgbutton)
         remote_layout.add_child(self._fileedit)
 
-        horiz = gui.Horiz(0.15 * em)
         btn = creat_btn('Save traj', self._save_traj)
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
-        text_frames = gui.TextEdit()
-        text_frames.set_on_value_changed(self._on_slider)
+        horiz = gui.Horiz(0.15 * em)
         horiz.add_child(gui.Label('step'))
         horiz.add_child(text_step)
-        horiz.add_child(gui.Label('frames'))
-        horiz.add_child(text_frames)
+        # horiz.add_child(gui.Label('frames'))
+        # horiz.add_child(text_frames)
         horiz.add_child(btn)
 
         # tracked_points = gui.Verts(0.15 * em)
         # tracked_points.background_color = gui.Color(r=0, b=0, g=0)
-        # self.tracked_points = gui.CollapsableVert("Tracked points", 0.33 * em,
+        # self.trackpoints_list = gui.CollapsableVert("Tracked points", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
-        self.tracked_points = gui.ListView()
-        self.tracked_points.set_max_visible_items(5)
-        self.tracked_points.set_on_selection_changed(self._on_track_list)
+        self.trackpoints_list = gui.ListView()
+        self.trackpoints_list.set_max_visible_items(5)
+        self.trackpoints_list.set_on_selection_changed(self._on_track_list)
 
         collapse.add_child(remote_layout)
         collapse.add_child(horiz)
         collapse.add_child(gui.Label('Tracked points'))
-        collapse.add_child(self.tracked_points)
+        collapse.add_child(self.trackpoints_list)
 
         return collapse
 
@@ -188,7 +206,36 @@ class Setting_panal(GUI_BASE):
     def update_tracked_points(self):
         keys = sorted(list(self.tracked_frame.keys()))
         items = [self.tracked_frame[k][0].text for k in keys]
-        self.tracked_points.set_items(items)
+        self.trackpoints_list.set_items(items)
+        self.window.set_needs_layout()
+
+    def add_freeze_data(self, name, geometry, mat, geometry_type):
+        ss = time.time()
+        frameidx = self._get_slider_value()
+        fname = f'{frameidx}_freeze_{name}'
+        if not self._scene.scene.has_geometry(fname):
+            self.freeze_data.append(fname)
+            self._scene.scene.add_geometry(fname, geometry, mat)
+            if geometry_type == 'point':
+                self.point_list[fname] = geometry
+            elif geometry_type == 'mesh':
+                self.mesh_list[fname] = geometry
+            self.update_freezed_points()
+
+    def _on_freeze_list(self, new_val, is_dbl_click):
+        if is_dbl_click:
+            if self._scene.scene.has_geometry(new_val):
+                self._scene.scene.remove_geometry(new_val)
+            try:
+                self.freeze_data.remove(new_val)
+            except Exception as e:
+                print(e)
+            self.update_freezed_points()
+        else:
+            print(new_val)
+
+    def update_freezed_points(self):
+        self.freezed_list.set_items(self.freeze_data)
         self.window.set_needs_layout()
 
     def _start_tracking(self, path):
@@ -233,8 +280,8 @@ class Setting_panal(GUI_BASE):
         scale_slider.int_value = 1
         scale_slider.set_on_value_changed(self._on_scale_slider)
 
-        freeze_btn   = creat_btn('Freeze frame', self._freeze_frame)
-        clear_freeze_btn   = creat_btn('Clear frozen data', self._clear_freeze)
+        freeze_btn   = creat_btn('Freeze', self._freeze_frame)
+        clear_freeze_btn   = creat_btn('Clear', self._clear_freeze)
 
         # tabs = gui.TabControl()
         tabs = gui.Vert(0.15 * em)
@@ -257,26 +304,30 @@ class Setting_panal(GUI_BASE):
         cam_grid.add_child(scale_slider)
 
         # horz = gui.Horiz(0.25 * em)
-        add_Switch(cam_grid, 'Fix camera', self._on_fix_view)
-        add_Switch(cam_grid, 'Relative view', self._on_free_view)
+        add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
+        add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
 
         tab2 = gui.Vert(0.25 * em)
         tab2.add_child(cam_grid)
         # tab2.add_child(horz)
 
-        temp_layout = gui.VGrid(2, 0.15 * em)
-        add_Switch(temp_layout, 'Auto Render', self.change_render_states)
-        add_box(temp_layout, 'Show freezed data', self._on_show_freeze_geometry, True)
+        temp_layout = gui.Horiz(0.15 * em)
         temp_layout.add_child(freeze_btn)
+        add_box(temp_layout, 'Show', self._on_show_freeze_geometry, True)
         temp_layout.add_child(clear_freeze_btn)
+
+        self.freezed_list = gui.ListView()
+        self.freezed_list.set_max_visible_items(5)
+        self.freezed_list.set_on_selection_changed(self._on_freeze_list)
 
         tab3 = gui.Vert(0.15 * em)
         tab3.add_child(temp_layout)
+        tab3.add_child(self.freezed_list)
 
         tabs.add_child(gui.Label('Show Data'))
         tabs.add_child(tab1)
         tabs.add_fixed(separation_height)
-        tabs.add_child(gui.Label('Render Option'))
+        tabs.add_child(gui.Label('Freezed data'))
         tabs.add_child(tab3)
         tabs.add_fixed(separation_height)
 
@@ -303,8 +354,8 @@ class Setting_panal(GUI_BASE):
             g.rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g, name)
 
-    def _on_fix_view(self, show):
-        Setting_panal.FIX_CAMERA = show
+    def _on_camera_view(self, show):
+        Setting_panal.FIX_CAMERA = not show
 
     def _on_select_camera(self, name, index):
         Setting_panal.POV = name
@@ -334,13 +385,11 @@ class Setting_panal(GUI_BASE):
             self._scene.scene.show_geometry(name, show)
 
     def _add_frame(self):
-        self.frame_slider_bar.int_value += 1
-        self._on_slider(self.frame_slider_bar.int_value)
+        self._on_slider(self.frame_slider_bar.int_value+1)
         
     def _minus_frame(self):
         if self.frame_slider_bar.int_value > 0:
-            self.frame_slider_bar.int_value -= 1
-            self._on_slider(self.frame_slider_bar.int_value)
+            self._on_slider(self.frame_slider_bar.int_value-1)
 
     def change_render_states(self, render):
         Setting_panal.RENDER = render
@@ -350,12 +399,14 @@ class Setting_panal(GUI_BASE):
 
     def _set_slider_value(self, value):
         self.frame_slider_bar.int_value = int(value)
+        self.frame_edit.int_value = int(value)
         
     def _get_slider_value(self):
         return self.frame_slider_bar.int_value
         
     def _set_slider_limit(self, min, max):
         self.frame_slider_bar.set_limits(min, max)
+        self.frame_edit.set_limits(min, max)
 
     def _on_FPV(self, show):
         Setting_panal.POV = 'first' if show else 'second'
@@ -370,6 +421,7 @@ class Setting_panal(GUI_BASE):
 
     def _on_slider(self, value):
         self.frame_slider_bar.int_value = int(value)
+        self.frame_edit.int_value = int(value)
         if not Setting_panal.PAUSE:
             self.change_pause_status()
         Setting_panal.CLICKED = True
@@ -396,6 +448,85 @@ class Setting_panal(GUI_BASE):
         self.window.set_on_layout(_on_tex_layout)
         self.window.add_child(info)
         return info
+
+    def add_thread(self, thread):
+        self.close_thread()
+        Setting_panal.MYTHREAD = thread
+        Setting_panal.MYTHREAD.start()
+
+    def close_thread(self):
+        if Setting_panal.MYTHREAD is not None:
+            stop_thread(Setting_panal.MYTHREAD)
+
+    def thread(self):
+        """
+        The function is a thread that runs in the background and updates the data in the GUI
+
+        > Youn can define your `fecth_data` and `update_data` functions here
+        """
+        init_param = False
+        self._set_slider_limit(0, self.total_frames - 1)
+        self._set_slider_value(0)
+        while True:
+            while self._get_slider_value() < self.total_frames - 1:
+                index = self._get_slider_value()
+                data = self.fecth_data(index)
+                self.update_data(data, init_param)
+                time.sleep(0.05)
+                init_param = True
+
+                while True:
+                    cv2.waitKey(5)
+                    if Setting_panal.CLICKED:
+                        rule = (index != self._get_slider_value())
+                        if rule:
+                            index = self._get_slider_value()
+                            data = self.fecth_data(index)
+                            self.update_data(data)
+                            time.sleep(0.05)
+                        self._clicked()
+
+                    if not Setting_panal.PAUSE:
+                        break
+
+                self._set_slider_value(index+1)
+
+            self._on_slider(0)
+
+    def fetch_data(self, index):
+        # your function here
+        data = None
+        return data
+    
+    def update_data(self, data, init_param=True):
+        def func():
+            # your function here
+            pass
+        gui.Application.instance.post_to_main_thread(self.window, func)
+        if not init_param:
+            # your function here
+            self.change_pause_status()
+
+def _async_raise(tid, exctype):
+    import ctypes
+    import inspect
+
+    """raises the exception, performs cleanup if needed"""
+    tid = ctypes.c_long(tid)
+    if not inspect.isclass(exctype):
+        exctype = type(exctype)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, ctypes.py_object(exctype))
+    if res == 0:
+        raise ValueError("invalid thread id")
+    elif res != 1:
+        # """if it returns a number greater than one, you're in trouble,
+        # and you should call it again with exc=NULL to revert the effect"""
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, None)
+        raise SystemError("PyThreadState_SetAsyncExc failed")
+
+def stop_thread(thread):
+    _async_raise(thread.ident, SystemExit)
+
 
 def main():
     gui.Application.instance.initialize()

@@ -28,10 +28,10 @@ from util import load_scene as load_pts, images_to_video, icp_mesh_and_point
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 
-POSE_KEY = ['First opt_pose', 'First pose', 'Second opt_pose', 'Second pose', 'Second pred']
+POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
 POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
-    POSE_COLOR[color] = plt.get_cmap("Paired")(i*2)[:3]
+    POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
 
 class o3dvis(setting, Menu):
     # PAUSE = False
@@ -81,8 +81,12 @@ class o3dvis(setting, Menu):
 
         self._on_select_camera(cams[0], 0)
 
+        self.frame_slider_bar.enabled = True
+        self.frame_edit.enabled = True
+        self.play_btn.enabled = True
+        
         if self.Human_data:
-            threading.Thread(target=self.update_thread).start()
+            self.add_thread(threading.Thread(target=self.update_thread))
 
     def reset_settings(self):
         o3dvis.IMG_COUNT = 0
@@ -175,10 +179,9 @@ class o3dvis(setting, Menu):
                         self.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
 
                 def updata_cloud():
-                    freeze = o3dvis.FREEZE
-                    self.update_geometry(pointcloud,  name='human points', freeze=freeze) 
+                    self.update_geometry(pointcloud,  name='human points', freeze=o3dvis.FREEZE) 
                     for si, smpl in enumerate(smpl_geometries):
-                        self.update_geometry(smpl, name=keys[si], freeze=freeze)  
+                        self.update_geometry(smpl, name=keys[si], freeze=o3dvis.FREEZE)  
                     self._unfreeze()
 
                 def save_img():
@@ -216,8 +219,7 @@ class o3dvis(setting, Menu):
                 self._set_slider_value(frame_index+1)
                     
             images_to_video(image_dir, video_name, delete=True)
-            if not o3dvis.PAUSE:
-                self.change_pause_status()
+            self._on_slider(0)
 
     def set_camera(self, ind, pov):
         _, extrinsics = self.Human_data.get_extrinsic(pov)
@@ -288,14 +290,7 @@ class o3dvis(setting, Menu):
         
         if name in self.data_names and self.data_names[name].checked:
             if freeze:
-                ss = time.time()
-                fname = f'{name}_freeze_{ss}'
-                self.freeze_data.append(fname)
-                self._scene.scene.add_geometry(fname, geometry, mat)
-                if geometry_type == 'point':
-                    self.point_list[name] = geometry
-                elif geometry_type == 'mesh':
-                    self.mesh_list[name] = geometry
+                self.add_freeze_data(name, geometry, mat, geometry_type)
             else:
                 self._scene.scene.add_geometry(name, geometry, mat)
         
@@ -308,7 +303,9 @@ class o3dvis(setting, Menu):
 
     def _on_show_geometry(self, show):
         for name, box in self.data_names.items():
-            self._scene.scene.show_geometry(name, box.checked)
+            for nn in [k for k in self.point_list.keys()] + [k for k in self.mesh_list.keys()]:
+                if name in nn:
+                    self._scene.scene.show_geometry(nn, box.checked)
         # self._apply_settings()
 
     def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=True):
@@ -354,13 +351,15 @@ class o3dvis(setting, Menu):
 
     def waitKey(self, key=0, helps=False):
         pass
-    
+
 def main():
     gui.Application.instance.initialize()
 
     w = o3dvis(1280, 720)
 
     gui.Application.instance.run()
+
+    w.close_thread()
 
 if __name__ == "__main__":
     main()

@@ -61,7 +61,10 @@ class trackingVis(base_gui):
 
         self.total_frames = len(self.tracking_list)
 
-        threading.Thread(target=self.tracking_thread).start()
+        self.frame_slider_bar.enabled = True
+        self.frame_edit.enabled = True
+        self.play_btn.enabled = True
+        self.add_thread(threading.Thread(target=self.thread))
 
     def fecth_data(self, index):
         path = self.tracking_foler
@@ -75,35 +78,6 @@ class trackingVis(base_gui):
         gui.Application.instance.post_to_main_thread(self.window, func)
         if not init_param:
             self.change_pause_status()
-
-    def tracking_thread(self):
-        init_param = False
-        self._set_slider_limit(0, self.total_frames - 1)
-        self._set_slider_value(0)
-        while True:
-            while self._get_slider_value() < self.total_frames - 1:
-                time.sleep(0.05)
-                index = self._get_slider_value()
-                data = self.fecth_data(index)
-                self.update_data(data, init_param)
-                init_param = True
-
-                while True:
-                    cv2.waitKey(5)
-                    if trackingVis.CLICKED:
-                        rule = (index != self._get_slider_value())
-                        if rule:
-                            index = self._get_slider_value()
-                            data = self.fecth_data(index)
-                            self.update_data(data)
-                        self._clicked()
-
-                    if not trackingVis.PAUSE:
-                        break
-                self._set_slider_value(index+1)
-
-            self._on_slider(0)
-
 
     def _on_mouse_widget3d(self, event):
         # We could override BUTTON_DOWN without a modifier, but that would
@@ -141,7 +115,6 @@ class trackingVis(base_gui):
                             self.tracked_frame[frame] = []
                             self.tracked_frame[frame].append(point_label)
                             self.tracked_frame[frame].append(label_3d)
-                            # self.tracked_points.add_child(point_label)
                             cam_to_select = world - self.get_camera_pos()
                             eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
                             up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
@@ -161,14 +134,17 @@ class trackingVis(base_gui):
         return gui.Widget.EventCallbackResult.IGNORED
 
     def _save_traj(self):
-        keys = sorted(list(self.tracked_frame.keys()))
-        positions = [self.tracked_frame[frame][1].position for frame in keys]
-        times = [float(self.tracking_list[frame].split('.')[0].replace('_', '.')) for frame in keys]
-        traj = np.hstack((np.array(positions) @ self.COOR_INIT[:3, :3], 
-                          np.array(keys)[:, None], 
-                          np.array(times)[:, None]))
-        savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
-        self.remote_load.write_txt(savepath, traj)
+        try:
+            keys = sorted(list(self.tracked_frame.keys()))
+            positions = [self.tracked_frame[frame][1].position for frame in keys]
+            times = [float(self.tracking_list[frame].split('.')[0].replace('_', '.')) for frame in keys]
+            traj = np.hstack((np.array(positions) @ self.COOR_INIT[:3, :3], 
+                            np.array(keys)[:, None], 
+                            np.array(times)[:, None]))
+            savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
+            self.remote_load.write_txt(savepath, traj)
+        except Exception as e:
+            self.warning_info(e.args[0])
 
 def main():
     gui.Application.instance.initialize()
@@ -176,6 +152,8 @@ def main():
     w = trackingVis(1280, 720, is_remote=True)
 
     gui.Application.instance.run()
+
+    w.close_thread()
 
 if __name__ == "__main__":
     main()
