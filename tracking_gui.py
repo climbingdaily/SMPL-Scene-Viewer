@@ -14,10 +14,9 @@
 import numpy as np
 import open3d.visualization.gui as gui
 import sys
-import cv2
 import threading
 import os
-import time
+import open3d as o3d
 
 sys.path.append('.')
 
@@ -106,15 +105,24 @@ class trackingVis(base_gui):
                     def update_label():
                         frame = self._get_slider_value()
                         if frame in self.tracked_frame:
-                            self.tracked_frame[frame][0].text = f'{frame}: {text}'
+                            self.tracked_frame[frame][0] = f'{frame}: {text}'
                             self.tracked_frame[frame][1].position = world
+                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+                            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
                         else:
-                            point_label = gui.Label(f'{frame}: {text}')
+                            point_info = f'{frame}: {text}'
                             label_3d = self._scene.add_3d_label(world, f'{frame}')
                             label_3d.color = gui.Color(r=0, b=1, g=0.9)
+
+                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+                            self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+
                             self.tracked_frame[frame] = []
-                            self.tracked_frame[frame].append(point_label)
+                            self.tracked_frame[frame].append(point_info)
                             self.tracked_frame[frame].append(label_3d)
+
                             cam_to_select = world - self.get_camera_pos()
                             eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
                             up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
@@ -133,6 +141,35 @@ class trackingVis(base_gui):
             return gui.Widget.EventCallbackResult.HANDLED
         return gui.Widget.EventCallbackResult.IGNORED
 
+    def update_label(self, world):
+        frame = self._get_slider_value()
+        
+        text = "{:.3f}, {:.3f}, {:.3f}".format(
+            world[0], world[1], world[2])
+        if frame in self.tracked_frame:
+            self.tracked_frame[frame][0] = f'{frame}: {text}'
+            self.tracked_frame[frame][1].position = world
+            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+        else:
+            point_info = f'{frame}: {text}'
+            label_3d = self._scene.add_3d_label(world, f'{frame}')
+            label_3d.color = gui.Color(r=0, b=1, g=0.9)
+
+            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+            self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+
+            self.tracked_frame[frame] = []
+            self.tracked_frame[frame].append(point_info)
+            self.tracked_frame[frame].append(label_3d)
+
+            cam_to_select = world - self.get_camera_pos()
+            eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
+            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
+            self._scene.look_at(world, eye, up)
+
     def _save_traj(self):
         try:
             keys = sorted(list(self.tracked_frame.keys()))
@@ -143,6 +180,7 @@ class trackingVis(base_gui):
                             np.array(times)[:, None]))
             savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
             self.remote_load.write_txt(savepath, traj)
+            self.warning_info(f'File saved in {savepath}', 'INFO')
         except Exception as e:
             self.warning_info(e.args[0])
 

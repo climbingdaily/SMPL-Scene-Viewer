@@ -50,7 +50,7 @@ def add_box(layout, name, func, checked=False):
     layout.add_child(box)
 
 class Setting_panal(GUI_BASE):
-    TRACKING_STEP = 20
+    TRACKING_STEP = 50
     FREEZE = False
     FREE_VIEW = False
     FIX_CAMERA = False
@@ -172,6 +172,7 @@ class Setting_panal(GUI_BASE):
         btn = creat_btn('Save traj', self._save_traj)
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
+        text_step.text_value = str(Setting_panal.TRACKING_STEP)
         horiz = gui.Horiz(0.15 * em)
         horiz.add_child(gui.Label('step'))
         horiz.add_child(text_step)
@@ -205,7 +206,7 @@ class Setting_panal(GUI_BASE):
 
     def update_tracked_points(self):
         keys = sorted(list(self.tracked_frame.keys()))
-        items = [self.tracked_frame[k][0].text for k in keys]
+        items = [self.tracked_frame[k][0] for k in keys]
         self.trackpoints_list.set_items(items)
         self.window.set_needs_layout()
 

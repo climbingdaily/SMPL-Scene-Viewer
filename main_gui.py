@@ -308,8 +308,14 @@ class o3dvis(setting, Menu):
                     self._scene.scene.show_geometry(nn, box.checked)
         # self._apply_settings()
 
-    def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=True):
-        self.add_geometry(geometry, name, reset_bounding_box=False, freeze=freeze)
+    def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=False, archive=False):
+        if self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
+        self.add_geometry(geometry, 
+                          name, 
+                          reset_bounding_box=reset_bounding_box, 
+                          freeze=freeze,
+                          archive=archive)
 
     def remove_geometry(self, name):
         self._scene.scene.remove_geometry(name)

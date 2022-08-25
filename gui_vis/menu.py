@@ -63,11 +63,11 @@ class Menu(GUI_BASE):
         dlg.set_on_done(self._on_load_smpl_done)
         self.window.show_dialog(dlg)
 
-    def warning_info(self, info):
+    def warning_info(self, info, type='Warning'):
         em = self.window.theme.font_size
-        dlg = gui.Dialog("Warning")
+        dlg = gui.Dialog(f'[{type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(info))
+        dlg_layout.add_child(gui.Label(f'[{type}]: {info}'))
         ok = gui.Button("OK")
         ok.set_on_clicked(self._on_about_ok)
         h = gui.Horiz()
@@ -80,20 +80,7 @@ class Menu(GUI_BASE):
         self.window.show_dialog(dlg)
 
     def _on_menu_show(self):
-        em = self.window.theme.font_size
-        dlg = gui.Dialog("Warning")
-        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label("[Warning]: Please load the human data"))
-        ok = gui.Button("OK")
-        ok.set_on_clicked(self._on_about_ok)
-        h = gui.Horiz()
-        h.add_stretch()
-        h.add_child(ok)
-        h.add_stretch()
-        dlg_layout.add_child(h)
-
-        dlg.add_child(dlg_layout)
-        self.window.show_dialog(dlg)
+        self.warning_info('Please load the human data')
 
     def _on_load_smpl_done(self, filename):
         pass
@@ -104,7 +91,7 @@ class Menu(GUI_BASE):
 def main():
     gui.Application.instance.initialize()
 
-    w = Menu(1080, 720)
+    w = Menu(1280, 720)
 
     gui.Application.instance.run()
 
