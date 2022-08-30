@@ -15,7 +15,7 @@ import numpy as np
 import open3d as o3d
 from copy import deepcopy
 
-def creat_chessboard(lenght = 2, size_x = 50, size_y = 50, white = [1,1,1], black = [0.3, 0.3, 0.3]):
+def creat_chessboard(lenght = 2, size_x = 52, size_y = 52, white = [1,1,1], black = [0.3, 0.3, 0.3]):
     """
     It creates a chessboard of a given size, with a given number of squares, and with a given color for
     the white and black squares
