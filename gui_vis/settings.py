@@ -365,6 +365,8 @@ class Setting_panal(GUI_BASE):
     def _clear_freeze(self):
         for name in self.freeze_data:
             self._scene.scene.remove_geometry(name)
+            self.freeze_data.remove(name)
+        self.update_freezed_points()
 
     def _on_free_view(self, show):
         Setting_panal.FREE_VIEW = show

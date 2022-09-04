@@ -248,6 +248,18 @@ def append_alpha(imtmp):
 
 
 def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024):
+    """
+    It takes in a batch of poses and returns a batch of vertices
+    
+    Args:
+      poses: the pose parameters of the SMPL model. (N, 72, 3) or (N, 24, 3, 3)
+      trans: translation of the model (N, 3)
+      beta: the shape parameters of the SMPL model. (10, )
+      batch_size: the number of poses to process at once. Defaults to 1024
+    
+    Returns:
+      The vertices of the mesh.
+    """
 
     if not (np.array(beta) != 0).sum():
         beta = [ 0.13718624, -0.32368565,  0.06066366,  0.22490674, -0.3380233 ,

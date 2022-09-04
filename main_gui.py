@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 sys.path.append('.')
 
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
-from util import load_scene as load_pts, images_to_video, icp_mesh_and_point
+from util import load_scene as load_pts, images_to_video
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 
