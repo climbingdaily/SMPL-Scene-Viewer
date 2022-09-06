@@ -52,8 +52,8 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
         else:
             trans = human_data[trans_str2].copy()
         vert = poses_to_vertices(pose, trans, beta=beta)
-        verts_list[f'{info} {pose_str}'] = vert[start:end]
-        print(f'[SMPL MODEL] {info} {pose_str} loaded')
+        verts_list[f'{info}'] = vert[start:end]
+        print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
 
 def load_vis_data(humans, start=0, end=-1):
     """
@@ -82,6 +82,10 @@ def load_vis_data(humans, start=0, end=-1):
 
     f_vert = poses_to_vertices(pose, beta=beta)
 
+    # pose + trans
+    vis_data['humans']['Baseline1(F)'] = f_vert[start: end] + \
+        np.expand_dims(trans.astype(np.float32), 1)[start: end]
+
     # load first person
     if 'lidar_traj' in first_person:
         lidar_traj = first_person['lidar_traj'][:, 1:4]
@@ -99,21 +103,45 @@ def load_vis_data(humans, start=0, end=-1):
         ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         trans = lidar_traj + lidar_to_head - head + root - root[0]  
     
-    f_vert += np.expand_dims(trans.astype(np.float32), 1)
-
-    vis_data['humans']['First pose'] = f_vert[start: end]
+    vis_data['humans']['Baseline2(F)'] = f_vert[start: end] + \
+        np.expand_dims(trans.astype(np.float32), 1)[start: end]
+    
     print(f'[SMPL MODEL] First pose loaded')
 
-    load_human_mesh(vis_data['humans'], first_person, start, end, 'opt_pose', 'opt_trans')
+    load_human_mesh(vis_data['humans'], 
+                    first_person, 
+                    start, 
+                    end, 
+                    'opt_pose', 
+                    'opt_trans', 
+                    info='Ours(F)')
 
     if 'second_person' in humans:
         second_person = humans['second_person']    
 
-        load_human_mesh(vis_data['humans'], second_person, start, end, 'pose',
-                        'trans', 'mocap_trans', info='Second')
+        load_human_mesh(vis_data['humans'], 
+                        second_person, 
+                        start, 
+                        end, 
+                        'pose',
+                        'mocap_trans', 
+                        info='Baseline1(S)')
 
-        load_human_mesh(vis_data['humans'], second_person, start, end, 'opt_pose',
-                        'opt_trans', info='Second')
+        load_human_mesh(vis_data['humans'], 
+                        second_person, 
+                        start, 
+                        end, 
+                        'pose',
+                        'trans', 
+                        info='Baseline2(S)')
+
+        load_human_mesh(vis_data['humans'], 
+                        second_person, 
+                        start, 
+                        end, 
+                        'opt_pose',
+                        'opt_trans', 
+                        info='Ours(S)')
 
         if 'point_clouds' in second_person:
             global_frame_id = second_person['point_frame']
@@ -179,7 +207,7 @@ class HUMAN_DATA:
             print(f'No First Lidar View')
 
         try:
-            verts = self.vis_data_list['humans']['First pose']
+            verts = self.vis_data_list['humans']['Baseline2(F)']
             root_position = vertices_to_head(verts, 0)
             root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
 
@@ -196,11 +224,11 @@ class HUMAN_DATA:
 
         try:
             try:
-                second_verts = self.vis_data_list['humans']['Second opt_pose']
+                second_verts = self.vis_data_list['humans']['Ours(S)']
                 second_pose = humans_verts['second_person']['opt_pose']
             except:
                 try:
-                    second_verts = self.vis_data_list['humans']['Second pose']
+                    second_verts = self.vis_data_list['humans']['Baseline2(S)']
                     second_pose = humans_verts['second_person']['pose']
                 except Exception as e:
                     print(e)

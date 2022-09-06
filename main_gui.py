@@ -28,7 +28,8 @@ from util import load_scene as load_pts, images_to_video
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 
-POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
+# POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
+POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)', 'Baseline1(F)', 'Baseline1(S)', 'Second pred']
 POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
@@ -130,6 +131,20 @@ class o3dvis(setting, Menu):
             self.reset_settings()
             self._set_slider_value(0)
             
+            def set_smpl(smpl, key, iid):
+                if iid >= 0:
+                    smpl.vertices = o3d.utility.Vector3dVector(human_data[key][iid])
+                    smpl.vertex_normals = o3d.utility.Vector3dVector()
+                    smpl.triangle_normals = o3d.utility.Vector3dVector()
+                    # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
+                    # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
+                    # smpl.translate(delta)
+                    smpl.compute_vertex_normals()
+                    if len(smpl.vertex_colors) == 0:
+                        smpl.paint_uniform_color(POSE_COLOR[key])
+                else:
+                    smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
+
             while self._get_slider_value() < total_frames - 1:
                 def fetch_meshs(ind):
 
@@ -143,33 +158,19 @@ class o3dvis(setting, Menu):
                     pointcloud.normals = o3d.utility.Vector3dVector()
                     pointcloud.paint_uniform_color(POSE_COLOR['points'])
 
+
                     for idx, smpl in enumerate(smpl_geometries):
                         # smpl = o3d.geometry.TriangleMesh()
                         key = keys[idx]
                         if 'pred' in key.lower():
-                            if index >= 0:
-                                smpl.vertices = o3d.utility.Vector3dVector(human_data[key][index])
-                                smpl.vertex_normals = o3d.utility.Vector3dVector()
-                                smpl.triangle_normals = o3d.utility.Vector3dVector()
-                                # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
-                                # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
-                                # smpl.translate(delta)
-                                smpl.compute_vertex_normals()
-                                if len(smpl.vertex_colors) == 0:
-                                    smpl.paint_uniform_color(POSE_COLOR[key])
-                            else:
-                                smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
+                            set_smpl(smpl, key, index)
+
                         elif 'first' in key.lower() or 'second' in key.lower():
-                            smpl.vertices = o3d.utility.Vector3dVector(human_data[key][ind])
-                            smpl.vertex_normals = o3d.utility.Vector3dVector()
-                            smpl.triangle_normals = o3d.utility.Vector3dVector()
-                            # if 'second' in key.lower() and index > 0:
-                            #     rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
-                            #     _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
-                            #     smpl.translate(delta)
-                            smpl.compute_vertex_normals()
-                            if len(smpl.vertex_colors) == 0:
-                                smpl.paint_uniform_color(POSE_COLOR[key])
+                            set_smpl(smpl, key, ind)
+
+                        elif '(f)' in key.lower() or '(s)' in key.lower():
+                            set_smpl(smpl, key, ind)
+
                         else :
                             print('Edit your key in human_data here!')
                 
