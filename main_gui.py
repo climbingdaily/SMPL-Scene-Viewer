@@ -87,139 +87,118 @@ class o3dvis(setting, Menu):
         self.play_btn.enabled = True
         
         if self.Human_data:
-            self.add_thread(threading.Thread(target=self.update_thread))
+            self.tracking_setting.visible = True
 
-    def reset_settings(self):
-        o3dvis.IMG_COUNT = 0
-        # o3dvis.FREE_VIEW = False
-        # o3dvis.PAUSE = False
-        # o3dvis.POV = 'first'
-        # o3dvis.RENDER = False
-        # self._set_slider_value(0)
+            humans = self.Human_data.vis_data_list['humans']
+            keys = list(humans.keys())
+            self.total_frames = humans[keys[0]].shape[0]
+            
+            self.fetched_data = {}
+            for key in keys:
+                smpl = o3d.io.read_triangle_mesh(sample_path)
+                smpl.vertex_colors = o3d.utility.Vector3dVector()
+                self.fetched_data[key] = smpl
+            self.fetched_data['human points'] = o3d.geometry.PointCloud()
 
-    def update_thread(self):
-        """
-        The function is to render the 3D point cloud and the SMPL mesh in the same window
-        """
+            self.add_thread(threading.Thread(target=self.thread))
+
+    def _start_tracking(self, path):
+        super(o3dvis, self)._start_tracking(path)
+        if len(self.tracking_list) > 0:
+            try:
+                start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][0][-1]
+                self.tracking_list = self.tracking_list[start:end+1]
+            except Exception as e:
+                print(e)
+
+    def update_data(self, data, initialized=True):
+        def func():
+            for name in data:
+                self.add_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
+            self._unfreeze()
+        gui.Application.instance.post_to_main_thread(self.window, func)
+        if not initialized:
+            self.change_pause_status()
+
+    def fetch_data(self, ind):
+        def set_smpl(smpl, key, iid):
+            if iid >= 0:
+                smpl.vertices = o3d.utility.Vector3dVector(
+                    self.Human_data.vis_data_list['humans'][key][iid])
+                smpl.vertex_normals = o3d.utility.Vector3dVector()
+                smpl.triangle_normals = o3d.utility.Vector3dVector()
+                # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
+                # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
+                # smpl.translate(delta)
+                smpl.compute_vertex_normals()
+                if len(smpl.vertex_colors) == 0:
+                    smpl.paint_uniform_color(POSE_COLOR[key])
+            else:
+                smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
+
+        pointcloud = self.fetched_data['human points']
         vis_data = self.Human_data.vis_data_list
 
-        smpl_geometries = []
-        human_data = vis_data['humans']
-
-        pointcloud = o3d.geometry.PointCloud()
         if 'point cloud' in vis_data:
             points = vis_data['point cloud'][0]
             indexes = vis_data['point cloud'][1]
-        else:
-            indexes = []
+            if ind in indexes:
+                index = indexes.index(ind)
+                pointcloud.points = o3d.utility.Vector3dVector(points[index])
+            else:
+                index = -1
+                pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+        pointcloud.normals = o3d.utility.Vector3dVector()
+        pointcloud.paint_uniform_color(POSE_COLOR['points'])
+        for key, geometry in self.fetched_data.items():
+            iid = index if 'pred' in key.lower() else ind
+            if key != 'human points':
+                set_smpl(geometry, key, iid)
 
-        for i in human_data:
-            smpl = o3d.io.read_triangle_mesh(sample_path)
-            smpl.vertex_colors = o3d.utility.Vector3dVector()
-            smpl_geometries.append(smpl) # a ramdon SMPL mesh
-    
-        keys = list(human_data.keys())
-        init_param = False
+        return self.fetched_data
 
-        total_frames = human_data[keys[0]].shape[0]
-
-        self._set_slider_limit(0, total_frames - 1)
+    def update_thread(self):
+        def save_img():
+            self.save_imgs(image_dir)
+        # =================================================
+        initialized = False
+        self._set_slider_limit(0, self.total_frames - 1)
 
         while True:
             video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
             self.reset_settings()
             self._set_slider_value(0)
-            
-            def set_smpl(smpl, key, iid):
-                if iid >= 0:
-                    smpl.vertices = o3d.utility.Vector3dVector(human_data[key][iid])
-                    smpl.vertex_normals = o3d.utility.Vector3dVector()
-                    smpl.triangle_normals = o3d.utility.Vector3dVector()
-                    # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
-                    # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
-                    # smpl.translate(delta)
-                    smpl.compute_vertex_normals()
-                    if len(smpl.vertex_colors) == 0:
-                        smpl.paint_uniform_color(POSE_COLOR[key])
-                else:
-                    smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
 
-            while self._get_slider_value() < total_frames - 1:
-                def fetch_meshs(ind):
-
-                    if ind in indexes:
-                        index = indexes.index(ind)
-                        pointcloud.points = o3d.utility.Vector3dVector(points[index])
-                    else:
-                        index = -1
-                        pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-
-                    pointcloud.normals = o3d.utility.Vector3dVector()
-                    pointcloud.paint_uniform_color(POSE_COLOR['points'])
-
-
-                    for idx, smpl in enumerate(smpl_geometries):
-                        # smpl = o3d.geometry.TriangleMesh()
-                        key = keys[idx]
-                        if 'pred' in key.lower():
-                            set_smpl(smpl, key, index)
-
-                        elif 'first' in key.lower() or 'second' in key.lower():
-                            set_smpl(smpl, key, ind)
-
-                        elif '(f)' in key.lower() or '(s)' in key.lower():
-                            set_smpl(smpl, key, ind)
-
-                        else :
-                            print('Edit your key in human_data here!')
-                
-                def add_first_cloud():
-                    self.add_geometry(pointcloud, reset_bounding_box = False, name='human points')  
-                    for si, smpl in enumerate(smpl_geometries):
-                        self.add_geometry(smpl, reset_bounding_box = False, name=keys[si])  
-
-                def updata_cloud():
-                    self.update_geometry(pointcloud,  name='human points', freeze=o3dvis.FREEZE) 
-                    for si, smpl in enumerate(smpl_geometries):
-                        self.update_geometry(smpl, name=keys[si], freeze=o3dvis.FREEZE)  
-                    self._unfreeze()
-
-                def save_img():
-                    self.save_imgs(image_dir)
-
-                frame_index = self._get_slider_value()
-                fetch_meshs(frame_index)
-                self.set_camera(frame_index, o3dvis.POV)
-                
-                if not init_param:
-                    init_param = True
-                    gui.Application.instance.post_to_main_thread(self.window, add_first_cloud)
-                    self.change_pause_status()
-                else:
-                    gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
+            while self._get_slider_value() < self.total_frames - 1:
+                index = self._get_slider_value()
+                data = self.fetch_data(index)
+                self.update_data(data, initialized)
+                self.set_camera(index, o3dvis.POV)
+                time.sleep(0.05)
+                initialized = True
 
                 if o3dvis.RENDER:
                     gui.Application.instance.post_to_main_thread(self.window, save_img)
-                time.sleep(0.05)
 
                 while True:
                     cv2.waitKey(10)
                     if o3dvis.CLICKED:
-                        if frame_index != self._get_slider_value() or o3dvis.FREEZE:
-                            frame_index = self._get_slider_value()
-                            fetch_meshs(frame_index)
-                            gui.Application.instance.post_to_main_thread(self.window, updata_cloud)
-                        self.set_camera(frame_index, o3dvis.POV)
-
+                        if index != self._get_slider_value() or o3dvis.FREEZE:
+                            index = self._get_slider_value()
+                            data = self.fetch_data(index)
+                            self.update_data(data)
+                            time.sleep(0.05)
+                        self.set_camera(index, o3dvis.POV)
                         self._clicked()
 
                     if not o3dvis.PAUSE:
                         break
                 
-                self._set_slider_value(frame_index+1)
+                self._set_slider_value(index+1)
                     
             images_to_video(image_dir, video_name, delete=True)
+
             self._on_slider(0)
 
     def set_camera(self, ind, pov):
@@ -234,10 +213,14 @@ class o3dvis(setting, Menu):
         else:
             self.init_camera(extrinsics[ind] @ self.COOR_INIT)  
 
-    def add_geometry(self, geometry, name=None, mat=None, 
-                        reset_bounding_box=True, 
-                        archive=False, 
-                        freeze=False):
+    def add_geometry(self, 
+                    geometry, 
+                    name=None, 
+                    mat=None, 
+                    reset_bounding_box=True, 
+                    archive=False, 
+                    freeze=False):
+
         if mat is None:
             mat =self.settings.material
         if name is None:
@@ -348,16 +331,6 @@ class o3dvis(setting, Menu):
             extrinsic_matrix = self.get_camera()
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
-
-    def save_imgs(self, img_dir):
-        if not os.path.exists(img_dir):
-            os.makedirs(img_dir)
-        img_path = os.path.join(img_dir, f'{o3dvis.IMG_COUNT:04d}.jpg')
-        o3dvis.IMG_COUNT += 1
-        self.export_image(img_path, 1280, 720)
-
-    def waitKey(self, key=0, helps=False):
-        pass
 
 def main():
     gui.Application.instance.initialize()

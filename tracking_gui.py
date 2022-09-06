@@ -21,7 +21,6 @@ import open3d as o3d
 sys.path.append('.')
 
 from main_gui import o3dvis as base_gui
-from util import load_data_remote
 
 class trackingVis(base_gui):
     FRAME = 1
@@ -35,47 +34,23 @@ class trackingVis(base_gui):
         self.window.set_needs_layout()
 
     def _start_tracking(self, path):
-        self.tracking_list = []
-        self.tracking_foler = path
-        username = self.remote_info['username'].text_value.strip()
-        hostname = self.remote_info['hostname'].text_value.strip()
-        port = self.remote_info['port'].text_value.strip()
-
-        try:
-            self.remote_load = load_data_remote(False, username, hostname, int(port))
-            pcd_paths = self.remote_load.list_dir(path)
-        except:
-            try:
-                self.remote_load = load_data_remote(True, username, hostname, int(port))
-                pcd_paths = self.remote_load.list_dir(path)
-            except Exception as e:
-                print(e)
-                self.warning_info(f"'{path}' \n Not valid! Please input the right remote info!!!")
-                return
-
-        for pcd_path in pcd_paths:
-            if pcd_path.endswith('.pcd'):
-                self.tracking_list.append(pcd_path)
-        self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x.split('.')[0].replace('_', '.')))
-
-        self.total_frames = len(self.tracking_list)
-
+        super(trackingVis, self)._start_tracking(path)
         self.frame_slider_bar.enabled = True
         self.frame_edit.enabled = True
         self.play_btn.enabled = True
+        self.total_frames = len(self.tracking_list)
         self.add_thread(threading.Thread(target=self.thread))
 
-    def fecth_data(self, index):
-        path = self.tracking_foler
-        geomety = self.remote_load.load_point_cloud(path + '/' +self.tracking_list[index])
+    def fetch_data(self, index):
+        geomety = self.remote_load.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
         return {'tracking frame': geomety}
 
-    def update_data(self, data, init_param=True):
+    def update_data(self, data, initialized=True):
         def func():
             for name in data:
                 self.add_geometry(data[name], name, reset_bounding_box=False)
         gui.Application.instance.post_to_main_thread(self.window, func)
-        if not init_param:
+        if not initialized:
             self.change_pause_status()
 
     def _on_mouse_widget3d(self, event):
@@ -146,19 +121,18 @@ class trackingVis(base_gui):
         
         text = "{:.3f}, {:.3f}, {:.3f}".format(
             world[0], world[1], world[2])
+        square_box = o3d.geometry.TriangleMesh.create_sphere(0.2, 20, create_uv_map=True)
+        square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+
         if frame in self.tracked_frame:
             self.tracked_frame[frame][0] = f'{frame}: {text}'
             self.tracked_frame[frame][1].position = world
-            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
-            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
             self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
         else:
             point_info = f'{frame}: {text}'
             label_3d = self._scene.add_3d_label(world, f'{frame}')
             label_3d.color = gui.Color(r=0, b=1, g=0.9)
 
-            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
-            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
             self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
 
             self.tracked_frame[frame] = []
@@ -183,6 +157,10 @@ class trackingVis(base_gui):
             self.warning_info(f'File saved in {savepath}', 'INFO')
         except Exception as e:
             self.warning_info(e.args[0])
+
+    def set_camera(self, ind, pov):
+        pass
+    
 
 def main():
     gui.Application.instance.initialize()

@@ -13,12 +13,14 @@
 
 import open3d.visualization.gui as gui
 import sys
+import os
 import time
 import cv2
 
 sys.path.append('.')
 sys.path.append('..')
 from .base_gui import AppWindow as GUI_BASE
+from util import load_data_remote, images_to_video
 
 def create_combobox(func, names=None):
     combobox = gui.Combobox()
@@ -61,13 +63,15 @@ class Setting_panal(GUI_BASE):
     INTRINSIC_FACTOR = 1
     SCALE = 1
     MYTHREAD = None
+    IMG_COUNT = 0
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
         self.archive_data = []
         self.freeze_data = []
-        em = self.window.theme.font_size
+        self.total_frames = 1
         self.tracked_frame = {}
+        em = self.window.theme.font_size
 
         stream_setting = self.create_stream_settings()
         human_setting, camera_setting = self.create_humandata_settings()
@@ -85,7 +89,7 @@ class Setting_panal(GUI_BASE):
 
         self.tracking_setting.visible = False
         self._settings_panel.add_child(collapse)
-
+        
     def create_stream_settings(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
@@ -240,7 +244,30 @@ class Setting_panal(GUI_BASE):
         self.window.set_needs_layout()
 
     def _start_tracking(self, path):
-        pass
+        self.tracking_list = []
+        self.tracking_foler = path
+        username = self.remote_info['username'].text_value.strip()
+        hostname = self.remote_info['hostname'].text_value.strip()
+        port = self.remote_info['port'].text_value.strip()
+
+        try:
+            self.remote_load = load_data_remote(False, username, hostname, int(port))
+            pcd_paths = self.remote_load.list_dir(path)
+        except:
+            try:
+                self.remote_load = load_data_remote(True, username, hostname, int(port))
+                pcd_paths = self.remote_load.list_dir(path)
+            except Exception as e:
+                print(e)
+                self.warning_info(f"'{path}' \n Not valid! Please input the right remote info!!!")
+                return
+
+        for pcd_path in pcd_paths:
+            if pcd_path.endswith('.pcd'):
+                self.tracking_list.append(pcd_path)
+        self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x.split('.')[0].replace('_', '.')))
+        
+        # pass
     
     def _set_tracking_step(self, value):
         Setting_panal.TRACKING_STEP = round(float(value))
@@ -461,32 +488,52 @@ class Setting_panal(GUI_BASE):
         if Setting_panal.MYTHREAD is not None:
             stop_thread(Setting_panal.MYTHREAD)
 
+    def reset_settings(self):
+        Setting_panal.IMG_COUNT = 0
+        # Setting_panal.FREE_VIEW = False
+        # Setting_panal.PAUSE = False
+        # Setting_panal.POV = 'first'
+        # Setting_panal.RENDER = False
+        # self._set_slider_value(0)
+
     def thread(self):
         """
         The function is a thread that runs in the background and updates the data in the GUI
 
-        > Youn can define your `fecth_data` and `update_data` functions here
+        > Youn can define your `fetch_data` and `update_data` functions here
         """
-        init_param = False
+        initialized = False
         self._set_slider_limit(0, self.total_frames - 1)
-        self._set_slider_value(0)
         while True:
+            try:
+                video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+            except Exception as e:
+                video_name = 'test' + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+            image_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f'temp_{video_name}')
+            def save_img():
+                self.save_imgs(image_dir)
+            self.reset_settings()
+            self._set_slider_value(0)
             while self._get_slider_value() < self.total_frames - 1:
                 index = self._get_slider_value()
-                data = self.fecth_data(index)
-                self.update_data(data, init_param)
-                time.sleep(0.05)
-                init_param = True
+                data = self.fetch_data(index)
+                self.update_data(data, initialized)
+                time.sleep(0.01)
+                self.set_camera(index, Setting_panal.POV)
+                initialized = True
+                if Setting_panal.RENDER:
+                    gui.Application.instance.post_to_main_thread(self.window, save_img)
 
                 while True:
-                    cv2.waitKey(5)
+                    time.sleep(0.01)
                     if Setting_panal.CLICKED:
-                        rule = (index != self._get_slider_value())
+                        rule = (index != self._get_slider_value() or Setting_panal.FREEZE)
                         if rule:
                             index = self._get_slider_value()
-                            data = self.fecth_data(index)
+                            data = self.fetch_data(index)
                             self.update_data(data)
-                            time.sleep(0.05)
+                            time.sleep(0.01)
+                        self.set_camera(index, Setting_panal.POV)
                         self._clicked()
 
                     if not Setting_panal.PAUSE:
@@ -494,19 +541,31 @@ class Setting_panal(GUI_BASE):
 
                 self._set_slider_value(index+1)
 
+            images_to_video(image_dir, video_name, delete=True)
+
             self._on_slider(0)
+
+    def save_imgs(self, img_dir):
+        if not os.path.exists(img_dir):
+            os.makedirs(img_dir)
+        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:04d}.jpg')
+        Setting_panal.IMG_COUNT += 1
+        self.export_image(img_path, 1280, 720)
+
+    def set_camera(self, ind, pov):
+        pass
 
     def fetch_data(self, index):
         # your function here
         data = None
         return data
     
-    def update_data(self, data, init_param=True):
+    def update_data(self, data, initialized=True):
         def func():
             # your function here
             pass
         gui.Application.instance.post_to_main_thread(self.window, func)
-        if not init_param:
+        if not initialized:
             # your function here
             self.change_pause_status()
 
