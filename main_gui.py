@@ -106,7 +106,7 @@ class o3dvis(setting, Menu):
         super(o3dvis, self)._start_tracking(path)
         if len(self.tracking_list) > 0:
             try:
-                start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][0][-1]
+                start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
                 self.tracking_list = self.tracking_list[start:end+1]
             except Exception as e:
                 print(e)
@@ -152,54 +152,14 @@ class o3dvis(setting, Menu):
         pointcloud.paint_uniform_color(POSE_COLOR['points'])
         for key, geometry in self.fetched_data.items():
             iid = index if 'pred' in key.lower() else ind
-            if key != 'human points':
+            if '(s)' in key.lower() or '(f)' in key.lower():
                 set_smpl(geometry, key, iid)
+        try:
+            self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
+        except Exception as e:
+            pass
 
         return self.fetched_data
-
-    def update_thread(self):
-        def save_img():
-            self.save_imgs(image_dir)
-        # =================================================
-        initialized = False
-        self._set_slider_limit(0, self.total_frames - 1)
-
-        while True:
-            video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
-            image_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'temp_{video_name}')
-            self.reset_settings()
-            self._set_slider_value(0)
-
-            while self._get_slider_value() < self.total_frames - 1:
-                index = self._get_slider_value()
-                data = self.fetch_data(index)
-                self.update_data(data, initialized)
-                self.set_camera(index, o3dvis.POV)
-                time.sleep(0.05)
-                initialized = True
-
-                if o3dvis.RENDER:
-                    gui.Application.instance.post_to_main_thread(self.window, save_img)
-
-                while True:
-                    cv2.waitKey(10)
-                    if o3dvis.CLICKED:
-                        if index != self._get_slider_value() or o3dvis.FREEZE:
-                            index = self._get_slider_value()
-                            data = self.fetch_data(index)
-                            self.update_data(data)
-                            time.sleep(0.05)
-                        self.set_camera(index, o3dvis.POV)
-                        self._clicked()
-
-                    if not o3dvis.PAUSE:
-                        break
-                
-                self._set_slider_value(index+1)
-                    
-            images_to_video(image_dir, video_name, delete=True)
-
-            self._on_slider(0)
 
     def set_camera(self, ind, pov):
         _, extrinsics = self.Human_data.get_extrinsic(pov)

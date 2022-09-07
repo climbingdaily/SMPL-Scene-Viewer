@@ -151,7 +151,7 @@ class Setting_panal(GUI_BASE):
         username = gui.TextEdit()
         hostname = gui.TextEdit()
         port = gui.TextEdit()
-        self._fileedit.text_value = '/hdd/dyd/lidarhumanscene/data/0623/003/tracking_data/segment_by_tracking'
+        self._fileedit.text_value = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
         username.text_value = 'dyd'
         hostname.text_value = '10.24.80.241'
         port.text_value = '911'
@@ -267,7 +267,6 @@ class Setting_panal(GUI_BASE):
                 self.tracking_list.append(pcd_path)
         self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x.split('.')[0].replace('_', '.')))
         
-        # pass
     
     def _set_tracking_step(self, value):
         Setting_panal.TRACKING_STEP = round(float(value))
@@ -555,10 +554,13 @@ class Setting_panal(GUI_BASE):
     def set_camera(self, ind, pov):
         pass
 
+    def get_tracking_data(self, index):
+        geomety = self.remote_load.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
+        return geomety
+        
     def fetch_data(self, index):
         # your function here
-        data = None
-        return data
+        return {}
     
     def update_data(self, data, initialized=True):
         def func():
