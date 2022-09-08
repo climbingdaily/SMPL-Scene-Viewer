@@ -44,12 +44,14 @@ def add_Switch(layout, name, func, checked=False):
     switch.set_on_clicked(func)
     switch.is_on = checked
     layout.add_child(switch)
+    return switch
 
 def add_box(layout, name, func, checked=False):
     box = gui.Checkbox(name)
     box.set_on_checked(func)
     box.checked = checked
     layout.add_child(box)
+    return box
 
 class Setting_panal(GUI_BASE):
     TRACKING_STEP = 50
@@ -73,7 +75,7 @@ class Setting_panal(GUI_BASE):
         self.tracked_frame = {}
         em = self.window.theme.font_size
 
-        stream_setting = self.create_stream_settings()
+        self.stream_setting = self.create_stream_settings()
         human_setting, camera_setting = self.create_humandata_settings()
         self.tracking_setting = self.tracking_tool_setting()
         
@@ -84,17 +86,37 @@ class Setting_panal(GUI_BASE):
 
         collapse = gui.CollapsableVert("My settings", 0.33 * em,
                                         gui.Margins(em, 0, 0, 0))
-        collapse.add_child(stream_setting)
+
+        # collapse.add_child(stream_setting)
         collapse.add_child(tabs)
+        self.window.add_child(self.stream_setting)
+        self.window.set_on_layout(self._on_layout)
 
         self.tracking_setting.visible = False
         self._settings_panel.add_child(collapse)
-        
+
+    def _on_layout(self, layout_context):
+        r = self.window.content_rect
+        self._scene.frame = r
+        width = 17 * layout_context.theme.font_size
+        pref = self.stream_setting.calc_preferred_size(layout_context,
+                                             gui.Widget.Constraints())
+        play_btn_height = min(r.height, pref.height)
+
+        height = min(
+            r.height - play_btn_height,
+            self._settings_panel.calc_preferred_size(
+                layout_context, gui.Widget.Constraints()).height)
+        self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
+
+        self.stream_setting.frame = gui.Rect(
+            r.width / 4, r.get_bottom() - pref.height, r.width / 2, pref.height)
+
     def create_stream_settings(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
 
-        collapse = gui.Vert(0.15 * em)
+        vert_layout = gui.Vert(0.15 * em)
         # collapse = gui.CollapsableVert("Data stream", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
 
@@ -120,23 +142,33 @@ class Setting_panal(GUI_BASE):
         # horiz_layout.add_child(gui.Label('frames'))
         # horiz_layout.add_child(text_frames)
 
-        prog_layout = gui.Horiz(0.15 * em)
-        prog_layout.add_child(frame_edit)
-        # prog_layout.add_child(minus_btn)
-        # prog_layout.add_child(add_btn)
-        prog_layout.add_child(frame_slider)
+        horiz_layout = gui.Horiz(0.15 * em)
+        horiz_layout.add_child(frame_edit)
+        # horiz_layout.add_child(minus_btn)
+        # horiz_layout.add_child(add_btn)
+        horiz_layout.add_child(play_btn)
+        horiz_layout.add_child(frame_slider)
         
-        # collapse.add_child(horiz_layout)
-        collapse.add_child(prog_layout)
-        collapse.add_child(play_btn)
-        add_Switch(collapse, 'Auto Render', self.change_render_states)
+        h2 = gui.Horiz(1 * em)
+        add_Switch(h2, 'Follow camera', self._on_camera_view, True)
+        self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
+        add_box(h2, 'Chess Board', self._on_show_archive_geometry, True)
+        h2.add_child(self._show_skybox)
+        h2.add_child(self._show_axes)
+        h2.add_child(self._show_ground_plane)
+        add_Switch(h2, 'Auto Render', self.change_render_states)
+
+        vert_layout.add_child(horiz_layout)
+        vert_layout.add_child(h2)
+        # vert_layout.add_child(play_btn)
+
 
         frame_slider.enabled = False
         frame_edit.enabled = False
         play_btn.enabled = False
         self.frame_slider_bar, self.play_btn, self.frame_edit = frame_slider, play_btn, frame_edit
 
-        return collapse
+        return vert_layout
 
     def tracking_tool_setting(self):
         self.remote_info = {}
@@ -315,7 +347,8 @@ class Setting_panal(GUI_BASE):
         tab1 = gui.VGrid(2, 0.15 * em)
 
         try:
-            add_box(tab1, 'Chess Board', self._on_show_archive_geometry, True)
+            add_box(tab1, 'Freezed data', self._on_show_freeze_geometry, True)
+
             for box in checkboxes:
                 tab1.add_child(box)
         except:
@@ -331,8 +364,8 @@ class Setting_panal(GUI_BASE):
         cam_grid.add_child(scale_slider)
 
         # horz = gui.Horiz(0.25 * em)
-        add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
-        add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
+        # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
+        # add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
 
         tab2 = gui.Vert(0.25 * em)
         tab2.add_child(cam_grid)
@@ -340,7 +373,6 @@ class Setting_panal(GUI_BASE):
 
         temp_layout = gui.Horiz(0.15 * em)
         temp_layout.add_child(freeze_btn)
-        add_box(temp_layout, 'Show', self._on_show_freeze_geometry, True)
         temp_layout.add_child(clear_freeze_btn)
 
         self.freezed_list = gui.ListView()
@@ -357,10 +389,6 @@ class Setting_panal(GUI_BASE):
         tabs.add_child(gui.Label('Freezed data'))
         tabs.add_child(tab3)
         tabs.add_fixed(separation_height)
-
-        # tabs.add_tab("Render Option", tab3)
-        # tabs.add_tab("Show Data", tab1)
-        # tabs.add_tab("Cameras", tab2)
 
         collapse.add_child(tabs)
 
@@ -382,7 +410,10 @@ class Setting_panal(GUI_BASE):
             self.update_geometry(g, name)
 
     def _on_camera_view(self, show):
+        self.only_trans.visible = show
         Setting_panal.FIX_CAMERA = not show
+        self.window.set_needs_layout()
+
 
     def _on_select_camera(self, name, index):
         Setting_panal.POV = name

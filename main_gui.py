@@ -11,6 +11,7 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+from statistics import geometric_mean
 import numpy as np
 import open3d as o3d
 import open3d.visualization.gui as gui
@@ -24,9 +25,8 @@ import matplotlib.pyplot as plt
 sys.path.append('.')
 
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
-from util import load_scene as load_pts, images_to_video
+from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
-
 
 # POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
 POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)', 'Baseline1(F)', 'Baseline1(S)', 'Second pred']
@@ -49,6 +49,7 @@ class o3dvis(setting, Menu):
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
         self.load_data(sample_path, [0,0,0.16])
+        # self.load(sample_path)
         self.window.set_needs_layout()
 
     def load_data(self, path, translate=[0,0,0], load_data_class=None):
@@ -93,12 +94,23 @@ class o3dvis(setting, Menu):
             keys = list(humans.keys())
             self.total_frames = humans[keys[0]].shape[0]
             
-            self.fetched_data = {}
+            data = {}
+            # data['human points'] = o3d.geometry.PointCloud()
+            data['human points'] = []
+            
+            # self.human_points = []
+            for ii in range(512):
+                p = o3d.geometry.TriangleMesh.create_sphere(0.02, 10)
+                p.compute_vertex_normals()
+                data['human points'].append(p)
+
             for key in keys:
                 smpl = o3d.io.read_triangle_mesh(sample_path)
                 smpl.vertex_colors = o3d.utility.Vector3dVector()
-                self.fetched_data[key] = smpl
-            self.fetched_data['human points'] = o3d.geometry.PointCloud()
+                data[key] = smpl
+
+            self.fetched_data = dict(
+                sorted(data.items(), key=lambda x: x[0]))
 
             self.add_thread(threading.Thread(target=self.thread))
 
@@ -114,9 +126,15 @@ class o3dvis(setting, Menu):
     def update_data(self, data, initialized=True):
         def func():
             for name in data:
-                self.add_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
+                if name == 'human points':
+                    for i, gg in enumerate(data[name]):
+                        self.update_geometry(gg, f'{name}_{i}', reset_bounding_box=False, freeze=o3dvis.FREEZE)
+                else:
+                    self.update_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
             self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
+        time.sleep(0.1)
+
         if not initialized:
             self.change_pause_status()
 
@@ -127,29 +145,35 @@ class o3dvis(setting, Menu):
                     self.Human_data.vis_data_list['humans'][key][iid])
                 smpl.vertex_normals = o3d.utility.Vector3dVector()
                 smpl.triangle_normals = o3d.utility.Vector3dVector()
-                # rt = self.Human_data.humans['first_person']['lidar_traj'][index, 1:8]
-                # _, delta = icp_mesh_and_point(smpl, pointcloud, rt, 0.05)
-                # smpl.translate(delta)
                 smpl.compute_vertex_normals()
                 if len(smpl.vertex_colors) == 0:
                     smpl.paint_uniform_color(POSE_COLOR[key])
             else:
                 smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
 
-        pointcloud = self.fetched_data['human points']
         vis_data = self.Human_data.vis_data_list
+
+        # pointcloud.clear()
+        # pointcloud.vertices = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+        # pointcloud.normals = o3d.utility.Vector3dVector()
+        for ii, p in enumerate(self.fetched_data['human points']):
+            p.translate(-p.get_center())
 
         if 'point cloud' in vis_data:
             points = vis_data['point cloud'][0]
             indexes = vis_data['point cloud'][1]
+
             if ind in indexes:
                 index = indexes.index(ind)
-                pointcloud.points = o3d.utility.Vector3dVector(points[index])
+                # pointcloud.points = o3d.utility.Vector3dVector(points[index])
+                for ii, p in enumerate(self.fetched_data['human points']):
+                    p.translate(-p.get_center())
+                    p.translate(points[index][ii])
             else:
                 index = -1
-                pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-        pointcloud.normals = o3d.utility.Vector3dVector()
-        pointcloud.paint_uniform_color(POSE_COLOR['points'])
+                # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+
+        # pointcloud.paint_uniform_color(POSE_COLOR['points'])
         for key, geometry in self.fetched_data.items():
             iid = index if 'pred' in key.lower() else ind
             if '(s)' in key.lower() or '(f)' in key.lower():
@@ -220,12 +244,22 @@ class o3dvis(setting, Menu):
         if archive:
             self.archive_data.append(name)
             self._scene.scene.add_geometry(name, geometry, mat)
-
+    
         elif name not in self.data_names.keys():
-            box = gui.Checkbox(name)
-            box.set_on_checked(self._on_show_geometry)
-            box.checked = True
-            self.check_boxes.add_child(box)
+            exist = False
+            if 'human points' in name:
+                box = gui.Checkbox('human points')
+                for nn, bb in self.data_names.items():
+                    if 'human points' in nn:
+                        box = bb
+                        exist = True
+                        break
+            else:
+                box = gui.Checkbox(name)
+            if not exist:
+                box.set_on_checked(self._on_show_geometry)
+                box.checked = True
+                self.check_boxes.add_child(box)
             self.data_names[name] = box
             self.window.set_needs_layout()
 
@@ -246,8 +280,9 @@ class o3dvis(setting, Menu):
                 print("[WARNING] It is t.geometry type")
 
     def _on_show_geometry(self, show):
+        geometry_list = [k for k in self.point_list.keys()] + [k for k in self.mesh_list.keys()]
         for name, box in self.data_names.items():
-            for nn in [k for k in self.point_list.keys()] + [k for k in self.mesh_list.keys()]:
+            for nn in geometry_list:
                 if name in nn:
                     self._scene.scene.show_geometry(nn, box.checked)
         # self._apply_settings()
@@ -296,7 +331,7 @@ def main():
     gui.Application.instance.initialize()
 
     w = o3dvis(1280, 720)
-
+    
     gui.Application.instance.run()
 
     w.close_thread()

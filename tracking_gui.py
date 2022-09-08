@@ -82,7 +82,7 @@ class trackingVis(base_gui):
                         if frame in self.tracked_frame:
                             self.tracked_frame[frame][0] = f'{frame}: {text}'
                             self.tracked_frame[frame][1].position = world
-                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.2, 20, create_uv_map=True)
                             square_box.translate(self.COOR_INIT[:3, :3].T @ world)
                             self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
                         else:
@@ -90,7 +90,7 @@ class trackingVis(base_gui):
                             label_3d = self._scene.add_3d_label(world, f'{frame}')
                             label_3d.color = gui.Color(r=0, b=1, g=0.9)
 
-                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.5, 20, create_uv_map=True)
+                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.2, 20, create_uv_map=True)
                             square_box.translate(self.COOR_INIT[:3, :3].T @ world)
                             self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
 

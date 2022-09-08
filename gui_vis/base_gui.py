@@ -328,9 +328,9 @@ class AppWindow:
         self._show_ground_plane.set_on_checked(self._on_show_ground_plane)
         # view_ctrls.add_fixed(separation_height)
         h = gui.Horiz(0.25 * em)
-        h.add_child(self._show_skybox)
-        h.add_child(self._show_axes)
-        h.add_child(self._show_ground_plane)
+        # h.add_child(self._show_skybox)
+        # h.add_child(self._show_axes)
+        # h.add_child(self._show_ground_plane)
         view_ctrls.add_child(h)
         h.add_fixed(separation_height)
 
@@ -484,7 +484,7 @@ class AppWindow:
         # callback. The on_layout callback should set the frame
         # (position + size) of every child correctly. After the callback is
         # done the window will layout the grandchildren.
-        w.set_on_layout(self._on_layout)
+        # w.set_on_layout(self._on_layout)
         w.add_child(self._scene)
         w.add_child(self._settings_panel)
 
