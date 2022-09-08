@@ -92,6 +92,27 @@ def creat_plane(lenght = 6, size_x = 24, size_y = 24, material = 'Tiles074'):
             planes.append(g)
     return planes
 
+def add_material(geometry, material = 'Tiles074'):
+    import open3d.visualization as vis
+    geometry = o3d.t.geometry.TriangleMesh.from_legacy(geometry)
+    # Material to make ground plane more interesting - a rough piece of glass
+    mat_ground = vis.Material("defaultLit")
+    mat_ground.scalar_properties['roughness'] = 0.1
+    mat_ground.scalar_properties['reflectance'] = 0.72
+    mat_ground.scalar_properties['transmission'] = 0.6
+    mat_ground.scalar_properties['thickness'] = 0.3
+    mat_ground.scalar_properties['absorption_distance'] = 0.1
+    mat_ground.vector_properties['absorption_color'] = np.array(
+        [0.82, 0.98, 0.972, 1.0])
+    mat_ground.texture_maps['albedo'] = o3d.t.io.read_image(
+        f"demo_scene_assets/{material}_Color.jpg")
+    mat_ground.texture_maps['roughness'] = o3d.t.io.read_image(
+        f"demo_scene_assets/{material}_Roughness.png")
+    mat_ground.texture_maps['normal'] = o3d.t.io.read_image(
+        f"demo_scene_assets/{material}_NormaDX.jpg")
+    geometry.material = mat_ground
+    return geometry
+
 def create_ground(
     center=[0, 0, 0], xdir=[1, 0, 0], ydir=[0, 1, 0], # 位置
     step=1, xrange=10, yrange=10, # 尺寸

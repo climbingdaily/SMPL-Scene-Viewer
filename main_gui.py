@@ -34,6 +34,19 @@ POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
 
+
+mat_box = o3d.visualization.rendering.MaterialRecord()
+mat_box.shader = 'defaultLitTransparency'
+# mat_box.shader = 'defaultLitSSR'
+# mat_box.base_color = [0.467, 0.467, 0.467, 0.2]
+# mat_box.base_roughness = 0.0
+# mat_box.base_reflectance = 0.0
+# mat_box.base_clearcoat = 1.0
+# mat_box.thickness = 1.0
+# mat_box.transmission = 1.0
+# mat_box.absorption_distance = 10
+# mat_box.absorption_color = [0.5, 0.5, 0.5]
+
 class o3dvis(setting, Menu):
     # PAUSE = False
     IMG_COUNT = 0
@@ -96,13 +109,14 @@ class o3dvis(setting, Menu):
             
             data = {}
             # data['human points'] = o3d.geometry.PointCloud()
-            data['human points'] = []
+            data['human points'] = o3d.geometry.TriangleMesh()
             
-            # self.human_points = []
+            self.human_points = []
             for ii in range(512):
-                p = o3d.geometry.TriangleMesh.create_sphere(0.02, 10)
+                p = o3d.geometry.TriangleMesh.create_sphere(0.01)
                 p.compute_vertex_normals()
-                data['human points'].append(p)
+                data['human points'] += p
+                self.human_points.append(p)
 
             for key in keys:
                 smpl = o3d.io.read_triangle_mesh(sample_path)
@@ -126,14 +140,10 @@ class o3dvis(setting, Menu):
     def update_data(self, data, initialized=True):
         def func():
             for name in data:
-                if name == 'human points':
-                    for i, gg in enumerate(data[name]):
-                        self.update_geometry(gg, f'{name}_{i}', reset_bounding_box=False, freeze=o3dvis.FREEZE)
-                else:
-                    self.update_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
+                self.update_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
             self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
-        time.sleep(0.1)
+        time.sleep(0.01)
 
         if not initialized:
             self.change_pause_status()
@@ -153,10 +163,7 @@ class o3dvis(setting, Menu):
 
         vis_data = self.Human_data.vis_data_list
 
-        # pointcloud.clear()
-        # pointcloud.vertices = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-        # pointcloud.normals = o3d.utility.Vector3dVector()
-        for ii, p in enumerate(self.fetched_data['human points']):
+        for ii, p in enumerate(self.human_points):
             p.translate(-p.get_center())
 
         if 'point cloud' in vis_data:
@@ -166,14 +173,19 @@ class o3dvis(setting, Menu):
             if ind in indexes:
                 index = indexes.index(ind)
                 # pointcloud.points = o3d.utility.Vector3dVector(points[index])
-                for ii, p in enumerate(self.fetched_data['human points']):
-                    p.translate(-p.get_center())
-                    p.translate(points[index][ii])
+                for ii, p in enumerate(self.human_points):
+                    p.translate(points[index][ii] - p.get_center())
             else:
                 index = -1
                 # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+        hps = self.fetched_data['human points']
+        # hps.vertex_normals = o3d.utility.Vector3dVector()
+        # hps.triangle_normals = o3d.utility.Vector3dVector()
+        # hps.compute_vertex_normals()
+        vertices = np.vstack([np.asarray(p.vertices) for p in self.human_points])
+        hps.vertices = o3d.utility.Vector3dVector(vertices)
+        hps.paint_uniform_color(POSE_COLOR['points'])
 
-        # pointcloud.paint_uniform_color(POSE_COLOR['points'])
         for key, geometry in self.fetched_data.items():
             iid = index if 'pred' in key.lower() else ind
             if '(s)' in key.lower() or '(f)' in key.lower():
@@ -246,20 +258,10 @@ class o3dvis(setting, Menu):
             self._scene.scene.add_geometry(name, geometry, mat)
     
         elif name not in self.data_names.keys():
-            exist = False
-            if 'human points' in name:
-                box = gui.Checkbox('human points')
-                for nn, bb in self.data_names.items():
-                    if 'human points' in nn:
-                        box = bb
-                        exist = True
-                        break
-            else:
-                box = gui.Checkbox(name)
-            if not exist:
-                box.set_on_checked(self._on_show_geometry)
-                box.checked = True
-                self.check_boxes.add_child(box)
+            box = gui.Checkbox(name)
+            box.set_on_checked(self._on_show_geometry)
+            box.checked = True
+            self.check_boxes.add_child(box)
             self.data_names[name] = box
             self.window.set_needs_layout()
 

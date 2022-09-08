@@ -42,6 +42,8 @@ class Settings:
     LIT = "defaultLit"
     NORMALS = "normals"
     DEPTH = "depth"
+    Transparency = 'defaultLitTransparency'
+    LitSSR = 'defaultLitSSR'
 
     DEFAULT_PROFILE_NAME = "Bright day with sun at +Y [default]"
     POINT_CLOUD_PROFILE_NAME = "Cloudy day (no direct sun)"
@@ -59,7 +61,7 @@ class Settings:
             "ibl_intensity": 45000,
             "sun_intensity": 45000,
             "sun_dir": [0.577, 0.577, 0.577],
-            # "ibl_rotation":
+            # "ibl_rotation":[]
             "use_ibl": True,
             "use_sun": True,
         },
@@ -154,15 +156,14 @@ class Settings:
             "clearcoat_roughness": 0.287,
             "anisotropy": 0.0
         },
-        # "Transparent": {
-        #     "metallic": 0.0,
-        #     "roughness": 0.15,
-        #     "reflectance": 0.72,
-        #     "transmission": 0.6,
-        #     "thickness": 0.287,
-        #     "absorption_distance": 0.1,
-        #     "absorption_color": np.array([0.82, 0.98, 0.972, 1.0])
-        # },
+        "Transparency": {
+            "metallic": 0.0,
+            "roughness": 0.0,
+            "reflectance": 0.0,
+            "clearcoat": 1.0,
+            "clearcoat_roughness": 0.0,
+            "anisotropy": 0.0
+        },
     }
 
     def __init__(self):
@@ -184,12 +185,26 @@ class Settings:
             Settings.LIT: rendering.MaterialRecord(),
             Settings.UNLIT: rendering.MaterialRecord(),
             Settings.NORMALS: rendering.MaterialRecord(),
-            Settings.DEPTH: rendering.MaterialRecord()
+            Settings.DEPTH: rendering.MaterialRecord(),
+            Settings.Transparency: rendering.MaterialRecord(),
+            Settings.LitSSR: rendering.MaterialRecord()
         }
         self._materials[Settings.LIT].base_color = [0.9, 0.9, 0.9, 1.0]
         self._materials[Settings.LIT].shader = Settings.LIT
         self._materials[Settings.UNLIT].base_color = [0.9, 0.9, 0.9, 1.0]
         self._materials[Settings.UNLIT].shader = Settings.UNLIT
+        self._materials[Settings.Transparency].base_color = [0.467, 0.467, 0.467, 0.2]
+        self._materials[Settings.Transparency].shader = Settings.Transparency
+        self._materials[Settings.Transparency].thickness = 1.0
+        self._materials[Settings.Transparency].transmission = 1.0
+        self._materials[Settings.Transparency].absorption_distance = 10
+        self._materials[Settings.Transparency].absorption_color = [0.5, 0.5, 0.5]
+        self._materials[Settings.LitSSR].base_color = [0.467, 0.467, 0.467, 0.2]
+        self._materials[Settings.LitSSR].shader = Settings.LitSSR
+        self._materials[Settings.LitSSR].thickness = 1.0
+        self._materials[Settings.LitSSR].transmission = 1.0
+        self._materials[Settings.LitSSR].absorption_distance = 10
+        self._materials[Settings.LitSSR].absorption_color = [0.5, 0.5, 0.5]
         self._materials[Settings.NORMALS].shader = Settings.NORMALS
         self._materials[Settings.DEPTH].shader = Settings.DEPTH
 
@@ -203,7 +218,7 @@ class Settings:
         self.apply_material = True
 
     def apply_material_prefab(self, name):
-        assert (self.material.shader == Settings.LIT)
+        # assert (self.material.shader == Settings.LIT)
         prefab = Settings.PREFAB[name]
         for key, val in prefab.items():
             setattr(self.material, "base_" + key, val)
@@ -224,9 +239,9 @@ class AppWindow:
 
     DEFAULT_IBL = "default"
 
-    MATERIAL_NAMES = ["Lit", "Unlit", "Normals", "Depth"]
+    MATERIAL_NAMES = ["Lit", "Unlit", "Normals", "Depth", "Transparency", "LitSSR"]
     MATERIAL_SHADERS = [
-        Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH
+        Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH, Settings.Transparency, Settings.LitSSR
     ]
 
     def __init__(self, width, height):
@@ -420,10 +435,9 @@ class AppWindow:
         material_settings = gui.Vert()
 
         self._shader = gui.Combobox()
-        self._shader.add_item(AppWindow.MATERIAL_NAMES[0])
-        self._shader.add_item(AppWindow.MATERIAL_NAMES[1])
-        self._shader.add_item(AppWindow.MATERIAL_NAMES[2])
-        self._shader.add_item(AppWindow.MATERIAL_NAMES[3])
+        for shader in AppWindow.MATERIAL_NAMES:
+            self._shader.add_item(shader)
+
         self._shader.set_on_selection_changed(self._on_shader)
         self._material_prefab = gui.Combobox()
         for prefab_name in sorted(Settings.PREFAB.keys()):
@@ -593,7 +607,7 @@ class AppWindow:
         self._sun_dir.vector_value = self.settings.sun_dir
         self._sun_color.color_value = self.settings.sun_color
         self._material_prefab.enabled = (
-            self.settings.material.shader == Settings.LIT)
+            self.settings.material.shader in [Settings.LIT, Settings.Transparency, Settings.LitSSR])
         c = gui.Color(self.settings.material.base_color[0],
                       self.settings.material.base_color[1],
                       self.settings.material.base_color[2],
@@ -698,6 +712,9 @@ class AppWindow:
         self.settings.material.base_color = [
             color.red, color.green, color.blue, color.alpha
         ]
+        if self.settings.material.shader in [Settings.Transparency, Settings.LitSSR]:
+            self.settings.material.absorption_color = [
+                color.red, color.green, color.blue]
         self.settings.apply_material = True
         self._apply_settings()
 
