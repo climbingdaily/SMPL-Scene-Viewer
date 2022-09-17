@@ -79,13 +79,18 @@ class Setting_panal(GUI_BASE):
         human_setting, camera_setting = self.create_humandata_settings()
         self.tracking_setting = self.tracking_tool_setting()
         
-        tabs = gui.TabControl()
-        tabs.add_tab('SMPL data', human_setting)
-        tabs.add_tab('Tracking tool', self.tracking_setting)
-        tabs.add_tab('Cameras', camera_setting)
+        # tabs = gui.TabControl()
+        tabs = gui.Vert()
+        tabs.add_child(human_setting)
+        tabs.add_child(self.tracking_setting)
+        tabs.add_child(camera_setting)
+        # tabs.add_tab('SMPL data', human_setting)
+        # tabs.add_tab('Tracking tool', self.tracking_setting)
+        # tabs.add_tab('Cameras', camera_setting)
 
-        collapse = gui.CollapsableVert("My settings", 0.33 * em,
-                                        gui.Margins(em, 0, 0, 0))
+        # collapse = gui.CollapsableVert("My settings", 0.33 * em,
+        #                                 gui.Margins(em, 0, 0, 0))
+        collapse = gui.Vert()
 
         # collapse.add_child(stream_setting)
         collapse.add_child(tabs)
@@ -93,7 +98,8 @@ class Setting_panal(GUI_BASE):
         self.window.set_on_layout(self._on_layout)
 
         self.tracking_setting.visible = False
-        self._settings_panel.add_child(collapse)
+        # self._settings_panel.add_child(collapse)
+        self._settings_panel.get_children()[0].add_tab('Settings', collapse)
 
     def _on_layout(self, layout_context):
         r = self.window.content_rect
@@ -174,9 +180,9 @@ class Setting_panal(GUI_BASE):
         self.remote_info = {}
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
-        # collapse = gui.CollapsableVert("Traking tool", 0.33 * em,
-        #                                 gui.Margins(em, 0, 0, 0))
-        collapse = gui.Vert(0.15 * em)
+        collapse = gui.CollapsableVert("Traking tool", 0.33 * em,
+                                        gui.Margins(em, 0, 0, 0))
+        # collapse = gui.Vert(0.15 * em)
                                         
         self._fileedit = gui.TextEdit()
         self._fileedit.set_on_value_changed(self._start_tracking)
@@ -325,9 +331,9 @@ class Setting_panal(GUI_BASE):
         separation_height = int(round(0.5 * em))
 
         if collapse is None:
-            # collapse = gui.CollapsableVert("Human data", 0.33 * em,
-            #                                 gui.Margins(em, 0, 0, 0))
-            collapse = gui.Vert(0.15 * em)
+            collapse = gui.CollapsableVert("Human data", 0.33 * em,
+                                            gui.Margins(em, 0, 0, 0))
+            # collapse = gui.Vert(0.15 * em)
                                             
         factor_slider = gui.Slider(gui.Slider.INT)
         factor_slider.set_limits(2, 60)
@@ -367,7 +373,9 @@ class Setting_panal(GUI_BASE):
         # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
         # add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
 
-        tab2 = gui.Vert(0.25 * em)
+        # tab2 = gui.Vert(0.25 * em)
+        tab2 = gui.CollapsableVert("Cameras", 0.33 * em,
+                                        gui.Margins(em, 0, 0, 0))
         tab2.add_child(cam_grid)
         # tab2.add_child(horz)
 
@@ -592,7 +600,7 @@ class Setting_panal(GUI_BASE):
     def fetch_data(self, index):
         # your function here
         return {}
-    
+
     def update_data(self, data, initialized=True):
         def func():
             # your function here

@@ -427,12 +427,13 @@ class AppWindow:
 
         # self._settings_panel.add_fixed(separation_height)
         # _setting_tabs.add_tab('Lighting', advanced)
+        view_ctrls.add_fixed(separation_height)
         view_ctrls.add_child(advanced)
         # self._settings_panel.add_child(advanced)
 
-        # material_settings = gui.CollapsableVert("Material settings", 0,
-        #                                         gui.Margins(em, 0, 0, 0))
-        material_settings = gui.Vert()
+        material_settings = gui.CollapsableVert("Material settings", 0,
+                                                gui.Margins(em, 0, 0, 0))
+        # material_settings = gui.Vert()
 
         self._shader = gui.Combobox()
         for shader in AppWindow.MATERIAL_NAMES:
@@ -484,11 +485,12 @@ class AppWindow:
         h.add_child(self._show_skybox)
         h.add_child(self._show_axes)
         h.add_child(self._show_ground_plane)
+        view_ctrls.add_fixed(separation_height)
+        view_ctrls.add_child(material_settings)
 
         # self._settings_panel.add_fixed(separation_height)
-        _setting_tabs.add_tab('Material', material_settings)
+        # _setting_tabs.add_tab('Material', material_settings)
         self._settings_panel.add_child(_setting_tabs)
-        # self._settings_panel.add_child(material_settings)
         # ----
 
         # Normally our user interface can be children of all one layout (usually

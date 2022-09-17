@@ -18,7 +18,8 @@ from scipy.spatial.transform import Rotation as R
 from util import load_data_remote, generate_views, get_head_global_rots
 from smpl import SMPL, poses_to_vertices
 
-def vertices_to_head(vertices, index = 15):
+def vertices_to_joints(vertices, index = 15):
+    # default index is head index
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
 
@@ -89,8 +90,8 @@ def load_vis_data(humans, start=0, end=-1):
     # load first person
     if 'lidar_traj' in first_person:
         lidar_traj = first_person['lidar_traj'][:, 1:4]
-        head = vertices_to_head(f_vert, 15).numpy()
-        root = vertices_to_head(f_vert, 0).numpy()
+        head = vertices_to_joints(f_vert, 15).numpy()
+        root = vertices_to_joints(f_vert, 0).numpy()
         head_rots = get_head_global_rots(pose)
 
         def lidar2head(i):
@@ -103,8 +104,8 @@ def load_vis_data(humans, start=0, end=-1):
         ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         trans = lidar_traj + lidar_to_head - head + root - root[0]  
     
-    vis_data['humans']['Baseline2(F)'] = f_vert[start: end] + \
-        np.expand_dims(trans.astype(np.float32), 1)[start: end]
+        vis_data['humans']['Baseline2(F)'] = f_vert[start: end] + \
+            np.expand_dims(trans.astype(np.float32), 1)[start: end]
     
     print(f'[SMPL MODEL] First pose loaded')
 
@@ -115,6 +116,14 @@ def load_vis_data(humans, start=0, end=-1):
                     'opt_pose', 
                     'opt_trans', 
                     info='Ours(F)')
+
+    load_human_mesh(vis_data['humans'], 
+                    first_person, 
+                    start, 
+                    end, 
+                    'full_pose', 
+                    'mocap_trans', 
+                    info='Ours_opt(F)')
 
     if 'second_person' in humans:
         second_person = humans['second_person']    
@@ -187,6 +196,8 @@ class HUMAN_DATA:
               }
             # second_person is optional
             """
+        if 'first_person' not in self.humans:
+            self.humans = {'first_person': self.humans}
         self.vis_data_list = load_vis_data(self.humans)
         # self.set_cameras()
 
@@ -208,7 +219,7 @@ class HUMAN_DATA:
 
         try:
             verts = self.vis_data_list['humans']['Baseline2(F)']
-            root_position = vertices_to_head(verts, 0)
+            root_position = vertices_to_joints(verts, 0)
             root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
 
             self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
@@ -233,11 +244,11 @@ class HUMAN_DATA:
                 except Exception as e:
                     print(e)
                     print(f'There is no second pose in the data')
-            position = vertices_to_head(second_verts) + np.array([0, 0, 0.2])
+            position = vertices_to_joints(second_verts) + np.array([0, 0, 0.2])
             rotation = get_head_global_rots(second_pose)
             self.cameras['Second View'] = generate_views(position, rotation, dist=offset_center)
 
-            position = vertices_to_head(second_verts, 0)
+            position = vertices_to_joints(second_verts, 0)
             rotation = get_head_global_rots(second_pose, parents=[0])
             self.cameras['(p2) 3rd View +Y'] = make_3rd_view(position, rotation, rotz=0)
             self.cameras['(p2) 3rd View -X'] = make_3rd_view(position, rotation, rotz=90)

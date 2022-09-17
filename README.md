@@ -21,20 +21,19 @@ python vis_pred_smpl.py -F "/path/to/your/file"
   ├──'first_person'
   |  ├── 'pose' # (N, a)
   |  ├── 'mocap_trans' # (N, 3)
-  |  ├── 'lidar_traj' (optional_1) # (N, 9), xyz in [:, 1 : 4]
-  |  ├── 'opt_pose' (optional_2) # (N, a)
+  |  ├── 'lidar_traj' (optional_1) # (N, a), a ≥ 4 and coordinate xyz in [:, 1:4]
+  |  ├── 'opt_pose' (optional_2) # (N, 72) or (N, 24, 3, 3)
   |  └── 'opt_trans' (optional_2) # (N, 3)
   ├──'second_person'
-  |  ├── 'pose' # (N, a)
+  |  ├── 'pose' # (N, 72) or (N, 24, 3, 3)
   |  ├── 'mocap_trans' # (N, 3)
-  |  ├── 'opt_pose' (optional_3) # (N, a)
+  |  ├── 'opt_pose' (optional_3) # (N, 72) or (N, 24, 3, 3)
   |  ├── 'opt_trans' (optional_3) # (N, 3)
-  |  ├── 'point_frame' (optional_4) # (n, )
-  |  └── 'point_clouds' (optional_4) # (N, b)
+  |  ├── 'point_frame' (optional_4) # (n, ) n ≤ N, 'point_frame' ∈ 'frame_num'
+  |  └── 'point_clouds' (optional_4) # (n, 3) n ≤ N
   └──'frame_num'(optional_4) # (N, )
   ```
-  - *a = 72 or [24, 3, 3]*
-  - *b = any number*
+  - *d1 = 72 or [24, 3, 3]*
   
 <!-- ![](imgs/sample.png) -->
 ```

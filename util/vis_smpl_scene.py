@@ -44,7 +44,7 @@ POSE_COLOR = {'points': plt.get_cmap("tab20")(1)[:3]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("Pastel1")(i)[:3]
     
-def vertices_to_head(vertices, index = 15):
+def vertices_to_joints(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
 
@@ -90,8 +90,8 @@ def load_vis_data(humans, start=0, end=-1):
     # load first person
     if 'lidar_traj' in first_person:
         lidar_traj = first_person['lidar_traj'][:, 1:4]
-        head = vertices_to_head(f_vert, 15)
-        root = vertices_to_head(f_vert, 0)
+        head = vertices_to_joints(f_vert, 15)
+        root = vertices_to_joints(f_vert, 0)
         head_to_root = (root - head).numpy()
         
         head_rots = get_head_global_rots(pose)
@@ -288,7 +288,7 @@ if __name__ == '__main__':
 
     if viewpoint_type == 'second':
         if 'Second pose' in vis_data_list:         
-            POVs, extrinsics = generate_views(vertices_to_head(
+            POVs, extrinsics = generate_views(vertices_to_joints(
                 vis_data_list['Second pose']) + np.array([0, 0, 0.2]), get_head_global_rots(humans['second_person']['pose']))
         else:
             print(f'There is no second pose in the data')

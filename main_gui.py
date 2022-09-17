@@ -29,11 +29,11 @@ from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 # POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
-POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)', 'Baseline1(F)', 'Baseline1(S)', 'Second pred']
-POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
+POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)', 'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
+# POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
+POSE_COLOR = {'points': [1,1,1]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
-
 
 mat_box = o3d.visualization.rendering.MaterialRecord()
 mat_box.shader = 'defaultLitTransparency'
@@ -113,8 +113,9 @@ class o3dvis(setting, Menu):
             
             self.human_points = []
             for ii in range(512):
-                p = o3d.geometry.TriangleMesh.create_sphere(0.01)
+                p = o3d.geometry.TriangleMesh.create_sphere(0.015, resolution=5)
                 p.compute_vertex_normals()
+                p.paint_uniform_color(POSE_COLOR['points'])
                 data['human points'] += p
                 self.human_points.append(p)
 
@@ -143,7 +144,7 @@ class o3dvis(setting, Menu):
                 self.update_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
             self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
-        time.sleep(0.01)
+        # time.sleep(0.01)
 
         if not initialized:
             self.change_pause_status()
@@ -179,12 +180,11 @@ class o3dvis(setting, Menu):
                 index = -1
                 # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
         hps = self.fetched_data['human points']
-        # hps.vertex_normals = o3d.utility.Vector3dVector()
-        # hps.triangle_normals = o3d.utility.Vector3dVector()
-        # hps.compute_vertex_normals()
         vertices = np.vstack([np.asarray(p.vertices) for p in self.human_points])
         hps.vertices = o3d.utility.Vector3dVector(vertices)
-        hps.paint_uniform_color(POSE_COLOR['points'])
+        hps.vertex_normals = o3d.utility.Vector3dVector()
+        hps.triangle_normals = o3d.utility.Vector3dVector()
+        hps.compute_vertex_normals()
 
         for key, geometry in self.fetched_data.items():
             iid = index if 'pred' in key.lower() else ind

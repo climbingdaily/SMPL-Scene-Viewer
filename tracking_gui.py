@@ -45,14 +45,6 @@ class trackingVis(base_gui):
         geomety = self.remote_load.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
         return {'tracking frame': geomety}
 
-    def update_data(self, data, initialized=True):
-        def func():
-            for name in data:
-                self.add_geometry(data[name], name, reset_bounding_box=False)
-        gui.Application.instance.post_to_main_thread(self.window, func)
-        if not initialized:
-            self.change_pause_status()
-
     def _on_mouse_widget3d(self, event):
         # We could override BUTTON_DOWN without a modifier, but that would
         # interfere with manipulating the scene.
