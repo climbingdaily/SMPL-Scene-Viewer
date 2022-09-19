@@ -125,10 +125,14 @@ class Setting_panal(GUI_BASE):
             r.height - play_btn_height,
             self._settings_panel.calc_preferred_size(
                 layout_context, gui.Widget.Constraints()).height)
-        self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
+        # self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
+        self._settings_panel.frame = gui.Rect(r.get_left(), r.y, width, height)
 
+        bar_width = pref.width if r.width / 2 < pref.width else r.width/2
+        bar_width = min(bar_width, r.width)
+        # leftup x, leftup y, width, height
         self.stream_setting.frame = gui.Rect(
-            r.width / 4, r.get_bottom() - pref.height, r.width / 2, pref.height)
+            (r.width-bar_width)/2, r.get_bottom() - pref.height, bar_width, pref.height)
 
     def create_stream_settings(self):
         em = self.window.theme.font_size
