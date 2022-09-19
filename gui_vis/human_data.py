@@ -23,7 +23,7 @@ def vertices_to_joints(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :]
 
-def make_3rd_view(positions, rots, rotz=0, lookdown=32):
+def make_3rd_view(positions, rots, rotz=0, lookdown=32, move_back = 1, move_up = 1.2, move_right = 0.5):
     """
     It takes the positions and rotations of the camera, and returns the positions and rotations of the
     camera, but with the camera rotated by `rotz` degrees around the z-axis, and moved to a new position
@@ -36,7 +36,7 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=32):
     """
     lookdown = R.from_rotvec(np.deg2rad(-lookdown) * np.array([1, 0, 0])).as_matrix()
     rotz = R.from_rotvec(np.deg2rad(rotz) * np.array([0, 0, 1])).as_matrix()
-    move = rotz @ np.array([0.5, -1, 1.2])
+    move = rotz @ np.array([move_right, -move_back, move_up])
 
     rots = np.zeros_like(rots)
     for i in range(rots.shape[0]):
@@ -47,7 +47,11 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=32):
 def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
-        beta = human_data['beta'].copy()
+        
+        if 'beta' not in human_data:
+            beta = [0] * 10
+        else:
+            beta = human_data['beta'].copy()
         if tran_str in human_data:
             trans = human_data[tran_str].copy()
         else:
@@ -74,7 +78,10 @@ def load_vis_data(humans, start=0, end=-1):
 
     first_person = humans['first_person']
     pose = first_person['pose'].copy()
+    if 'beta' not in first_person:
+        first_person['beta'] = [0] * 10
     beta = first_person['beta'].copy()
+
     end = pose.shape[0] if end <= 0 else end 
     if 'mocap_trans' in first_person:
         trans = first_person['mocap_trans'].copy()
@@ -170,6 +177,8 @@ def load_vis_data(humans, start=0, end=-1):
                 vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
                 print(f'[SMPL MODEL] Predicted person loaded')
 
+    print(f'[Data loading end] ==============')
+
     return vis_data
 
 class HUMAN_DATA:
@@ -209,20 +218,41 @@ class HUMAN_DATA:
     def set_cameras(self, offset_center=-0.2):
         humans_verts = self.humans
 
+        # first lidar view generation
         try:
-            lidar_position = humans_verts['first_person']['lidar_traj'][:, 1:4]
+            lidar_pos = humans_verts['first_person']['lidar_traj'][:, 1:4]
             head_rots = get_head_global_rots(humans_verts['first_person']['pose'])
-            self.cameras['First Lidar View'] = generate_views(lidar_position, head_rots, dist=offset_center)
+            self.cameras['First Lidar View'] = generate_views(lidar_pos, head_rots, dist=offset_center)
         except Exception as e:
             print(e)
             print(f'No First Lidar View')
-
+            
+            try:
+                verts = self.vis_data_list['humans']['Baseline1(F)']
+                root_position = vertices_to_joints(verts, 0)
+                root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
+                self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
+                
+            except Exception as e:
+                print(e)
+                print(f'No First root View')
+        
+        # first person view generation
         try:
-            verts = self.vis_data_list['humans']['Baseline2(F)']
-            root_position = vertices_to_joints(verts, 0)
-            root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
-
+            try:
+                verts = self.vis_data_list['humans']['Baseline2(F)']
+                root_position = vertices_to_joints(verts, 0)
+                root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
+            except Exception as e:
+                print(e)
+                try:
+                    verts = self.vis_data_list['humans']['Baseline1(F)']
+                    root_position = vertices_to_joints(verts, 0)
+                    root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
+                except Exception as e: 
+                    print(e)
             self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
+            self.cameras['3rd View back +5m'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=0, move_back=5, move_up=0, move_right=0)
             self.cameras['3rd View +Y'] = make_3rd_view(root_position, root_rots, rotz=0)
             self.cameras['3rd View -X'] = make_3rd_view(root_position, root_rots, rotz=90)
             self.cameras['3rd View -Y'] = make_3rd_view(root_position, root_rots, rotz=180)
@@ -231,8 +261,9 @@ class HUMAN_DATA:
 
         except Exception as e:
             print(e)
-            print(f'No First root View')
+            print(f'No First person View')
 
+        # second person view generation
         try:
             try:
                 second_verts = self.vis_data_list['humans']['Ours(S)']
