@@ -850,7 +850,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
-                self.mesh_list[name] = geometry
+                self.mesh_list[name] = {'geometry': geometry, 'type': 'mesh'}
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -870,7 +870,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
-                self.point_list[name] = geometry
+                self.point_list[name] = {'geometry': geometry, 'type': 'point'}
             else:
                 print("[WARNING] Failed to read points", path)
 

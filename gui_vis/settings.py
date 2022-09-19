@@ -38,6 +38,17 @@ def creat_btn(name, func, color=None):
         btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
     btn.set_on_clicked(func)
     return btn
+    
+def add_btn(layout, name, func, color=None):
+    btn = gui.Button(name)
+    btn.horizontal_padding_em = 0.2
+    btn.vertical_padding_em = 0
+    if color is not None:
+        btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
+    btn.set_on_clicked(func)
+    layout.add_child(btn)
+    return btn
+
 
 def add_Switch(layout, name, func, checked=False):
     switch = gui.ToggleSwitch(name)
@@ -260,9 +271,9 @@ class Setting_panal(GUI_BASE):
             self.freeze_data.append(fname)
             self._scene.scene.add_geometry(fname, geometry, mat)
             if geometry_type == 'point':
-                self.point_list[fname] = geometry
+                self.point_list[fname] = {'geometry': geometry, 'type': 'point'}
             elif geometry_type == 'mesh':
-                self.mesh_list[fname] = geometry
+                self.mesh_list[fname] = {'geometry': geometry, 'type': 'mesh'}
             self.update_freezed_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):
@@ -409,12 +420,12 @@ class Setting_panal(GUI_BASE):
         pre_scale = Setting_panal.SCALE
         Setting_panal.SCALE = int(value)
         for name, g in self.point_list.items():
-            g.scale(1/pre_scale, (0.0, 0.0, 0.0))
-            g.rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
+            g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
+            g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g, name)
         for name, g in self.mesh_list.items():
-            g.scale(1/pre_scale, (0.0, 0.0, 0.0))
-            g.rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
+            g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
+            g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g, name)
 
     def _on_camera_view(self, show):

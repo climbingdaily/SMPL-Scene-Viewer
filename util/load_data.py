@@ -92,55 +92,41 @@ def read_pcd_from_server(client, filepath, sftp_client = None):
 
     try:
         pc_pcd = pypcd.PointCloud.from_fileobj(remote_file)
-        pc = np.zeros((pc_pcd.pc_data.shape[0], 3))
-        pc[:, 0] = pc_pcd.pc_data['x']
-        pc[:, 1] = pc_pcd.pc_data['y']
-        pc[:, 2] = pc_pcd.pc_data['z']
-        if 'rgb' in pc_pcd.fields:
-            append = pypcd.decode_rgb_from_pcl(pc_pcd.pc_data['rgb'])/255
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_x' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_x'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_y' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_y'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'normal_z' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['normal_z'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        if 'intensity' in pc_pcd.fields:        
-            append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
-            pc = np.concatenate((pc, append), axis=1)
-        
-        return np.concatenate((pc, append), axis=1)
+        return read_pcd(pc_pcd)
     except Exception as e:
         print(f"Load point cloud {filepath} error")
     finally:
         remote_file.close()
 
-def read_pcd(pcd_file):
-    pc_pcd = pypcd.point_cloud_from_path(pcd_file)
+def read_pcd(pc_pcd):
+    # pc_pcd = pypcd.point_cloud_from_path(pcd_file)
     pc = np.zeros((pc_pcd.pc_data.shape[0], 3))
     pc[:, 0] = pc_pcd.pc_data['x']
     pc[:, 1] = pc_pcd.pc_data['y']
     pc[:, 2] = pc_pcd.pc_data['z']
+    fields = []
+    count = 3
     if 'rgb' in pc_pcd.fields:
         append = pypcd.decode_rgb_from_pcl(pc_pcd.pc_data['rgb'])/255
         pc = np.concatenate((pc, append), axis=1)
-    if 'normal_x' in pc_pcd.fields:        
+        fields.append({'rgb': [count, count+1, count+2]})
+        count += 3
+    if 'normal_x' in pc_pcd.fields and 'normal_y' in pc_pcd.fields and 'normal_z' in pc_pcd.fields:        
         append = pc_pcd.pc_data['normal_x'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
-    if 'normal_y' in pc_pcd.fields:        
         append = pc_pcd.pc_data['normal_y'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
-    if 'normal_z' in pc_pcd.fields:        
         append = pc_pcd.pc_data['normal_z'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
+        fields.append({'normal': [count, count+1, count+2]})
+        count += 3
     if 'intensity' in pc_pcd.fields:        
         append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
+        fields.append({'intensity': [count, count+1, count+2]})
+        count += 1
     
-    return pc
+    return pc, fields
       
 def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
     """
@@ -301,26 +287,29 @@ class load_data_remote(object):
             
         if file_name.endswith('.txt'):
             pts = np.loadtxt(file_name)
-            pointcloud.points = o3d.utility.Vector3dVector(pts[:, :3]) 
+            xyz = [0, 1, 2] if pts.shape[0] == 3 else [1,2,3]
+            pointcloud.points = o3d.utility.Vector3dVector(pts[:, xyz]) 
         elif file_name.endswith('.pcd'):
             if self.remote:
-                pcd = read_pcd_from_server(self.client, file_name, self.sftp_client)
+                pcd, fields = read_pcd_from_server(self.client, file_name, self.sftp_client)
             else:
-                pcd = read_pcd(file_name)
+                pcd, fields = read_pcd(pypcd.point_cloud_from_path(file_name)) 
 
             pointcloud.points = o3d.utility.Vector3dVector(pcd[:, :3])
-            if pcd.shape[1] == 4 or pcd.shape[1] == 7 or pcd.shape[1] == 10:
-                if pcd[:, -1].max() > 255:
-                    intensity = np.array([155 * np.log2(i/100) / np.log2(864) + 100 if i > 100 else i for i in pcd[:, -1]])
+            if 'normal' in fields:
+                pointcloud.normals = o3d.utility.Vector3dVector(pcd[:, fields['normal']])
+
+            if 'rgb' in fields:
+                pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, fields['rgb']])
+
+            elif 'intensity' in fields:
+                if pcd[:, fields['intensity']].max() > 255:
+                    intensity = np.array([155 * np.log2(i/100) / np.log2(864) + 100 if i > 100 else i for i in pcd[:, fields['intensity']]])
                 else:
-                    intensity = pcd[:, -1]
-                colors = plt.get_cmap('plasma')(intensity/255)[:, :3]
+                    intensity = pcd[:, fields['intensity']]
+                scale = 1 if intensity.max() < 1.1 else 255
+                colors = plt.get_cmap('Greys')(intensity/scale)[:, :3]
                 pointcloud.colors = o3d.utility.Vector3dVector(colors)
-            elif pcd.shape[1] == 6:
-                pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6])  
-            elif pcd.shape[1] > 6:
-                pointcloud.colors = o3d.utility.Vector3dVector(pcd[:, 3:6]) 
-                # pointcloud.normals = o3d.utility.Vector3dVector(pcd[:, 6:9]) 
 
             if position is not None:
                 

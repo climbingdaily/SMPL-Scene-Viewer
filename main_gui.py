@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('.')
 
-from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
+from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_btn, add_box
 from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
@@ -61,14 +61,13 @@ class o3dvis(setting, Menu):
         self.data_names = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
-        self.load_data(sample_path, [0,0,0.16])
-        # self.load(sample_path)
+        self.load_scene(sample_path, [0,0,0.16])
         self.window.set_needs_layout()
 
-    def load_data(self, path, translate=[0,0,0], load_data_class=None):
+    def load_scene(self, path, translate=[0,0,0], load_data_class=None):
         self.window.close_dialog()
         if not os.path.isfile(path):
-            print(f'{path} is not a valid file')
+            self.warning_info(f'{path} is not a valid file')
             return
         name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
@@ -76,13 +75,27 @@ class o3dvis(setting, Menu):
         geometry.translate(translate)
         self.add_geometry(geometry, name=name)
 
-    def load_scene(self, scene_path):
+    def load_traj(self, path, translate=[0,0,0], load_data_class=None):
         self.window.close_dialog()
-        if not os.path.isfile(scene_path):
+        if not os.path.isfile(path):
+            self.warning_info(f'{path} is not a valid file')
             return
-        self.scene_name = os.path.basename(scene_path).split('.')[0]
+        name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
-        load_pts(self, scene_path)
+        geometry = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+        geometry.translate(translate)
+        points = np.asarray(geometry.points)
+
+        skip=20
+        traj = o3d.geometry.TriangleMesh()
+
+        for ii in range(0, points.shape[0], skip):
+            s = o3d.geometry.TriangleMesh.create_sphere(0.2 * o3dvis.SCALE, resolution=5)
+            s.translate(points[ii] - s.get_center())
+            s.compute_vertex_normals()
+            s.paint_uniform_color(POSE_COLOR['points'])
+            traj += s
+        self.add_geometry(traj, name=name)
 
     def _on_load_smpl_done(self, filename):
         self.window.close_dialog()
@@ -113,7 +126,7 @@ class o3dvis(setting, Menu):
             
             self.human_points = []
             for ii in range(512):
-                p = o3d.geometry.TriangleMesh.create_sphere(0.015, resolution=5)
+                p = o3d.geometry.TriangleMesh.create_sphere(0.015 * o3dvis.SCALE, resolution=5)
                 p.compute_vertex_normals()
                 p.paint_uniform_color(POSE_COLOR['points'])
                 data['human points'] += p
@@ -228,7 +241,7 @@ class o3dvis(setting, Menu):
                     geometry.estimate_normals()
                 geometry.normalize_normals()
                 if name not in self.point_list:
-                    self.point_list[name] = geometry
+                    self.point_list[name] = {'geometry': geometry, 'type': 'point'}
                 geometry_type = 'point'
 
         except:
@@ -242,7 +255,7 @@ class o3dvis(setting, Menu):
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
                 if name not in self.mesh_list:
-                    self.mesh_list[name] = geometry
+                    self.mesh_list[name] = {'geometry': geometry, 'type': 'mesh'}
                 geometry_type = 'mesh'
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
@@ -258,11 +271,8 @@ class o3dvis(setting, Menu):
             self._scene.scene.add_geometry(name, geometry, mat)
     
         elif name not in self.data_names.keys():
-            box = gui.Checkbox(name)
-            box.set_on_checked(self._on_show_geometry)
-            box.checked = True
-            self.check_boxes.add_child(box)
-            self.data_names[name] = box
+            self.data_names[name] = add_box(self.check_boxes, name, self._on_show_geometry, True)
+            # add_btn(self.check_boxes, name, self._on_material_setting)
             self.window.set_needs_layout()
 
         elif self._scene.scene.has_geometry(name):
