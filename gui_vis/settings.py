@@ -94,7 +94,7 @@ class Setting_panal(GUI_BASE):
         tabs = gui.Vert()
         tabs.add_child(human_setting)
         tabs.add_child(self.tracking_setting)
-        tabs.add_child(camera_setting)
+        # tabs.add_child(camera_setting)
         # tabs.add_tab('SMPL data', human_setting)
         # tabs.add_tab('Tracking tool', self.tracking_setting)
         # tabs.add_tab('Cameras', camera_setting)
@@ -111,6 +111,7 @@ class Setting_panal(GUI_BASE):
         self.tracking_setting.visible = False
         # self._settings_panel.add_child(collapse)
         self._settings_panel.get_children()[0].add_tab('Settings', collapse)
+        self._settings_panel.get_children()[0].add_tab('Cameras', camera_setting)
 
     def _on_layout(self, layout_context):
         r = self.window.content_rect
@@ -384,9 +385,9 @@ class Setting_panal(GUI_BASE):
         # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
         # add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
 
-        # tab2 = gui.Vert(0.25 * em)
-        tab2 = gui.CollapsableVert("Cameras", 0.33 * em,
-                                        gui.Margins(em, 0, 0, 0))
+        tab2 = gui.Vert(0.25 * em)
+        # tab2 = gui.CollapsableVert("Cameras", 0.33 * em,
+        #                                 gui.Margins(em, 0, 0, 0))
         tab2.add_child(cam_grid)
         # tab2.add_child(horz)
 
