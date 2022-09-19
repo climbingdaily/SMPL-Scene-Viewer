@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('.')
 
-from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_btn, add_box
+from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set
 from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
@@ -238,8 +238,7 @@ class o3dvis(setting, Menu):
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
-                if name not in self.geo_list:
-                    self.geo_list[name] = {'geometry': geometry, 'type': 'point'}
+                type = 'point'
 
         except:
             try:
@@ -251,33 +250,36 @@ class o3dvis(setting, Menu):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-                if name not in self.geo_list:
-                    self.geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
+                type = 'mesh'
+
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
             except Exception as e:
                 print(e)
                 print("[Info]", "not pointcloud or mehs.")
+                return 
+
+        if name not in self.geo_list:
+            box = self.archive_box if archive else add_box(
+                self.check_boxes, name, self._on_show_geometry, True)
+            self.window.set_needs_layout()
+            self.geo_list[name] = {
+                'geometry': geometry, 
+                'type': type, 
+                'box': box,
+                'mat': mat_set(), 
+                'archive': archive,
+                'freeze': False}
+
+        elif self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
 
         geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
         geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
 
-        if archive:
-            # self.geo_list[name]['box'] = self.geo_list['Chess Board']['box']
-            self.archive_data.append(name)
-            self._scene.scene.add_geometry(name, geometry, mat)
-    
-        elif 'box' not in self.geo_list[name]:
-            self.geo_list[name]['box'] = add_box(self.check_boxes, name, self._on_show_geometry, True)
-            # add_btn(self.check_boxes, name, self._on_material_setting)
-            self.window.set_needs_layout()
-
-        elif self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-        
         if name in self.geo_list and self.geo_list[name]['box'].checked:
             if freeze:
-                self.add_freeze_data(name, geometry, mat, self.geo_list[name]['type'])
+                self.add_freeze_data(name, geometry, mat)
             else:
                 self._scene.scene.add_geometry(name, geometry, mat)
         

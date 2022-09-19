@@ -11,6 +11,7 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+from copy import deepcopy
 import open3d.visualization.gui as gui
 import sys
 import os
@@ -174,7 +175,7 @@ class Setting_panal(GUI_BASE):
         h2 = gui.Horiz(1 * em)
         add_Switch(h2, 'Follow camera', self._on_camera_view, True)
         self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
-        add_box(h2, 'Chess Board', self._on_show_archive_geometry, True)
+        self.archive_box = add_box(h2, 'Chess Board', self._on_show_archive_geometry, True)
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
@@ -188,6 +189,7 @@ class Setting_panal(GUI_BASE):
         frame_slider.enabled = False
         frame_edit.enabled = False
         play_btn.enabled = False
+
         self.frame_slider_bar, self.play_btn, self.frame_edit = frame_slider, play_btn, frame_edit
 
         return vert_layout
@@ -268,14 +270,22 @@ class Setting_panal(GUI_BASE):
         self.trackpoints_list.set_items(items)
         self.window.set_needs_layout()
 
-    def add_freeze_data(self, name, geometry, mat, geometry_type):
-        ss = time.time()
+    def add_freeze_data(self, name, geometry, mat):
         frameidx = self._get_slider_value()
         fname = f'{frameidx}_freeze_{name}'
+
         if not self._scene.scene.has_geometry(fname):
             self.freeze_data.append(fname)
             self._scene.scene.add_geometry(fname, geometry, mat)
-            self.geo_list[fname] = {'geometry': geometry, 'type': geometry_type, 'box': self.geo_list[name]['box']}
+            
+            self.geo_list[fname] = {
+                'geometry': geometry, 
+                'type': self.geo_list[name]['type'], 
+                'box': self.freeze_box,
+                'mat': self.geo_list[name]['mat'], 
+                'archive': self.geo_list[name]['archive'],
+                'freeze': True}
+
             self.update_freezed_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):
@@ -366,8 +376,7 @@ class Setting_panal(GUI_BASE):
         tab1 = gui.VGrid(2, 0.15 * em)
 
         try:
-            add_box(tab1, 'Freezed data', self._on_show_freeze_geometry, True)
-
+            # self.freeze_box = add_box(tab1, 'Freezed data', self._on_show_freeze_geometry, True)
             for box in checkboxes:
                 tab1.add_child(box)
         except:
@@ -392,9 +401,10 @@ class Setting_panal(GUI_BASE):
         tab2.add_child(cam_grid)
         # tab2.add_child(horz)
 
-        temp_layout = gui.Horiz(0.15 * em)
+        temp_layout = gui.Horiz(0.25 * em)
         temp_layout.add_child(freeze_btn)
         temp_layout.add_child(clear_freeze_btn)
+        self.freeze_box = add_box(temp_layout, 'Freezed frames', self._on_show_freeze_geometry, True)
 
         self.freezed_list = gui.ListView()
         self.freezed_list.set_max_visible_items(5)
@@ -404,8 +414,9 @@ class Setting_panal(GUI_BASE):
         tab3.add_child(temp_layout)
         tab3.add_child(self.freezed_list)
 
-        tabs.add_child(gui.Label('Show Data'))
         tabs.add_child(tab1)
+        tabs.add_fixed(separation_height)
+        tabs.add_fixed(separation_height)
         tabs.add_fixed(separation_height)
         tabs.add_child(gui.Label('Freezed data'))
         tabs.add_child(tab3)
@@ -424,7 +435,7 @@ class Setting_panal(GUI_BASE):
         for name, g in self.geo_list.items():
             g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
             g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
-            self.update_geometry(g, name)
+            self.update_geometry(g['geometry'], name)
 
     def _on_camera_view(self, show):
         self.only_trans.visible = show
@@ -454,12 +465,14 @@ class Setting_panal(GUI_BASE):
         Setting_panal.FREEZE = False
 
     def _on_show_archive_geometry(self, show):
-        for name in self.archive_data:
-            self._scene.scene.show_geometry(name, show)
+        for name in self.geo_list:
+            if self.geo_list[name]['archive']:
+                self._scene.scene.show_geometry(name, show)
 
     def _on_show_freeze_geometry(self, show):
-        for name in self.freeze_data:
-            self._scene.scene.show_geometry(name, show)
+        for name in self.geo_list:
+            if self.geo_list[name]['freeze']:
+                self._scene.scene.show_geometry(name, show)
 
     def _add_frame(self):
         self._on_slider(self.frame_slider_bar.int_value+1)
