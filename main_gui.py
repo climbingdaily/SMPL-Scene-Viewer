@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('.')
 
-from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set
+from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn
 from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
@@ -233,13 +233,13 @@ class o3dvis(setting, Menu):
             mat =self.settings.material
         if name is None:
             name = self.scene_name
+
         try: 
             if geometry.has_points():
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
                 type = 'point'
-
         except:
             try:
                 if not geometry.has_triangle_normals():
@@ -251,7 +251,6 @@ class o3dvis(setting, Menu):
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
                 type = 'mesh'
-
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
             except Exception as e:
@@ -259,9 +258,18 @@ class o3dvis(setting, Menu):
                 print("[Info]", "not pointcloud or mehs.")
                 return 
 
+        if self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
+
         if name not in self.geo_list:
-            box = self.archive_box if archive else add_box(
-                self.check_boxes, name, self._on_show_geometry, True)
+            if archive:
+                box = self.archive_box
+            else: 
+                hh = gui.Horiz(0.5 * self.window.theme.font_size)
+                add_btn(hh, 'Property', self._on_material_setting)
+                box = add_box(hh, name, self._on_show_geometry, True)
+                self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
+
             self.window.set_needs_layout()
             self.geo_list[name] = {
                 'geometry': geometry, 
@@ -271,18 +279,14 @@ class o3dvis(setting, Menu):
                 'archive': archive,
                 'freeze': False}
 
-        elif self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-
-        geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
-        geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
-
-        if name in self.geo_list and self.geo_list[name]['box'].checked:
+        if self.geo_list[name]['box'].checked:
+            geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
+            geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
             if freeze:
-                self.add_freeze_data(name, geometry, mat)
+                self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
             else:
-                self._scene.scene.add_geometry(name, geometry, mat)
-        
+                self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                    
         if reset_bounding_box:
             try:
                 bounds = geometry.get_axis_aligned_bounding_box()
@@ -295,14 +299,8 @@ class o3dvis(setting, Menu):
             self._scene.scene.show_geometry(name, data['box'].checked)
         # self._apply_settings()
 
-    def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=False, archive=False):
-        if self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-        self.add_geometry(geometry, 
-                          name, 
-                          reset_bounding_box=reset_bounding_box, 
-                          freeze=freeze,
-                          archive=archive)
+    def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
+        self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
 
     def remove_geometry(self, name):
         self._scene.scene.remove_geometry(name)

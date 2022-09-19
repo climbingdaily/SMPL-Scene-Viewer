@@ -106,24 +106,34 @@ class Menu(GUI_BASE):
         # self._point_size.double_value = settings.material.point_size
 
     def _on_material_setting(self):
-        geometry_name = 'sample'
-        if geometry_name not in self.geo_settings:
-            self.geo_settings[geometry_name] = Settings()
-        settings = self.geo_settings[geometry_name]
+        name_list = []
+        for name, item in self.geo_list.items():
+            if not item['freeze'] and not item['archive']:
+                name_list.append(name)
+
+        name = name_list[self.data_id-1]
+        if name not in self.geo_list:
+            self.warning_info(f'No such geometry: {name} ')
+            return 
+
+        if 'mat' not in self.geo_list[name]:
+            self.geo_list[name]['mat'] = Settings()
+
+        settings = self.geo_list[name]['mat']
 
         em = self.window.theme.font_size
-        dlg = gui.Dialog(geometry_name)
+        dlg = gui.Dialog(name)
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(f'==== Update material for {geometry_name} ===='))
+        dlg_layout.add_child(gui.Label(f'==== Update material for {name} ===='))
 
-        def _on_shader(name, index):
+        def _on_shader(_, index):
             settings.set_material(GUI_BASE.MATERIAL_SHADERS[index])
-            self._updata_material(settings, geometry_name)
+            self._updata_material(settings, name)
             
-        def _on_material_prefab(name, index):
-            settings.apply_material_prefab(name)
+        def _on_material_prefab(nn, index):
+            settings.apply_material_prefab(nn)
             settings.apply_material = True
-            self._updata_material(settings, geometry_name)
+            self._updata_material(settings, name)
             
         def _on_material_color(color):
             settings.material.base_color = [
@@ -133,12 +143,12 @@ class Menu(GUI_BASE):
                 settings.material.absorption_color = [
                     color.red, color.green, color.blue]
             settings.apply_material = True
-            self._updata_material(settings, geometry_name)
+            self._updata_material(settings, name)
             
         def _on_point_size(size):
             settings.material.point_size = int(size)
             settings.apply_material = True
-            self._updata_material(settings, geometry_name)
+            self._updata_material(settings, name)
 
         material_settings = gui.Vert()
         _shader = gui.Combobox()

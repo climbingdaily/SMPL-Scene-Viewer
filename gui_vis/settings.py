@@ -82,7 +82,6 @@ class Setting_panal(GUI_BASE):
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
         self.archive_data = []
-        self.freeze_data = []
         self.total_frames = 1
         self.tracked_frame = {}
         em = self.window.theme.font_size
@@ -143,8 +142,6 @@ class Setting_panal(GUI_BASE):
         # collapse = gui.CollapsableVert("Data stream", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
 
-        minus_btn    = creat_btn('-', self._minus_frame)
-        add_btn      = creat_btn('+', self._add_frame)
         play_btn     = creat_btn('  >>|| (Play / Stop)  ', self.change_pause_status, color = [0, 0, 0.5])
 
         frame_edit = gui.NumberEdit(gui.NumberEdit.INT)
@@ -168,7 +165,6 @@ class Setting_panal(GUI_BASE):
         horiz_layout = gui.Horiz(0.15 * em)
         horiz_layout.add_child(frame_edit)
         # horiz_layout.add_child(minus_btn)
-        # horiz_layout.add_child(add_btn)
         horiz_layout.add_child(play_btn)
         horiz_layout.add_child(frame_slider)
         
@@ -272,19 +268,22 @@ class Setting_panal(GUI_BASE):
 
     def add_freeze_data(self, name, geometry, mat):
         frameidx = self._get_slider_value()
-        fname = f'{frameidx}_freeze_{name}'
+
+        if not self.geo_list[name]['freeze']:
+            fname = f'{frameidx}_freeze_{name}' 
+        else:
+            fname = name
+
+        self.geo_list[fname] = {
+            'geometry': geometry, 
+            'type': self.geo_list[name]['type'], 
+            'box': self.freeze_box,
+            'mat': self.geo_list[name]['mat'], 
+            'archive': self.geo_list[name]['archive'],
+            'freeze': True}
 
         if not self._scene.scene.has_geometry(fname):
-            self.freeze_data.append(fname)
             self._scene.scene.add_geometry(fname, geometry, mat)
-            
-            self.geo_list[fname] = {
-                'geometry': geometry, 
-                'type': self.geo_list[name]['type'], 
-                'box': self.freeze_box,
-                'mat': self.geo_list[name]['mat'], 
-                'archive': self.geo_list[name]['archive'],
-                'freeze': True}
 
             self.update_freezed_points()
 
@@ -293,7 +292,7 @@ class Setting_panal(GUI_BASE):
             if self._scene.scene.has_geometry(new_val):
                 self._scene.scene.remove_geometry(new_val)
             try:
-                self.freeze_data.remove(new_val)
+                self.geo_list.pop(new_val)
             except Exception as e:
                 print(e)
             self.update_freezed_points()
@@ -301,7 +300,11 @@ class Setting_panal(GUI_BASE):
             print(new_val)
 
     def update_freezed_points(self):
-        self.freezed_list.set_items(self.freeze_data)
+        freezed_list = []
+        for name in self.geo_list:
+            if self.geo_list[name]['freeze']:
+                freezed_list.append(name)
+        self.freezed_list.set_items(freezed_list)
         self.window.set_needs_layout()
 
     def _start_tracking(self, path):
@@ -373,12 +376,19 @@ class Setting_panal(GUI_BASE):
 
         # tabs = gui.TabControl()
         tabs = gui.Vert(0.15 * em)
-        tab1 = gui.VGrid(2, 0.15 * em)
-
+        # check_boxes = gui.VGrid(2, 0.15 * em)
+        data_list = gui.Horiz(0.15 * em)
+        data_list.preferred_height = 10*em
+        self.check_boxes = gui.TreeView()
+        data_list.add_child(self.check_boxes)
+        self.check_boxes.set_on_selection_changed(self._on_tree)
         try:
-            # self.freeze_box = add_box(tab1, 'Freezed data', self._on_show_freeze_geometry, True)
+            # self.freeze_box = add_box(check_boxes, 'Freezed data', self._on_show_freeze_geometry, True)
             for box in checkboxes:
-                tab1.add_child(box)
+                hh = gui.Horiz()
+                hh.add_child(box)
+                add_btn(hh, 'Property', self._on_material_setting, True)
+                self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
         except:
             pass
 
@@ -414,17 +424,18 @@ class Setting_panal(GUI_BASE):
         tab3.add_child(temp_layout)
         tab3.add_child(self.freezed_list)
 
-        tabs.add_child(tab1)
+        tabs.add_child(data_list)
         tabs.add_fixed(separation_height)
         tabs.add_fixed(separation_height)
         tabs.add_fixed(separation_height)
+
         tabs.add_child(gui.Label('Freezed data'))
         tabs.add_child(tab3)
         tabs.add_fixed(separation_height)
 
         collapse.add_child(tabs)
 
-        self.check_boxes, self.camera_setting = tab1, cameras
+        self.camera_setting = cameras
         self.camera_setting.enabled = False
 
         return collapse, tab2
@@ -442,15 +453,23 @@ class Setting_panal(GUI_BASE):
         Setting_panal.FIX_CAMERA = not show
         self.window.set_needs_layout()
 
+    def _on_tree(self, new_item_id):
+        self.data_id = new_item_id
+        # print(new_item_id)
 
     def _on_select_camera(self, name, index):
         Setting_panal.POV = name
         Setting_panal.CLICKED = True
 
     def _clear_freeze(self):
-        for name in self.freeze_data:
-            self._scene.scene.remove_geometry(name)
-            self.freeze_data.remove(name)
+        nlist = [k for k in self.geo_list]
+        for name in nlist:
+            if self.geo_list[name]['freeze']:
+                if self._scene.scene.has_geometry(name):
+                    self._scene.scene.remove_geometry(name)
+
+                self.geo_list.pop(name)
+
         self.update_freezed_points()
 
     def _on_free_view(self, show):
