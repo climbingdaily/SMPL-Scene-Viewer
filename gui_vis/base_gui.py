@@ -259,8 +259,7 @@ class AppWindow:
         self._scene.set_on_sun_direction_changed(self._on_sun_dir)
 
         # geometry type list
-        self.point_list = {}
-        self.mesh_list = {}
+        self.geo_list = {}
 
         # ---- Settings panel ----
         # Rather than specifying sizes in pixels, which may vary in size based
@@ -368,7 +367,7 @@ class AppWindow:
         view_ctrls.add_child(self._profiles)
         view_ctrls.add_fixed(separation_height)
         # self._settings_panel.add_fixed(separation_height)
-        _setting_tabs.add_tab('view_ctrls', view_ctrls)
+        _setting_tabs.add_tab('Lighting', view_ctrls)
         
         # self._settings_panel.add_child(view_ctrls)
 
@@ -589,12 +588,16 @@ class AppWindow:
             # self._scene.scene.update_material(self.settings.material)
             # update material for point cloud
             if self.point_box.checked:
-                for name in self.point_list:
-                    self._scene.scene.modify_geometry_material(name, self.settings.material)
+                for name in self.geo_list:
+                    if 'point' == self.geo_list[name]['type']:
+                        self._scene.scene.modify_geometry_material(name, self.settings.material)
+
             # update material for mesh
             if self.mesh_box.checked:
-                for name in self.mesh_list:
-                    self._scene.scene.modify_geometry_material(name, self.settings.material)
+                for name in self.geo_list:
+                    if 'mesh' == self.geo_list[name]['type']:
+                        self._scene.scene.modify_geometry_material(name, self.settings.material)
+
             self.settings.apply_material = False
 
 
@@ -850,7 +853,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
-                self.mesh_list[name] = {'geometry': geometry, 'type': 'mesh'}
+                self.geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -870,7 +873,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
-                self.point_list[name] = {'geometry': geometry, 'type': 'point'}
+                self.geo_list[name] = {'geometry': geometry, 'type': 'point'}
             else:
                 print("[WARNING] Failed to read points", path)
 

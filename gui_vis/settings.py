@@ -275,10 +275,7 @@ class Setting_panal(GUI_BASE):
         if not self._scene.scene.has_geometry(fname):
             self.freeze_data.append(fname)
             self._scene.scene.add_geometry(fname, geometry, mat)
-            if geometry_type == 'point':
-                self.point_list[fname] = {'geometry': geometry, 'type': 'point'}
-            elif geometry_type == 'mesh':
-                self.mesh_list[fname] = {'geometry': geometry, 'type': 'mesh'}
+            self.geo_list[fname] = {'geometry': geometry, 'type': geometry_type, 'box': self.geo_list[name]['box']}
             self.update_freezed_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):
@@ -424,11 +421,7 @@ class Setting_panal(GUI_BASE):
     def _on_scale_slider(self, value):
         pre_scale = Setting_panal.SCALE
         Setting_panal.SCALE = int(value)
-        for name, g in self.point_list.items():
-            g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
-            g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
-            self.update_geometry(g, name)
-        for name, g in self.mesh_list.items():
+        for name, g in self.geo_list.items():
             g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
             g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g, name)

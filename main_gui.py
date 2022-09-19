@@ -58,7 +58,6 @@ class o3dvis(setting, Menu):
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
         self.is_done = False
-        self.data_names = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
         self.load_scene(sample_path, [0,0,0.16])
@@ -234,15 +233,13 @@ class o3dvis(setting, Menu):
             mat =self.settings.material
         if name is None:
             name = self.scene_name
-        geometry_type = ''
         try: 
             if geometry.has_points():
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
-                if name not in self.point_list:
-                    self.point_list[name] = {'geometry': geometry, 'type': 'point'}
-                geometry_type = 'point'
+                if name not in self.geo_list:
+                    self.geo_list[name] = {'geometry': geometry, 'type': 'point'}
 
         except:
             try:
@@ -254,9 +251,8 @@ class o3dvis(setting, Menu):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-                if name not in self.mesh_list:
-                    self.mesh_list[name] = {'geometry': geometry, 'type': 'mesh'}
-                geometry_type = 'mesh'
+                if name not in self.geo_list:
+                    self.geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
             except Exception as e:
@@ -267,20 +263,21 @@ class o3dvis(setting, Menu):
         geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
 
         if archive:
+            # self.geo_list[name]['box'] = self.geo_list['Chess Board']['box']
             self.archive_data.append(name)
             self._scene.scene.add_geometry(name, geometry, mat)
     
-        elif name not in self.data_names.keys():
-            self.data_names[name] = add_box(self.check_boxes, name, self._on_show_geometry, True)
+        elif 'box' not in self.geo_list[name]:
+            self.geo_list[name]['box'] = add_box(self.check_boxes, name, self._on_show_geometry, True)
             # add_btn(self.check_boxes, name, self._on_material_setting)
             self.window.set_needs_layout()
 
         elif self._scene.scene.has_geometry(name):
             self._scene.scene.remove_geometry(name)
         
-        if name in self.data_names and self.data_names[name].checked:
+        if name in self.geo_list and self.geo_list[name]['box'].checked:
             if freeze:
-                self.add_freeze_data(name, geometry, mat, geometry_type)
+                self.add_freeze_data(name, geometry, mat, self.geo_list[name]['type'])
             else:
                 self._scene.scene.add_geometry(name, geometry, mat)
         
@@ -292,11 +289,8 @@ class o3dvis(setting, Menu):
                 print("[WARNING] It is t.geometry type")
 
     def _on_show_geometry(self, show):
-        geometry_list = [k for k in self.point_list.keys()] + [k for k in self.mesh_list.keys()]
-        for name, box in self.data_names.items():
-            for nn in geometry_list:
-                if name in nn:
-                    self._scene.scene.show_geometry(nn, box.checked)
+        for name, data in self.geo_list.items():
+            self._scene.scene.show_geometry(name, data['box'].checked)
         # self._apply_settings()
 
     def update_geometry(self, geometry, name, freeze=False, reset_bounding_box=False, archive=False):
