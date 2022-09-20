@@ -167,7 +167,7 @@ class Settings:
     }
 
     def __init__(self):
-        self.mouse_model = gui.SceneWidget.Controls.ROTATE_CAMERA
+        # self.mouse_model = gui.SceneWidget.Controls.ROTATE_CAMERA
         self.bg_color = gui.Color(1, 1, 1)
         self.show_skybox = True
         self.show_ground_plane = True
@@ -235,6 +235,7 @@ class AppWindow:
     # MENU_SMPL = 3
     MENU_QUIT = 4
     MENU_SHOW_SETTINGS = 11
+    WINDOW_SHOW_SETTINGS = 12
     MENU_ABOUT = 21
 
     DEFAULT_IBL = "default"
@@ -257,6 +258,11 @@ class AppWindow:
         self._scene = gui.SceneWidget()
         self._scene.scene = rendering.Open3DScene(w.renderer)
         self._scene.set_on_sun_direction_changed(self._on_sun_dir)
+
+        self._scene_traj = gui.SceneWidget()
+        self._scene_traj.scene = rendering.Open3DScene(w.renderer)
+        self._scene_traj.set_on_sun_direction_changed(self._on_sun_dir)
+        # self._scene_traj.visible = False
 
         # geometry type list
         self.geo_list = {}
@@ -501,6 +507,7 @@ class AppWindow:
         # done the window will layout the grandchildren.
         # w.set_on_layout(self._on_layout)
         w.add_child(self._scene)
+        w.add_child(self._scene_traj)
         w.add_child(self._settings_panel)
 
         # ---- Menu ----
@@ -520,9 +527,13 @@ class AppWindow:
                 file_menu.add_separator()
                 file_menu.add_item("Quit", AppWindow.MENU_QUIT)
             settings_menu = gui.Menu()
-            settings_menu.add_item("Lighting & Materials",
+            settings_menu.add_item("Settings",
                                    AppWindow.MENU_SHOW_SETTINGS)
+            settings_menu.add_item("Window 0", 
+                                    AppWindow.WINDOW_SHOW_SETTINGS)
+
             settings_menu.set_checked(AppWindow.MENU_SHOW_SETTINGS, True)
+            settings_menu.set_checked(AppWindow.WINDOW_SHOW_SETTINGS, True)
             help_menu = gui.Menu()
             help_menu.add_item("About", AppWindow.MENU_ABOUT)
 
@@ -534,12 +545,12 @@ class AppWindow:
                 # About..., Preferences..., and Quit menu items typically go.
                 menu.add_menu("Example", app_menu)
                 menu.add_menu("File", file_menu)
-                menu.add_menu("Settings", settings_menu)
+                menu.add_menu("Windows", settings_menu)
                 # Don't include help menu unless it has something more than
                 # About...
             else:
                 menu.add_menu("File", file_menu)
-                menu.add_menu("Settings", settings_menu)
+                menu.add_menu("Windows", settings_menu)
                 menu.add_menu("Help", help_menu)
             gui.Application.instance.menubar = menu
 
@@ -548,41 +559,48 @@ class AppWindow:
         # menu item is activated.
         w.set_on_menu_item_activated(AppWindow.MENU_OPEN, self._on_menu_open)
         # w.set_on_menu_item_activated(AppWindow.MENU_SMPL, self._on_menu_smpl)
-        w.set_on_menu_item_activated(AppWindow.MENU_EXPORT,
-                                     self._on_menu_export)
+        w.set_on_menu_item_activated(AppWindow.MENU_EXPORT, self._on_menu_export)
         w.set_on_menu_item_activated(AppWindow.MENU_QUIT, self._on_menu_quit)
         w.set_on_menu_item_activated(AppWindow.MENU_SHOW_SETTINGS,
                                      self._on_menu_toggle_settings_panel)
+        w.set_on_menu_item_activated(AppWindow.WINDOW_SHOW_SETTINGS,
+                                     self._on_WINDOW_toggle_settings_panel)
         w.set_on_menu_item_activated(AppWindow.MENU_ABOUT, self._on_menu_about)
         # ----
 
         self._apply_settings()
 
     def _apply_settings(self):
+        self._apply_settings_on_scene(self._scene.scene)
+        self._apply_settings_on_scene(self._scene_traj.scene)
+
+    def _apply_settings_on_scene(self, scene):
+        
         bg_color = [
             self.settings.bg_color.red, self.settings.bg_color.green,
             self.settings.bg_color.blue, self.settings.bg_color.alpha
         ]
-        self._scene.scene.set_background(bg_color)
-        self._scene.scene.show_skybox(self.settings.show_skybox)
-        self._scene.scene.show_ground_plane(self.settings.show_ground_plane, rendering.Scene.GroundPlane(0))
-        self._scene.scene.show_axes(self.settings.show_axes)
+
+        scene.set_background(bg_color)
+        scene.show_skybox(self.settings.show_skybox)
+        scene.show_ground_plane(self.settings.show_ground_plane, rendering.Scene.GroundPlane(0))
+        scene.show_axes(self.settings.show_axes)
         if self.settings.new_ibl_name is not None:
-            self._scene.scene.scene.set_indirect_light(
+            scene.scene.set_indirect_light(
                 self.settings.new_ibl_name)
             # Clear new_ibl_name, so we don't keep reloading this image every
             # time the settings are applied.
             self.settings.new_ibl_name = None
-        self._scene.scene.scene.enable_indirect_light(self.settings.use_ibl)
-        self._scene.scene.scene.set_indirect_light_intensity(
+        scene.scene.enable_indirect_light(self.settings.use_ibl)
+        scene.scene.set_indirect_light_intensity(
             self.settings.ibl_intensity)
         sun_color = [
             self.settings.sun_color.red, self.settings.sun_color.green,
             self.settings.sun_color.blue
         ]
-        self._scene.scene.scene.set_sun_light(self.settings.sun_dir, sun_color,
+        scene.scene.set_sun_light(self.settings.sun_dir, sun_color,
                                               self.settings.sun_intensity)
-        self._scene.scene.scene.enable_sun_light(self.settings.use_sun)
+        scene.scene.enable_sun_light(self.settings.use_sun)
 
         if self.settings.apply_material:
             # self._scene.scene.update_material(self.settings.material)
@@ -590,16 +608,15 @@ class AppWindow:
             if self.point_box.checked:
                 for name in self.geo_list:
                     if 'point' == self.geo_list[name]['type']:
-                        self._scene.scene.modify_geometry_material(name, self.settings.material)
+                        scene.modify_geometry_material(name, self.settings.material)
 
             # update material for mesh
             if self.mesh_box.checked:
                 for name in self.geo_list:
                     if 'mesh' == self.geo_list[name]['type']:
-                        self._scene.scene.modify_geometry_material(name, self.settings.material)
+                        scene.modify_geometry_material(name, self.settings.material)
 
             self.settings.apply_material = False
-
 
         self._bg_color.color_value = self.settings.bg_color
         self._show_skybox.checked = self.settings.show_skybox
@@ -626,6 +643,7 @@ class AppWindow:
         # the grandchildren.
         r = self.window.content_rect
         self._scene.frame = r
+        self._scene_traj.frame = gui.Rect(r.x * 3/4 - width, r.y, r.width/4, r.height/4)
         width = 17 * layout_context.theme.font_size
         height = min(
             r.height,
@@ -636,18 +654,23 @@ class AppWindow:
 
     def _set_mouse_mode_rotate(self):
         self._scene.set_view_controls(gui.SceneWidget.Controls.ROTATE_CAMERA)
+        self._scene_traj.set_view_controls(gui.SceneWidget.Controls.ROTATE_CAMERA)
 
     def _set_mouse_mode_fly(self):
         self._scene.set_view_controls(gui.SceneWidget.Controls.FLY)
+        self._scene_traj.set_view_controls(gui.SceneWidget.Controls.FLY)
 
     def _set_mouse_mode_sun(self):
         self._scene.set_view_controls(gui.SceneWidget.Controls.ROTATE_SUN)
+        self._scene_traj.set_view_controls(gui.SceneWidget.Controls.ROTATE_SUN)
 
     def _set_mouse_mode_ibl(self):
         self._scene.set_view_controls(gui.SceneWidget.Controls.ROTATE_IBL)
+        self._scene_traj.set_view_controls(gui.SceneWidget.Controls.ROTATE_IBL)
 
     def _set_mouse_mode_model(self):
         self._scene.set_view_controls(gui.SceneWidget.Controls.ROTATE_MODEL)
+        self._scene_traj.set_view_controls(gui.SceneWidget.Controls.ROTATE_MODEL)
 
     def _on_bg_color(self, new_color):
         self.settings.bg_color = new_color
@@ -801,6 +824,11 @@ class AppWindow:
         gui.Application.instance.menubar.set_checked(
             AppWindow.MENU_SHOW_SETTINGS, self._settings_panel.visible)
 
+    def _on_WINDOW_toggle_settings_panel(self):
+        self._scene_traj.visible = not self._scene_traj.visible
+        gui.Application.instance.menubar.set_checked(
+            AppWindow.WINDOW_SHOW_SETTINGS, self._scene_traj.visible)
+
     def _on_menu_about(self):
         # Show a simple dialog. Although the Dialog is actually a widget, you can
         # treat it similar to a Window for layout and put all the widgets in a
@@ -899,6 +927,14 @@ class AppWindow:
             # o3d.io.write_image(path, img, quality)
             cv2.imwrite(path, img[..., [2,1,0]])
 
+        # x = self.window.content_rect.width
+        # y = self.window.content_rect.height
+        # ratio = 1280/720
+        # if x/y > ratio:
+        #     x = int(y * ratio)
+        # else:
+        #     y = int(x / ratio)
+        # self._scene.scene.set_view_size(x, y)
         self._scene.scene.scene.render_to_image(on_image)
 
 

@@ -93,6 +93,7 @@ class Menu(GUI_BASE):
 
     def _updata_material(self, settings, name):
         self._scene.scene.modify_geometry_material(name, settings.material)
+        self._scene_traj.scene.modify_geometry_material(name, settings.material)
 
         # self._material_prefab.enabled = (
         #     settings.material.shader in [Settings.LIT, Settings.Transparency, Settings.LitSSR])
@@ -124,7 +125,7 @@ class Menu(GUI_BASE):
         em = self.window.theme.font_size
         dlg = gui.Dialog(name)
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(f'==== Update material for {name} ===='))
+        dlg_layout.add_child(gui.Label(f'\t\t\tUpdate material for {name}\t\t\t'))
 
         def _on_shader(_, index):
             settings.set_material(GUI_BASE.MATERIAL_SHADERS[index])

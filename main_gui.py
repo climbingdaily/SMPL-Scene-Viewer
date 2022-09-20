@@ -54,7 +54,6 @@ class o3dvis(setting, Menu):
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
         self.COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-        # self._scene.scene.view.set_shadowing(1)
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
         self.is_done = False
@@ -81,8 +80,12 @@ class o3dvis(setting, Menu):
             return
         name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
-        geometry = load_pts(None, pcd_path=path, load_data_class=load_data_class)
-        geometry.translate(translate)
+        traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+        traj.translate(translate)
+        # traj = self.points_to_sphere(traj)
+        self.add_geometry(traj, name=name)
+
+    def points_to_sphere(self, geometry):
         points = np.asarray(geometry.points)
 
         skip=20
@@ -94,7 +97,8 @@ class o3dvis(setting, Menu):
             s.compute_vertex_normals()
             s.paint_uniform_color(POSE_COLOR['points'])
             traj += s
-        self.add_geometry(traj, name=name)
+        
+        return traj
 
     def _on_load_smpl_done(self, filename):
         self.window.close_dialog()
@@ -117,13 +121,14 @@ class o3dvis(setting, Menu):
 
             humans = self.Human_data.vis_data_list['humans']
             keys = list(humans.keys())
-            self.total_frames = humans[keys[0]].shape[0]
+            self.total_frames = humans[keys[0]]['verts'].shape[0]
             
             data = {}
             # data['human points'] = o3d.geometry.PointCloud()
             data['human points'] = o3d.geometry.TriangleMesh()
             
             self.human_points = []
+
             for ii in range(512):
                 p = o3d.geometry.TriangleMesh.create_sphere(0.015 * o3dvis.SCALE, resolution=5)
                 p.compute_vertex_normals()
@@ -132,6 +137,10 @@ class o3dvis(setting, Menu):
                 self.human_points.append(p)
 
             for key in keys:
+                traj = o3d.geometry.PointCloud()
+                traj.points = o3d.utility.Vector3dVector(humans[key]['trans'].squeeze())
+                self.update_geometry(traj, f'traj_{key}')
+
                 smpl = o3d.io.read_triangle_mesh(sample_path)
                 smpl.vertex_colors = o3d.utility.Vector3dVector()
                 data[key] = smpl
@@ -165,7 +174,7 @@ class o3dvis(setting, Menu):
         def set_smpl(smpl, key, iid):
             if iid >= 0:
                 smpl.vertices = o3d.utility.Vector3dVector(
-                    self.Human_data.vis_data_list['humans'][key][iid])
+                    self.Human_data.vis_data_list['humans'][key]['verts'][iid])
                 smpl.vertex_normals = o3d.utility.Vector3dVector()
                 smpl.triangle_normals = o3d.utility.Vector3dVector()
                 smpl.compute_vertex_normals()
@@ -261,6 +270,9 @@ class o3dvis(setting, Menu):
         if self._scene.scene.has_geometry(name):
             self._scene.scene.remove_geometry(name)
 
+        if self._scene_traj.scene.has_geometry(name):
+            self._scene_traj.scene.remove_geometry(name)
+
         if name not in self.geo_list:
             if archive:
                 box = self.archive_box
@@ -286,24 +298,23 @@ class o3dvis(setting, Menu):
                 self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
             else:
                 self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
                     
         if reset_bounding_box:
             try:
                 bounds = geometry.get_axis_aligned_bounding_box()
                 self._scene.setup_camera(60, bounds, bounds.get_center())
+                self._scene_traj.setup_camera(60, bounds, bounds.get_center())
             except:
                 print("[WARNING] It is t.geometry type")
 
-    def _on_show_geometry(self, show):
-        for name, data in self.geo_list.items():
-            self._scene.scene.show_geometry(name, data['box'].checked)
-        # self._apply_settings()
 
     def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
         self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
 
     def remove_geometry(self, name):
         self._scene.scene.remove_geometry(name)
+        self._scene_traj.scene.remove_geometry(name)
 
     def set_view(self, view):
         pass
@@ -321,17 +332,21 @@ class o3dvis(setting, Menu):
 
     def init_camera(self, extrinsic_matrix=None): 
         bounds = self._scene.scene.bounding_box
-        x = self.window.content_rect.width
-        y = self.window.content_rect.height
+        x = self._scene.frame.width
+        y = self._scene.frame.height
+
         cx, cy = x/2, y/2
         fx = fy = cx * o3dvis.INTRINSIC_FACTOR
         self.intrinsic = np.array([[fx, 0., cx],
                                     [0. , fy, cy],
                                     [0. , 0., 1.]])
+
         if o3dvis.FIX_CAMERA or extrinsic_matrix is None:
             extrinsic_matrix = self.get_camera()
+
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
+        # self._scene_traj.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
 def main():
     gui.Application.instance.initialize()

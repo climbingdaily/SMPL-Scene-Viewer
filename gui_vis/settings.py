@@ -115,7 +115,10 @@ class Setting_panal(GUI_BASE):
 
     def _on_layout(self, layout_context):
         r = self.window.content_rect
+        # self._scene.frame = gui.Rect(0, 0, 1280, 720)
         self._scene.frame = r
+        self._scene_traj.frame = gui.Rect(r.width * 3/4, r.y, r.width/4, r.height/4)
+
         width = 17 * layout_context.theme.font_size
         pref = self.stream_setting.calc_preferred_size(layout_context,
                                              gui.Widget.Constraints())
@@ -171,7 +174,7 @@ class Setting_panal(GUI_BASE):
         h2 = gui.Horiz(1 * em)
         add_Switch(h2, 'Follow camera', self._on_camera_view, True)
         self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
-        self.archive_box = add_box(h2, 'Chess Board', self._on_show_archive_geometry, True)
+        self.archive_box = add_box(h2, 'Chess Board', self._on_show_geometry, True)
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
@@ -414,7 +417,7 @@ class Setting_panal(GUI_BASE):
         temp_layout = gui.Horiz(0.25 * em)
         temp_layout.add_child(freeze_btn)
         temp_layout.add_child(clear_freeze_btn)
-        self.freeze_box = add_box(temp_layout, 'Freezed frames', self._on_show_freeze_geometry, True)
+        self.freeze_box = add_box(temp_layout, 'Freezed frames', self._on_show_geometry, True)
 
         self.freezed_list = gui.ListView()
         self.freezed_list.set_max_visible_items(5)
@@ -483,15 +486,11 @@ class Setting_panal(GUI_BASE):
     def _unfreeze(self):
         Setting_panal.FREEZE = False
 
-    def _on_show_archive_geometry(self, show):
-        for name in self.geo_list:
-            if self.geo_list[name]['archive']:
-                self._scene.scene.show_geometry(name, show)
-
-    def _on_show_freeze_geometry(self, show):
-        for name in self.geo_list:
-            if self.geo_list[name]['freeze']:
-                self._scene.scene.show_geometry(name, show)
+    def _on_show_geometry(self, show):
+        for name, data in self.geo_list.items():
+            self._scene.scene.show_geometry(name, data['box'].checked)
+            self._scene_traj.scene.show_geometry(name, data['box'].checked)
+        # self._apply_settings()
 
     def _add_frame(self):
         self._on_slider(self.frame_slider_bar.int_value+1)

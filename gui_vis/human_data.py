@@ -57,7 +57,7 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
         else:
             trans = human_data[trans_str2].copy()
         vert = poses_to_vertices(pose, trans, beta=beta)
-        verts_list[f'{info}'] = vert[start:end]
+        verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end]}
         print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
 
 def load_vis_data(humans, start=0, end=-1):
@@ -91,8 +91,10 @@ def load_vis_data(humans, start=0, end=-1):
     f_vert = poses_to_vertices(pose, beta=beta)
 
     # pose + trans
-    vis_data['humans']['Baseline1(F)'] = f_vert[start: end] + \
-        np.expand_dims(trans.astype(np.float32), 1)[start: end]
+    save_trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
+    vis_data['humans']['Baseline1(F)'] = {
+        'verts': f_vert[start: end] + save_trans, 
+        'trans': save_trans[start: end]}
 
     # load first person
     if 'lidar_traj' in first_person:
@@ -110,9 +112,10 @@ def load_vis_data(humans, start=0, end=-1):
         ### !!!   It's very important: -root[0]   !!
         ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         trans = lidar_traj + lidar_to_head - head + root - root[0]  
-    
-        vis_data['humans']['Baseline2(F)'] = f_vert[start: end] + \
-            np.expand_dims(trans.astype(np.float32), 1)[start: end]
+        trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
+
+        vis_data['humans']['Baseline2(F)'] = {'verts': f_vert[start: end] + trans, 'trans': trans.squeeze()}
+            
     
     print(f'[SMPL MODEL] First pose loaded')
 
@@ -174,7 +177,8 @@ def load_vis_data(humans, start=0, end=-1):
                 else:
                     trans = second_person['trans'].copy()
                 local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
-                vis_data['humans']['Second pred'] = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
+                verts = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
+                vis_data['humans']['Second pred'] = {'verts': verts, 'trans': trans[valid_idx]}
                 print(f'[SMPL MODEL] Predicted person loaded')
 
     print(f'[Data loading end] ==============')
@@ -228,7 +232,7 @@ class HUMAN_DATA:
             print(f'No First Lidar View')
             
             try:
-                verts = self.vis_data_list['humans']['Baseline1(F)']
+                verts = self.vis_data_list['humans']['Baseline1(F)']['verts']
                 root_position = vertices_to_joints(verts, 0)
                 root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
                 self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
@@ -240,13 +244,13 @@ class HUMAN_DATA:
         # first person view generation
         try:
             try:
-                verts = self.vis_data_list['humans']['Baseline2(F)']
+                verts = self.vis_data_list['humans']['Baseline2(F)']['verts']
                 root_position = vertices_to_joints(verts, 0)
                 root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
             except Exception as e:
                 print(e)
                 try:
-                    verts = self.vis_data_list['humans']['Baseline1(F)']
+                    verts = self.vis_data_list['humans']['Baseline1(F)']['verts']
                     root_position = vertices_to_joints(verts, 0)
                     root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
                 except Exception as e: 
@@ -266,7 +270,7 @@ class HUMAN_DATA:
         # second person view generation
         try:
             try:
-                second_verts = self.vis_data_list['humans']['Ours(S)']
+                second_verts = self.vis_data_list['humans']['Ours(S)']['verts']
                 second_pose = humans_verts['second_person']['opt_pose']
             except:
                 try:
@@ -291,6 +295,8 @@ class HUMAN_DATA:
         views = list(self.cameras.keys())
         for view in views:
             print(f'[Camera]: {view}')
+        print(f'[Camera loaded]')
+        
         return views
 
     def get_extrinsic(self, FOV):
