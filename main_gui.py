@@ -267,11 +267,7 @@ class o3dvis(setting, Menu):
                 print("[Info]", "not pointcloud or mehs.")
                 return 
 
-        if self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-
-        if self._scene_traj.scene.has_geometry(name):
-            self._scene_traj.scene.remove_geometry(name)
+        self.remove_geometry(name)
 
         if name not in self.geo_list:
             if archive:
@@ -298,7 +294,8 @@ class o3dvis(setting, Menu):
                 self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
             else:
                 self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
-                self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                if self._scene_traj.visible:
+                    self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
                     
         if reset_bounding_box:
             try:
@@ -313,8 +310,10 @@ class o3dvis(setting, Menu):
         self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
 
     def remove_geometry(self, name):
-        self._scene.scene.remove_geometry(name)
-        self._scene_traj.scene.remove_geometry(name)
+        if self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
+        if self._scene_traj.scene.has_geometry(name):
+            self._scene_traj.scene.remove_geometry(name)
 
     def set_view(self, view):
         pass

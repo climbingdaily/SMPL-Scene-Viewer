@@ -104,12 +104,12 @@ def read_pcd(pc_pcd):
     pc[:, 0] = pc_pcd.pc_data['x']
     pc[:, 1] = pc_pcd.pc_data['y']
     pc[:, 2] = pc_pcd.pc_data['z']
-    fields = []
+    fields = {}
     count = 3
     if 'rgb' in pc_pcd.fields:
         append = pypcd.decode_rgb_from_pcl(pc_pcd.pc_data['rgb'])/255
         pc = np.concatenate((pc, append), axis=1)
-        fields.append({'rgb': [count, count+1, count+2]})
+        fields['rgb'] = [count, count+1, count+2]
         count += 3
     if 'normal_x' in pc_pcd.fields and 'normal_y' in pc_pcd.fields and 'normal_z' in pc_pcd.fields:        
         append = pc_pcd.pc_data['normal_x'].reshape(-1, 1)
@@ -118,12 +118,12 @@ def read_pcd(pc_pcd):
         pc = np.concatenate((pc, append), axis=1)
         append = pc_pcd.pc_data['normal_z'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
-        fields.append({'normal': [count, count+1, count+2]})
+        fields['normal'] = [count, count+1, count+2]
         count += 3
     if 'intensity' in pc_pcd.fields:        
         append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
-        fields.append({'intensity': [count, count+1, count+2]})
+        fields['intensity'] = [count, count+1, count+2]
         count += 1
     
     return pc, fields
