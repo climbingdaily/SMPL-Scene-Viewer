@@ -106,14 +106,14 @@ class Setting_panal(GUI_BASE):
         # collapse.add_child(stream_setting)
         collapse.add_child(tabs)
         self.window.add_child(self.stream_setting)
-        self.window.set_on_layout(self._on_layout)
+        self.window.set_on_layout(self._on_setting_layout)
 
         self.tracking_setting.visible = False
         # self._settings_panel.add_child(collapse)
         self._settings_panel.get_children()[0].add_tab('Settings', collapse)
         self._settings_panel.get_children()[0].add_tab('Cameras', camera_setting)
 
-    def _on_layout(self, layout_context):
+    def _on_setting_layout(self, layout_context):
         r = self.window.content_rect
         # self._scene.frame = gui.Rect(0, 0, 1280, 720)
         self._scene.frame = r
@@ -381,7 +381,7 @@ class Setting_panal(GUI_BASE):
         tabs = gui.Vert(0.15 * em)
         # check_boxes = gui.VGrid(2, 0.15 * em)
         data_list = gui.Horiz(0.15 * em)
-        data_list.preferred_height = 10*em
+        data_list.preferred_height = 15 * em
         self.check_boxes = gui.TreeView()
         data_list.add_child(self.check_boxes)
         self.check_boxes.set_on_selection_changed(self._on_tree)
@@ -599,6 +599,7 @@ class Setting_panal(GUI_BASE):
                 time.sleep(0.01)
                 self.set_camera(index, Setting_panal.POV)
                 initialized = True
+
                 if Setting_panal.RENDER:
                     gui.Application.instance.post_to_main_thread(self.window, save_img)
 
@@ -626,7 +627,7 @@ class Setting_panal(GUI_BASE):
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
-        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:04d}.jpg')
+        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.jpg')
         Setting_panal.IMG_COUNT += 1
         self.export_image(img_path, 1280, 720)
 

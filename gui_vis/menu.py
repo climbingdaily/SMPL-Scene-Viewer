@@ -93,7 +93,8 @@ class Menu(GUI_BASE):
 
     def _updata_material(self, settings, name):
         self._scene.scene.modify_geometry_material(name, settings.material)
-        self._scene_traj.scene.modify_geometry_material(name, settings.material)
+        if self._scene_traj.scene.has_geometry(name):
+            self._scene_traj.scene.modify_geometry_material(name, settings.material)
 
         # self._material_prefab.enabled = (
         #     settings.material.shader in [Settings.LIT, Settings.Transparency, Settings.LitSSR])
@@ -152,25 +153,39 @@ class Menu(GUI_BASE):
             self._updata_material(settings, name)
 
         material_settings = gui.Vert()
+
+        # shader settings
         _shader = gui.Combobox()
         for shader in GUI_BASE.MATERIAL_NAMES:
             _shader.add_item(shader)
-
+        _shader.selected_index = GUI_BASE.MATERIAL_SHADERS.index(settings.material.shader)
         _shader.set_on_selection_changed(_on_shader)
 
+        # _material_prefab settings
         _material_prefab = gui.Combobox()
         for prefab_name in sorted(Settings.PREFAB.keys()):
             _material_prefab.add_item(prefab_name)
-        _material_prefab.selected_text = Settings.DEFAULT_MATERIAL_NAME
+        _material_prefab.selected_text = settings.prefab
+        # _material_prefab.enabled = (
+        #     settings.material.shader in [Settings.LIT, Settings.Transparency, Settings.LitSSR])
         _material_prefab.set_on_selection_changed(_on_material_prefab)
 
+        # color settings
         _material_color = gui.ColorEdit()
+        c = gui.Color(settings.material.base_color[0],
+                settings.material.base_color[1],
+                settings.material.base_color[2],
+                settings.material.base_color[3])
+        _material_color.color_value = c
         _material_color.set_on_value_changed(_on_material_color)
 
+        # point size setting
         _point_size = gui.Slider(gui.Slider.INT)
         _point_size.set_limits(1, 10)
+        _point_size.double_value = settings.material.point_size
         _point_size.set_on_value_changed(_on_point_size)
 
+        # layout
         grid = gui.VGrid(2, 0.25 * em)
         grid.add_child(gui.Label("Type"))
         grid.add_child(_shader)

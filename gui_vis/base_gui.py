@@ -168,6 +168,7 @@ class Settings:
 
     def __init__(self):
         # self.mouse_model = gui.SceneWidget.Controls.ROTATE_CAMERA
+        self.prefab = Settings.DEFAULT_MATERIAL_NAME
         self.bg_color = gui.Color(1, 1, 1)
         self.show_skybox = True
         self.show_ground_plane = True
@@ -219,8 +220,8 @@ class Settings:
 
     def apply_material_prefab(self, name):
         # assert (self.material.shader == Settings.LIT)
-        prefab = Settings.PREFAB[name]
-        for key, val in prefab.items():
+        self.prefab = name
+        for key, val in Settings.PREFAB[name].items():
             setattr(self.material, "base_" + key, val)
 
     def apply_lighting_profile(self, name):
@@ -262,7 +263,7 @@ class AppWindow:
         self._scene_traj = gui.SceneWidget()
         self._scene_traj.scene = rendering.Open3DScene(w.renderer)
         self._scene_traj.set_on_sun_direction_changed(self._on_sun_dir)
-        # self._scene_traj.visible = False
+        self._scene_traj.visible = False
 
         # geometry type list
         self.geo_list = {}
@@ -459,22 +460,22 @@ class AppWindow:
         def empty(show):
             pass
 
-        self.point_box = gui.Checkbox("Point cloud")
+        self.point_box = gui.Checkbox("Point")
         self.point_box.set_on_checked(empty)
         self.point_box.checked = True
         self.mesh_box = gui.Checkbox("Mesh")
         self.mesh_box.set_on_checked(empty)
         self.mesh_box.checked = True
         
-        material_settings.add_child(gui.Label("Update geometry type"))
         grid = gui.Horiz(0.25 * em)
+        grid.add_child(gui.Label("Geometry type"))
         grid.add_child(self.mesh_box)
         grid.add_child(self.point_box)
         material_settings.add_child(grid)
         material_settings.add_fixed(separation_height)
 
         grid = gui.VGrid(2, 0.25 * em)
-        grid.add_child(gui.Label("Type"))
+        grid.add_child(gui.Label("Shader"))
         grid.add_child(self._shader)
         grid.add_child(gui.Label("Material"))
         grid.add_child(self._material_prefab)
@@ -505,7 +506,7 @@ class AppWindow:
         # callback. The on_layout callback should set the frame
         # (position + size) of every child correctly. After the callback is
         # done the window will layout the grandchildren.
-        # w.set_on_layout(self._on_layout)
+        w.set_on_layout(self._on_layout)
         w.add_child(self._scene)
         w.add_child(self._scene_traj)
         w.add_child(self._settings_panel)
@@ -643,7 +644,7 @@ class AppWindow:
         # the grandchildren.
         r = self.window.content_rect
         self._scene.frame = r
-        self._scene_traj.frame = gui.Rect(r.x * 3/4 - width, r.y, r.width/4, r.height/4)
+        self._scene_traj.frame = gui.Rect(r.width * 3/4, r.y, r.width/4, r.height/4)
         width = 17 * layout_context.theme.font_size
         height = min(
             r.height,
@@ -926,6 +927,7 @@ class AppWindow:
                 quality = 100
             # o3d.io.write_image(path, img, quality)
             cv2.imwrite(path, img[..., [2,1,0]])
+            cv2.waitKey(5)
 
         # x = self.window.content_rect.width
         # y = self.window.content_rect.height

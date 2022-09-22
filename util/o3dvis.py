@@ -447,7 +447,7 @@ class o3dvis():
             if not self.waitKey(10, helps=helps):
                 break
             helps = False
-            self.save_imgs(save_dir, strs + '_{:04d}.jpg'.format(count)) 
+            self.save_imgs(save_dir, strs + '_{:05d}.jpg'.format(count)) 
             count += 1
 
         for s in sphere_list:
@@ -534,7 +534,7 @@ class o3dvis():
         if Keyword.SAVE_IMG:
             os.makedirs(out_dir, exist_ok=True)
             # outname = os.path.join(out_dir, filename)
-            outname = os.path.join(out_dir, f'{self.img_save_count:04d}.jpg')
+            outname = os.path.join(out_dir, f'{self.img_save_count:05d}.jpg')
             self.img_save_count += 1
             # outname = os.path.join(out_dir, filename).replace('.jpg', '.mp4')
             # outname = os.path.join(out_dir, filename).replace('.mp4', '.avi')
@@ -643,7 +643,7 @@ class o3dvis():
 
             self.waitKey(10, helps=False)
             self.save_imgs(os.path.join(file_path, 'imgs'),
-                           '{:04d}.jpg'.format(i-skip))
+                           '{:05d}.jpg'.format(i-skip))
         if remote:
             client.close()
         while True:

@@ -77,47 +77,47 @@ def load_vis_data(humans, start=0, end=-1):
     vis_data['humans'] = {}
 
     first_person = humans['first_person']
-    pose = first_person['pose'].copy()
-    if 'beta' not in first_person:
-        first_person['beta'] = [0] * 10
-    beta = first_person['beta'].copy()
+    if 'pose' in first_person:
+        pose = first_person['pose'].copy()
+        if 'beta' not in first_person:
+            first_person['beta'] = [0] * 10
+        beta = first_person['beta'].copy()
 
-    end = pose.shape[0] if end <= 0 else end 
-    if 'mocap_trans' in first_person:
-        trans = first_person['mocap_trans'].copy()
-    else:
-        trans = first_person['trans'].copy()
+        end = pose.shape[0] if end <= 0 else end 
+        if 'mocap_trans' in first_person:
+            trans = first_person['mocap_trans'].copy()
+        else:
+            trans = first_person['trans'].copy()
+        f_vert = poses_to_vertices(pose, beta=beta)
 
-    f_vert = poses_to_vertices(pose, beta=beta)
+        # pose + trans
+        save_trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
+        vis_data['humans']['Baseline1(F)'] = {
+            'verts': f_vert[start: end] + save_trans, 
+            'trans': save_trans[start: end]}
 
-    # pose + trans
-    save_trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
-    vis_data['humans']['Baseline1(F)'] = {
-        'verts': f_vert[start: end] + save_trans, 
-        'trans': save_trans[start: end]}
+        # load first person
+        if 'lidar_traj' in first_person:
+            lidar_traj = first_person['lidar_traj'][:, 1:4]
+            head = vertices_to_joints(f_vert, 15).numpy()
+            root = vertices_to_joints(f_vert, 0).numpy()
+            head_rots = get_head_global_rots(pose)
 
-    # load first person
-    if 'lidar_traj' in first_person:
-        lidar_traj = first_person['lidar_traj'][:, 1:4]
-        head = vertices_to_joints(f_vert, 15).numpy()
-        root = vertices_to_joints(f_vert, 0).numpy()
-        head_rots = get_head_global_rots(pose)
+            def lidar2head(i):
+                return head_rots[i].T @ (head[i] - lidar_traj[i] + trans[i])
 
-        def lidar2head(i):
-            return head_rots[i].T @ (head[i] - lidar_traj[i] + trans[i])
+            lidar_to_head = head_rots @ lidar2head(0)
 
-        lidar_to_head = head_rots @ lidar2head(0)
+            ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ### !!!   It's very important: -root[0]   !!
+            ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            trans = lidar_traj + lidar_to_head - head + root - root[0]  
+            trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
 
-        ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ### !!!   It's very important: -root[0]   !!
-        ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        trans = lidar_traj + lidar_to_head - head + root - root[0]  
-        trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
-
-        vis_data['humans']['Baseline2(F)'] = {'verts': f_vert[start: end] + trans, 'trans': trans.squeeze()}
+            vis_data['humans']['Baseline2(F)'] = {'verts': f_vert[start: end] + trans, 'trans': trans.squeeze()}
             
     
-    print(f'[SMPL MODEL] First pose loaded')
+        print(f'[SMPL MODEL] First pose loaded')
 
     load_human_mesh(vis_data['humans'], 
                     first_person, 
@@ -225,7 +225,11 @@ class HUMAN_DATA:
         # first lidar view generation
         try:
             lidar_pos = humans_verts['first_person']['lidar_traj'][:, 1:4]
-            head_rots = get_head_global_rots(humans_verts['first_person']['pose'])
+            if 'pose' not in humans_verts['first_person']:
+                head_rots = R.from_quat(humans_verts['first_person']['lidar_traj'][:, 4:8]).as_matrix()
+                head_rots = head_rots @ head_rots[0].T
+            else:    
+                head_rots = get_head_global_rots(humans_verts['first_person']['pose'])
             self.cameras['First Lidar View'] = generate_views(lidar_pos, head_rots, dist=offset_center)
         except Exception as e:
             print(e)

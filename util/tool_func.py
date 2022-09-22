@@ -11,6 +11,7 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+from logging import exception
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import os
@@ -25,7 +26,7 @@ def images_to_video(img_dir, filename=None, delete=False):
     video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
     os.makedirs(os.path.join(os.path.dirname(img_dir), 'vis_data'), exist_ok=True)
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
-    command = f"ffmpeg -f image2 -i \"{img_dir}\\%4d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path2}\""
+    command = f"ffmpeg -f image2 -i \"{img_dir}\\%5d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path2}\""
     if not os.path.exists(video_path) and not os.path.exists(video_path2) and os.path.exists(img_dir):
         try:
             run(command, shell=True)
@@ -33,11 +34,15 @@ def images_to_video(img_dir, filename=None, delete=False):
             print(f'[command error] \"{command}\"')
 
         if delete :
+            try:
             # ! Danger
-            img_list = os.listdir(img_dir)
-            for img in img_list:
-                os.remove(os.path.join(img_dir, img))
-            os.removedirs(img_dir)
+                img_list = os.listdir(img_dir)
+                for img in img_list:
+                    os.remove(os.path.join(img_dir, img))
+                    time.sleep(0.001)
+                os.removedirs(img_dir)
+            except Exception as e:
+                print(e)
 
 def filterTraj(traj_xyz, fit_time=None, segment=20, frame_time=0.05, keep_data = False):
 

@@ -29,11 +29,15 @@ from util import load_scene as load_pts
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
 # POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
-POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)', 'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
+POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)',
+            'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
 # POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 POSE_COLOR = {'points': [1,1,1]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
+
+POSE_COLOR['Ours(F)'] = [58/255, 147/255, 189/255]
+POSE_COLOR['Ours(S)'] = [208/255, 80/255, 80/255]
 
 mat_box = o3d.visualization.rendering.MaterialRecord()
 mat_box.shader = 'defaultLitTransparency'
@@ -68,6 +72,7 @@ class o3dvis(setting, Menu):
             self.warning_info(f'{path} is not a valid file')
             return
         name = os.path.basename(path).split('.')[0]
+        self.scene_name = name
         # self._on_load_dialog_done(scene_path)
         geometry = load_pts(None, pcd_path=path, load_data_class=load_data_class)
         geometry.translate(translate)
@@ -304,7 +309,6 @@ class o3dvis(setting, Menu):
                 self._scene_traj.setup_camera(60, bounds, bounds.get_center())
             except:
                 print("[WARNING] It is t.geometry type")
-
 
     def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
         self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 

@@ -123,7 +123,7 @@ def read_pcd(pc_pcd):
     if 'intensity' in pc_pcd.fields:        
         append = pc_pcd.pc_data['intensity'].reshape(-1, 1)
         pc = np.concatenate((pc, append), axis=1)
-        fields['intensity'] = [count, count+1, count+2]
+        fields['intensity'] = [count]
         count += 1
     
     return pc, fields
@@ -304,11 +304,11 @@ class load_data_remote(object):
 
             elif 'intensity' in fields:
                 if pcd[:, fields['intensity']].max() > 255:
-                    intensity = np.array([155 * np.log2(i/100) / np.log2(864) + 100 if i > 100 else i for i in pcd[:, fields['intensity']]])
+                    intensity = np.array([155 * np.log2(i/100) / np.log2(864) + 100 if i > 100 else i for i in pcd[:, fields['intensity']]]).squeeze()
                 else:
-                    intensity = pcd[:, fields['intensity']]
+                    intensity = pcd[:, fields['intensity']].squeeze()
                 scale = 1 if intensity.max() < 1.1 else 255
-                colors = plt.get_cmap('Greys')(intensity/scale)[:, :3]
+                colors = plt.get_cmap('gray')(intensity/scale)[:, :3]
                 pointcloud.colors = o3d.utility.Vector3dVector(colors)
 
             if position is not None:
