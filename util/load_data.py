@@ -38,7 +38,7 @@ view = {
 	],
 }
 
-def client_server(username=None, hostname=None, port=None):
+def client_server(username=None, hostname=None, port=None, password=None):
     """
     It creates a client object that connects to the server using the username, hostname, and port number
     that you provide
@@ -56,7 +56,7 @@ def client_server(username=None, hostname=None, port=None):
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(hostname, port, username, compress=True)
+    client.connect(hostname, port, username, password = password, compress=True)
     return client
 
 def list_dir_remote(client, folder):
@@ -169,14 +169,14 @@ def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
 class load_data_remote(object):
     client = None
     sftp_client = None
-    def __init__(self, remote, username=None, hostname=None, port=None):
+    def __init__(self, remote, username=None, hostname=None, port=None, password=None):
         self.remote = remote
         if remote:
-            load_data_remote.make_client_server(username, hostname, port)
+            load_data_remote.make_client_server(username, hostname, port, password)
 
     @staticmethod
-    def make_client_server(username=None, hostname=None, port=None):
-        load_data_remote.client = client_server(username, hostname, port)
+    def make_client_server(username=None, hostname=None, port=None, password=None):
+        load_data_remote.client = client_server(username, hostname, port, password)
         load_data_remote.sftp_client = load_data_remote.client.open_sftp()
 
     def isdir(self, path):

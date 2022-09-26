@@ -33,6 +33,7 @@ import os
 import platform
 import sys
 import cv2
+import time
 
 isMacOS = (platform.system() == "Darwin")
 
@@ -546,13 +547,13 @@ class AppWindow:
                 # About..., Preferences..., and Quit menu items typically go.
                 menu.add_menu("Example", app_menu)
                 menu.add_menu("File", file_menu)
-                menu.add_menu("Windows", settings_menu)
+                menu.add_menu("View", settings_menu)
                 # Don't include help menu unless it has something more than
                 # About...
             else:
                 menu.add_menu("File", file_menu)
-                menu.add_menu("Windows", settings_menu)
-                menu.add_menu("Help", help_menu)
+                menu.add_menu("View", settings_menu)
+                menu.add_menu("About", help_menu)
             gui.Application.instance.menubar = menu
 
         # The menubar is global, but we need to connect the menu items to the
@@ -839,7 +840,11 @@ class AppWindow:
 
         # Add the text
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label("Open3D GUI Example"))
+        dlg_layout.add_child(gui.Label("Copyright"))
+        text = gui.Vert(em, gui.Margins(em, em, em, em))
+        text.preferred_width = 30 * em
+        text.add_child(gui.Label("This is a visualization tool for LiDAR human and scene. The code is realeased on 'https://github.com/climbingdaily/vis_lidar_human_scene'. \nThe codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. Contact us if you are interested in commercial usage. \n\nCopyright@Yudi Dai.\nyudidai@stu.xmu.edu.cn "))
+        dlg_layout.add_child(text)
 
         # Add the Ok button. We need to define a callback function to handle
         # the click.
@@ -853,7 +858,7 @@ class AppWindow:
         h = gui.Horiz()
         h.add_stretch()
         h.add_child(ok)
-        h.add_stretch()
+        # h.add_stretch()
         dlg_layout.add_child(h)
 
         dlg.add_child(dlg_layout)
@@ -927,7 +932,8 @@ class AppWindow:
                 quality = 100
             # o3d.io.write_image(path, img, quality)
             cv2.imwrite(path, img[..., [2,1,0]])
-            cv2.waitKey(5)
+            # time.sleep(0.005)
+            # cv2.waitKey(5)
 
         # x = self.window.content_rect.width
         # y = self.window.content_rect.height

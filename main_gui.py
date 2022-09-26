@@ -11,7 +11,6 @@
 # HISTORY:                                                                     #
 ################################################################################
 
-from statistics import geometric_mean
 import numpy as np
 import open3d as o3d
 import open3d.visualization.gui as gui
@@ -21,6 +20,9 @@ import threading
 import os
 import time
 import matplotlib.pyplot as plt
+from gui_vis.base_gui import Settings
+
+from gui_vis.human_data import vertices_to_joints
 
 sys.path.append('.')
 
@@ -32,12 +34,12 @@ sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)',
             'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
 # POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
-POSE_COLOR = {'points': [1,1,1]}
+POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
 
 POSE_COLOR['Ours(F)'] = [58/255, 147/255, 189/255]
-POSE_COLOR['Ours(S)'] = [208/255, 80/255, 80/255]
+POSE_COLOR['Ours(S)'] = [228/255, 100/255, 100/255]
 
 mat_box = o3d.visualization.rendering.MaterialRecord()
 mat_box.shader = 'defaultLitTransparency'
@@ -60,7 +62,7 @@ class o3dvis(setting, Menu):
         self.COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
-        self.is_done = False
+        self.fetched_data = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True)
         self.load_scene(sample_path, [0,0,0.16])
@@ -143,7 +145,8 @@ class o3dvis(setting, Menu):
 
             for key in keys:
                 traj = o3d.geometry.PointCloud()
-                traj.points = o3d.utility.Vector3dVector(humans[key]['trans'].squeeze())
+                traj.points = o3d.utility.Vector3dVector(vertices_to_joints(humans[key]['verts'], 0).numpy())
+                traj.paint_uniform_color(POSE_COLOR[key])
                 self.update_geometry(traj, f'traj_{key}')
 
                 smpl = o3d.io.read_triangle_mesh(sample_path)
@@ -162,15 +165,22 @@ class o3dvis(setting, Menu):
                 start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
                 self.tracking_list = self.tracking_list[start:end+1]
             except Exception as e:
+                # self.update_data = setting.update_data
+                self.frame_slider_bar.enabled = True
+                self.frame_edit.enabled = True
+                self.play_btn.enabled = True
+                self.total_frames = len(self.tracking_list)
+                self.add_thread(threading.Thread(target=self.thread))
                 print(e)
 
     def update_data(self, data, initialized=True):
+        
         def func():
             for name in data:
                 self.update_geometry(data[name], name, reset_bounding_box=False, freeze=o3dvis.FREEZE)
+            self.window.set_needs_layout()
             self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
-        # time.sleep(0.01)
 
         if not initialized:
             self.change_pause_status()
@@ -188,36 +198,43 @@ class o3dvis(setting, Menu):
             else:
                 smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
 
-        vis_data = self.Human_data.vis_data_list
+        try:
 
-        for ii, p in enumerate(self.human_points):
-            p.translate(-p.get_center())
+            vis_data = self.Human_data.vis_data_list
 
-        if 'point cloud' in vis_data:
-            points = vis_data['point cloud'][0]
-            indexes = vis_data['point cloud'][1]
+            for ii, p in enumerate(self.human_points):
+                p.translate(-p.get_center())
 
-            if ind in indexes:
-                index = indexes.index(ind)
-                # pointcloud.points = o3d.utility.Vector3dVector(points[index])
-                for ii, p in enumerate(self.human_points):
-                    p.translate(points[index][ii] - p.get_center())
-            else:
-                index = -1
-                # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-        hps = self.fetched_data['human points']
-        vertices = np.vstack([np.asarray(p.vertices) for p in self.human_points])
-        hps.vertices = o3d.utility.Vector3dVector(vertices)
-        hps.vertex_normals = o3d.utility.Vector3dVector()
-        hps.triangle_normals = o3d.utility.Vector3dVector()
-        hps.compute_vertex_normals()
+            if 'point cloud' in vis_data:
+                points = vis_data['point cloud'][0]
+                indexes = vis_data['point cloud'][1]
 
-        for key, geometry in self.fetched_data.items():
-            iid = index if 'pred' in key.lower() else ind
-            if '(s)' in key.lower() or '(f)' in key.lower():
-                set_smpl(geometry, key, iid)
+                if ind in indexes:
+                    index = indexes.index(ind)
+                    # pointcloud.points = o3d.utility.Vector3dVector(points[index])
+                    for ii, p in enumerate(self.human_points):
+                        p.translate(points[index][ii] - p.get_center())
+                else:
+                    index = -1
+                    # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
+            pts = self.fetched_data['human points']
+            vertices = np.vstack([np.asarray(p.vertices) for p in self.human_points])
+            pts.vertices = o3d.utility.Vector3dVector(vertices)
+            pts.vertex_normals = o3d.utility.Vector3dVector()
+            pts.triangle_normals = o3d.utility.Vector3dVector()
+            pts.compute_vertex_normals()
+
+            for key, geometry in self.fetched_data.items():
+                iid = index if 'pred' in key.lower() else ind
+                if '(s)' in key.lower() or '(f)' in key.lower():
+                    set_smpl(geometry, key, iid)
+        except Exception as e:
+            print(e)
+            pass
+
         try:
             self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
+            
         except Exception as e:
             pass
 
@@ -242,9 +259,8 @@ class o3dvis(setting, Menu):
                     reset_bounding_box=True, 
                     archive=False, 
                     freeze=False):
-
         if mat is None:
-            mat =self.settings.material
+            mat =self.settings.material 
         if name is None:
             name = self.scene_name
 
@@ -272,35 +288,21 @@ class o3dvis(setting, Menu):
                 print("[Info]", "not pointcloud or mehs.")
                 return 
 
-        self.remove_geometry(name)
-
         if name not in self.geo_list:
-            if archive:
-                box = self.archive_box
-            else: 
-                hh = gui.Horiz(0.5 * self.window.theme.font_size)
-                add_btn(hh, 'Property', self._on_material_setting)
-                box = add_box(hh, name, self._on_show_geometry, True)
-                self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
-
-            self.window.set_needs_layout()
-            self.geo_list[name] = {
-                'geometry': geometry, 
-                'type': type, 
-                'box': box,
-                'mat': mat_set(), 
-                'archive': archive,
-                'freeze': False}
+            self.make_material(geometry, name, archive, point_size=2)
 
         if self.geo_list[name]['box'].checked:
             geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
+            self.remove_geometry(name)
             if freeze:
                 self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
             else:
                 self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
                 if self._scene_traj.visible:
                     self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+        else:
+            self.remove_geometry(name)
                     
         if reset_bounding_box:
             try:
@@ -350,6 +352,37 @@ class o3dvis(setting, Menu):
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
         # self._scene_traj.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
+
+    def make_material(self, geometry, name, is_archive=False, point_size=2, color=[0.9, 0.9, 0.9, 1.0]):
+        if is_archive:
+            box = self.archive_box
+        else:
+            hh = gui.Horiz(0.5 * self.window.theme.font_size)
+            add_btn(hh, 'Property', self._on_material_setting)
+            box = add_box(hh, name, self._on_show_geometry, True)
+            self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
+
+        self.window.set_needs_layout()
+        settings = mat_set()
+        if 'traj_' in name.lower():
+            shader = settings.UNLIT
+            point_size = 4
+            color[-1] = 0.8
+        else:
+            shader = settings.LIT
+
+        settings.set_material(shader)
+        settings.material.point_size = int(point_size)
+        settings.material.base_color = color
+        # settings.apply_material_prefab(settings.DEFAULT_MATERIAL_NAME)
+
+        self.geo_list[name] = {
+            'geometry': geometry, 
+            'type': type, 
+            'box': box,
+            'mat': settings, 
+            'archive': is_archive,
+            'freeze': False}
 
 def main():
     gui.Application.instance.initialize()

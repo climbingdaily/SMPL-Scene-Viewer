@@ -42,8 +42,7 @@ class trackingVis(base_gui):
         self.add_thread(threading.Thread(target=self.thread))
 
     def fetch_data(self, index):
-        geomety = self.remote_load.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
-        return {'tracking frame': geomety}
+        return {'tracking frame': self.get_tracking_data(index)}
 
     def _on_mouse_widget3d(self, event):
         # We could override BUTTON_DOWN without a modifier, but that would

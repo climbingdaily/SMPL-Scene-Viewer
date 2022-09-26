@@ -89,7 +89,7 @@ class Setting_panal(GUI_BASE):
         self.stream_setting = self.create_stream_settings()
         human_setting, camera_setting = self.create_humandata_settings()
         self.tracking_setting = self.tracking_tool_setting()
-        
+
         # tabs = gui.TabControl()
         tabs = gui.Vert()
         tabs.add_child(human_setting)
@@ -110,8 +110,9 @@ class Setting_panal(GUI_BASE):
 
         self.tracking_setting.visible = False
         # self._settings_panel.add_child(collapse)
-        self._settings_panel.get_children()[0].add_tab('Settings', collapse)
-        self._settings_panel.get_children()[0].add_tab('Cameras', camera_setting)
+        self._settings_panel.get_children()[0].add_tab('Setting', collapse)
+        self._settings_panel.get_children()[0].add_tab('PCDs', self.remote_setting())
+        self._settings_panel.get_children()[0].add_tab('Camera', camera_setting)
 
     def _on_setting_layout(self, layout_context):
         r = self.window.content_rect
@@ -193,31 +194,26 @@ class Setting_panal(GUI_BASE):
 
         return vert_layout
 
-    def tracking_tool_setting(self):
-        self.remote_info = {}
+    def remote_setting(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
-        collapse = gui.CollapsableVert("Traking tool", 0.33 * em,
-                                        gui.Margins(em, 0, 0, 0))
-        # collapse = gui.Vert(0.15 * em)
-                                        
-        self._fileedit = gui.TextEdit()
-        self._fileedit.set_on_value_changed(self._start_tracking)
+        remote = gui.Vert(0.15 * em)
+        folder = gui.TextEdit()
+        folder.set_on_value_changed(self._start_tracking)
         username = gui.TextEdit()
         hostname = gui.TextEdit()
         port = gui.TextEdit()
-        self._fileedit.text_value = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
+        pwd = gui.TextEdit()
+        folder.text_value = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
         username.text_value = 'dyd'
         hostname.text_value = '10.24.80.241'
         port.text_value = '911'
-
-        filedlgbutton = creat_btn('Folder', self._on_traj_folder)
-
+        self.remote_info = {}
         self.remote_info['username'] = username
         self.remote_info['hostname'] = hostname
         self.remote_info['port'] = port
-        self.remote_info['folder'] = self._fileedit
-
+        self.remote_info['folder'] = folder
+        self.remote_info['pwd'] = pwd
         remote_layout = gui.VGrid(2, 0.15 * em)
         remote_layout.add_child(gui.Label('user'))
         remote_layout.add_child(username)
@@ -225,8 +221,31 @@ class Setting_panal(GUI_BASE):
         remote_layout.add_child(hostname)
         remote_layout.add_child(gui.Label('port'))
         remote_layout.add_child(port)
-        remote_layout.add_child(filedlgbutton)
-        remote_layout.add_child(self._fileedit)
+        remote_layout.add_child(gui.Label('pwd'))
+        remote_layout.add_child(pwd)
+        remote_layout.add_child(gui.Label('folder'))
+        remote_layout.add_child(folder)
+
+        h = gui.Horiz(em)
+        h.add_child(gui.Label('Load remote pcds'))
+        h.add_child(creat_btn('Connect', lambda: self._start_tracking(None)))
+        remote.add_fixed(separation_height)
+        remote.add_child(h)
+        remote.add_child(remote_layout)
+        remote.add_child(gui.Label('--------------------------------'))
+
+        h = gui.Horiz(em)
+        h.add_child(gui.Label('Load local pcds'))
+        h.add_child(creat_btn('Folder', self._on_traj_folder))
+        remote.add_child(h)
+        return remote
+
+    def tracking_tool_setting(self):
+        em = self.window.theme.font_size
+        separation_height = int(round(0.5 * em))
+        collapse = gui.CollapsableVert("Traking tool", 0.33 * em,
+                                        gui.Margins(em, 0, 0, 0))
+        # collapse = gui.Vert(0.15 * em)
 
         btn = creat_btn('Save traj', self._save_traj)
         text_step = gui.TextEdit()
@@ -247,7 +266,7 @@ class Setting_panal(GUI_BASE):
         self.trackpoints_list.set_max_visible_items(5)
         self.trackpoints_list.set_on_selection_changed(self._on_track_list)
 
-        collapse.add_child(remote_layout)
+        # collapse.add_child(remote_layout)
         collapse.add_child(horiz)
         collapse.add_child(gui.Label('Tracked points'))
         collapse.add_child(self.trackpoints_list)
@@ -310,24 +329,30 @@ class Setting_panal(GUI_BASE):
         self.freezed_list.set_items(freezed_list)
         self.window.set_needs_layout()
 
-    def _start_tracking(self, path):
+    def _start_tracking(self, path=None):
+        if path is None:
+            path = self.remote_info['folder'].text_value
         self.tracking_list = []
         self.tracking_foler = path
-        username = self.remote_info['username'].text_value.strip()
-        hostname = self.remote_info['hostname'].text_value.strip()
-        port = self.remote_info['port'].text_value.strip()
 
         try:
-            self.remote_load = load_data_remote(False, username, hostname, int(port))
-            pcd_paths = self.remote_load.list_dir(path)
+            self.data_loader = load_data_remote(False)
+            pcd_paths = self.data_loader.list_dir(path)
         except:
             try:
-                self.remote_load = load_data_remote(True, username, hostname, int(port))
-                pcd_paths = self.remote_load.list_dir(path)
+                password = self.remote_info['pwd'].text_value.strip()
+                username = self.remote_info['username'].text_value.strip()
+                hostname = self.remote_info['hostname'].text_value.strip()
+                port = self.remote_info['port'].text_value.strip()
+                self.data_loader = load_data_remote(True, username, hostname, int(port), password)
+                pcd_paths = self.data_loader.list_dir(path)
             except Exception as e:
                 print(e)
                 self.warning_info(f"'{path}' \n Not valid! Please input the right remote info!!!")
                 return
+        if len(pcd_paths) <=0:
+            self.warning_info(f"'{path}' \n Not valid! Please input the right folder info!!!")
+            return
 
         for pcd_path in pcd_paths:
             if pcd_path.endswith('.pcd'):
@@ -351,7 +376,7 @@ class Setting_panal(GUI_BASE):
         self.window.show_dialog(filedlg)
         
     def _on_filedlg_done(self, path):
-        self._fileedit.text_value = path
+        self.remote_info['folder'].text_value = path
         self.window.close_dialog()
         self._start_tracking(path)
         
@@ -588,20 +613,25 @@ class Setting_panal(GUI_BASE):
             except Exception as e:
                 video_name = 'test' + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             image_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f'temp_{video_name}')
-            def save_img():
-                self.save_imgs(image_dir)
             self.reset_settings()
             self._set_slider_value(0)
+
             while self._get_slider_value() < self.total_frames - 1:
                 index = self._get_slider_value()
                 data = self.fetch_data(index)
                 self.update_data(data, initialized)
-                time.sleep(0.01)
-                self.set_camera(index, Setting_panal.POV)
+                time.sleep(0.02)
+                try:
+                    self.set_camera(index, Setting_panal.POV)
+                except Exception as e:
+                    print(e)
+
                 initialized = True
 
                 if Setting_panal.RENDER:
-                    gui.Application.instance.post_to_main_thread(self.window, save_img)
+                    gui.Application.instance.post_to_main_thread(self.window, lambda: self.save_imgs(image_dir))
+                    # self.window.post_redraw()
+                    time.sleep(0.02)
 
                 while True:
                     time.sleep(0.01)
@@ -612,15 +642,19 @@ class Setting_panal(GUI_BASE):
                             data = self.fetch_data(index)
                             self.update_data(data)
                             time.sleep(0.01)
-                        self.set_camera(index, Setting_panal.POV)
+                        try:
+                            self.set_camera(index, Setting_panal.POV)
+                        except Exception as e:
+                            print(e)
+                            
                         self._clicked()
-
                     if not Setting_panal.PAUSE:
                         break
-
+                    
                 self._set_slider_value(index+1)
 
             images_to_video(image_dir, video_name, delete=True)
+            # Setting_panal.RENDER = False
 
             self._on_slider(0)
 
@@ -635,7 +669,7 @@ class Setting_panal(GUI_BASE):
         pass
 
     def get_tracking_data(self, index):
-        geomety = self.remote_load.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
+        geomety = self.data_loader.load_point_cloud(self.tracking_foler + '/' + self.tracking_list[index])
         return geomety
         
     def fetch_data(self, index):
