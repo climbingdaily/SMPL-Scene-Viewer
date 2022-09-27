@@ -144,7 +144,7 @@ class trackingVis(base_gui):
                             np.array(keys)[:, None], 
                             np.array(times)[:, None]))
             savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
-            self.remote_load.write_txt(savepath, traj)
+            self.data_loader.write_txt(savepath, traj)
             self.warning_info(f'File saved in {savepath}', 'INFO')
         except Exception as e:
             self.warning_info(e.args[0])
