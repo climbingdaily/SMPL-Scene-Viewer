@@ -134,7 +134,7 @@ demo_scene_assets/
 vis_data/
 *.avi
 *.mp4
-*.pkl
+/smpl/*.pkl
 *.pcd
 *.tgz
 interactive.ipynb

@@ -20,38 +20,22 @@ import threading
 import os
 import time
 import matplotlib.pyplot as plt
-from gui_vis.base_gui import Settings
-
-from gui_vis.human_data import vertices_to_joints
 
 sys.path.append('.')
 
-from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn
+from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn, vertices_to_joints
 from util import load_scene as load_pts
+
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
-# POSE_KEY = ['First opt_pose', 'Second opt_pose', 'First pose', 'Second pose', 'Second pred']
 POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)',
             'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
-# POSE_COLOR = {'points': plt.get_cmap("tab20b")(1)[:3]}
 POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
 
 POSE_COLOR['Ours(F)'] = [58/255, 147/255, 189/255]
 POSE_COLOR['Ours(S)'] = [228/255, 100/255, 100/255]
-
-mat_box = o3d.visualization.rendering.MaterialRecord()
-mat_box.shader = 'defaultLitTransparency'
-# mat_box.shader = 'defaultLitSSR'
-# mat_box.base_color = [0.467, 0.467, 0.467, 0.2]
-# mat_box.base_roughness = 0.0
-# mat_box.base_reflectance = 0.0
-# mat_box.base_clearcoat = 1.0
-# mat_box.thickness = 1.0
-# mat_box.transmission = 1.0
-# mat_box.absorption_distance = 10
-# mat_box.absorption_color = [0.5, 0.5, 0.5]
 
 class o3dvis(setting, Menu):
     # PAUSE = False

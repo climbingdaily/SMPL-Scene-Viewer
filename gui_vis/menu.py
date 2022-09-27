@@ -17,7 +17,8 @@ import sys
 sys.path.append('.')
 sys.path.append('..')
 
-from .base_gui import AppWindow as GUI_BASE, Settings
+from .base_gui import AppWindow as GUI_BASE
+from .gui_material import Settings
 
 class Menu(GUI_BASE):
     MENU_SCENE = 31
