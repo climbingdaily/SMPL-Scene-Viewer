@@ -15,10 +15,8 @@ import numpy as np
 import open3d as o3d
 import open3d.visualization.gui as gui
 import sys
-import cv2
 import threading
 import os
-import time
 import matplotlib.pyplot as plt
 
 sys.path.append('.')
@@ -77,6 +75,16 @@ class o3dvis(setting, Menu):
         self.add_geometry(traj, name=name)
 
     def points_to_sphere(self, geometry):
+        """
+        > It takes a point cloud and returns a mesh of spheres, each sphere centered at a point in the point
+        cloud
+        
+        Args:
+          geometry: the geometry of the point cloud
+        
+        Returns:
+          A triangle mesh
+        """
         points = np.asarray(geometry.points)
 
         skip=20
@@ -92,6 +100,13 @@ class o3dvis(setting, Menu):
         return traj
 
     def _on_load_smpl_done(self, filename):
+        """
+        The function loads the SMPL model and the corresponding tracking data, and then creates a point
+        cloud and a triangle mesh for each joint in the SMPL model.
+        
+        Args:
+          filename: the path to the SMPL model
+        """
         self.window.close_dialog()
         self.Human_data.load(filename) 
 
@@ -158,6 +173,15 @@ class o3dvis(setting, Menu):
                 print(e)
 
     def update_data(self, data, initialized=True):
+        """
+        The "update_data" function is called by the "thread" function. 
+        
+        It updates the geometry of the scene
+        
+        Args:
+          data: a dictionary of numpy arrays, where the keys are the names of the objects
+          initialized: If True, the data is initialized. If False, the data is updated. Defaults to True
+        """
         
         def func():
             for name in data:
@@ -170,6 +194,17 @@ class o3dvis(setting, Menu):
             self.change_pause_status()
 
     def fetch_data(self, ind):
+        """
+        It takes in a frame number, and returns a dictionary of all the data for that frame. 
+        
+        The data is stored in a dictionary called `fetched_data`. 
+        
+        Args:
+          ind: the index of the frame
+        
+        Returns:
+          the fetched data.
+        """
         def set_smpl(smpl, key, iid):
             if iid >= 0:
                 smpl.vertices = o3d.utility.Vector3dVector(
@@ -225,6 +260,13 @@ class o3dvis(setting, Menu):
         return self.fetched_data
 
     def set_camera(self, ind, pov):
+        """
+        It sets the camera to the given index and point of view.
+        
+        Args:
+          ind: the index of the camera
+          pov: the camera's point of view
+        """
         _, extrinsics = self.Human_data.get_extrinsic(pov)
         if ind > 0 and o3dvis.FREE_VIEW:
             camera_pose = self.get_camera()
@@ -243,6 +285,17 @@ class o3dvis(setting, Menu):
                     reset_bounding_box=True, 
                     archive=False, 
                     freeze=False):
+        """
+        If the geometry is a point cloud / mesh, it will be added to the scene. 
+        
+        Args:
+          geometry: The geometry to be added.
+          name: The name of the geometry.
+          mat: material
+          reset_bounding_box: If True, the camera will be reset to fit the geometry. Defaults to True
+          archive: If True, the geometry will be saved in the archive. Defaults to False
+          freeze: If True, the geometry will be added to the scene as a frozen object. Defaults to False
+        """
         if mat is None:
             mat =self.settings.material 
         if name is None:
@@ -309,6 +362,13 @@ class o3dvis(setting, Menu):
         pass
 
     def get_camera(self):
+        """
+        > The function `get_camera` returns the camera view matrix of the current scene
+        The Y-axis and Z-axis of the scene are opposite of the camera in world coordinates.
+        
+        Returns:
+          The camera view matrix.
+        """
         view = self._scene.scene.camera.get_view_matrix()
         view[1, :] = - view[1, :]
         view[2, :] = - view[2, :]
@@ -320,6 +380,24 @@ class o3dvis(setting, Menu):
         return -ex[:3, :3].T @ ex[:3, 3]
 
     def init_camera(self, extrinsic_matrix=None): 
+        """
+        > The function `init_camera` sets up the camera for the scene. 
+        
+        The function takes in an optional argument `extrinsic_matrix` which is a 4x4 matrix that represents
+        the camera's position and orientation in the world. If this argument is not provided, the function
+        will use the camera's current position and orientation. 
+        
+        The function then sets up the camera for the scene. The camera is set up by calling the function
+        `setup_camera` from the `Scene` class. The function `setup_camera` takes in the following arguments:
+        
+        - `intrinsic`: a 3x3 matrix that represents the camera's intrinsic parameters. 
+        - `extrinsic`: a 4x4 matrix that represents the camera's extrinsic parameters. 
+        - `width`: the width of the image. 
+        - `height`: the height of the image.
+        
+        Args:
+          extrinsic_matrix: the camera pose
+        """
         bounds = self._scene.scene.bounding_box
         x = self._scene.frame.width
         y = self._scene.frame.height

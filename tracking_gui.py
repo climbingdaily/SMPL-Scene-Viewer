@@ -45,6 +45,32 @@ class trackingVis(base_gui):
         return {'tracking frame': self.get_tracking_data(index)}
 
     def _on_mouse_widget3d(self, event):
+        """
+        It takes the mouse click event, and then uses the depth image to get the 3D coordinates of the point
+        clicked. 
+        
+        The depth image is a 2D image that contains the depth of each pixel in the scene. 
+        
+        The depth image is obtained by rendering the scene to a depth image. 
+        
+        The depth image is then used to get the 3D coordinates of the point clicked. 
+        
+        The 3D coordinates are then used to create a 3D label and a sphere at the clicked point. 
+        
+        The 3D label and the sphere are added to the scene and the dictionary `tracked_frame`. 
+        
+        The dictionary `tracked_frame` is used to store the 3D labels and the spheres. 
+        
+        The dictionary `tracked_frame` is used to update the 3D labels and the spheres when the slider is
+        moved.
+        
+        Args:
+          event: The event that triggered the callback.
+        
+        Returns:
+          The return value is a gui.Widget.EventCallbackResult.HANDLED or
+        gui.Widget.EventCallbackResult.IGNORED.
+        """
         # We could override BUTTON_DOWN without a modifier, but that would
         # interfere with manipulating the scene.
         if event.type == gui.MouseEvent.Type.BUTTON_DOWN and event.is_modifier_down(
@@ -69,26 +95,28 @@ class trackingVis(base_gui):
                         world[0], world[1], world[2])
 
                     def update_label():
+
+                        def create_box(world):
+                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.05 * trackingVis.SCALE, 20, create_uv_map=True)
+                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
+                            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+
                         frame = self._get_slider_value()
                         if frame in self.tracked_frame:
                             self.tracked_frame[frame][0] = f'{frame}: {text}'
                             self.tracked_frame[frame][1].position = world
-                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.04 * trackingVis.SCALE, 20, create_uv_map=True)
-                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
-                            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+                            create_box(world)
                         else:
                             point_info = f'{frame}: {text}'
                             label_3d = self._scene.add_3d_label(world, f'{frame}')
                             label_3d.color = gui.Color(r=0, b=1, g=0.9)
-
-                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.04 * trackingVis.SCALE , 20, create_uv_map=True)
-                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
-                            self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+                            create_box(world)
 
                             self.tracked_frame[frame] = []
                             self.tracked_frame[frame].append(point_info)
                             self.tracked_frame[frame].append(label_3d)
 
+                            # set the camera view
                             cam_to_select = world - self.get_camera_pos()
                             eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
                             up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
@@ -107,35 +135,10 @@ class trackingVis(base_gui):
             return gui.Widget.EventCallbackResult.HANDLED
         return gui.Widget.EventCallbackResult.IGNORED
 
-    def update_label(self, world):
-        frame = self._get_slider_value()
-        
-        text = "{:.3f}, {:.3f}, {:.3f}".format(
-            world[0], world[1], world[2])
-        square_box = o3d.geometry.TriangleMesh.create_sphere(0.04 * trackingVis.SCALE, 20, create_uv_map=True)
-        square_box.translate(self.COOR_INIT[:3, :3].T @ world)
-
-        if frame in self.tracked_frame:
-            self.tracked_frame[frame][0] = f'{frame}: {text}'
-            self.tracked_frame[frame][1].position = world
-            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
-        else:
-            point_info = f'{frame}: {text}'
-            label_3d = self._scene.add_3d_label(world, f'{frame}')
-            label_3d.color = gui.Color(r=0, b=1, g=0.9)
-
-            self.add_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
-
-            self.tracked_frame[frame] = []
-            self.tracked_frame[frame].append(point_info)
-            self.tracked_frame[frame].append(label_3d)
-
-            cam_to_select = world - self.get_camera_pos()
-            eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
-            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
-            self._scene.look_at(world, eye, up)
-
     def _save_traj(self):
+        """
+        > The function `_save_traj` saves the trajectory of the tracked object in the current video
+        """
         try:
             keys = sorted(list(self.tracked_frame.keys()))
             positions = [self.tracked_frame[frame][1].position for frame in keys]
@@ -152,7 +155,6 @@ class trackingVis(base_gui):
     def set_camera(self, ind, pov):
         pass
     
-
 def main():
     gui.Application.instance.initialize()
 

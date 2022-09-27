@@ -307,7 +307,7 @@ class Setting_panal(GUI_BASE):
         if not self._scene.scene.has_geometry(fname):
             self._scene.scene.add_geometry(fname, geometry, mat)
 
-            self.update_freezed_points()
+            self.update_frozen_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):
         if is_dbl_click:
@@ -317,16 +317,16 @@ class Setting_panal(GUI_BASE):
                 self.geo_list.pop(new_val)
             except Exception as e:
                 print(e)
-            self.update_freezed_points()
+            self.update_frozen_points()
         else:
             print(new_val)
 
-    def update_freezed_points(self):
-        freezed_list = []
+    def update_frozen_points(self):
+        frozen_list = []
         for name in self.geo_list:
             if self.geo_list[name]['freeze']:
-                freezed_list.append(name)
-        self.freezed_list.set_items(freezed_list)
+                frozen_list.append(name)
+        self.frozen_list.set_items(frozen_list)
         self.window.set_needs_layout()
 
     def _start_tracking(self, path=None):
@@ -411,7 +411,7 @@ class Setting_panal(GUI_BASE):
         data_list.add_child(self.check_boxes)
         self.check_boxes.set_on_selection_changed(self._on_tree)
         try:
-            # self.freeze_box = add_box(check_boxes, 'Freezed data', self._on_show_freeze_geometry, True)
+            # self.freeze_box = add_box(check_boxes, 'frozen data', self._on_show_freeze_geometry, True)
             for box in checkboxes:
                 hh = gui.Horiz()
                 hh.add_child(box)
@@ -442,22 +442,22 @@ class Setting_panal(GUI_BASE):
         temp_layout = gui.Horiz(0.25 * em)
         temp_layout.add_child(freeze_btn)
         temp_layout.add_child(clear_freeze_btn)
-        self.freeze_box = add_box(temp_layout, 'Freezed frames', self._on_show_geometry, True)
+        self.freeze_box = add_box(temp_layout, 'frozen frames', self._on_show_geometry, True)
 
-        self.freezed_list = gui.ListView()
-        self.freezed_list.set_max_visible_items(5)
-        self.freezed_list.set_on_selection_changed(self._on_freeze_list)
+        self.frozen_list = gui.ListView()
+        self.frozen_list.set_max_visible_items(5)
+        self.frozen_list.set_on_selection_changed(self._on_freeze_list)
 
         tab3 = gui.Vert(0.15 * em)
         tab3.add_child(temp_layout)
-        tab3.add_child(self.freezed_list)
+        tab3.add_child(self.frozen_list)
 
         tabs.add_child(data_list)
         tabs.add_fixed(separation_height)
         tabs.add_fixed(separation_height)
         tabs.add_fixed(separation_height)
 
-        tabs.add_child(gui.Label('Freezed data'))
+        tabs.add_child(gui.Label('frozen data'))
         tabs.add_child(tab3)
         tabs.add_fixed(separation_height)
 
@@ -498,7 +498,7 @@ class Setting_panal(GUI_BASE):
 
                 self.geo_list.pop(name)
 
-        self.update_freezed_points()
+        self.update_frozen_points()
 
     def _on_free_view(self, show):
         Setting_panal.FREE_VIEW = show
