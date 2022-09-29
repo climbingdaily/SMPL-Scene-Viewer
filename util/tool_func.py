@@ -18,16 +18,16 @@ import os
 from subprocess import run
 import time
 
-def images_to_video(img_dir, filename=None, delete=False):
+def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     if filename is None:
         filename = os.path.basename(img_dir) + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
 
     video_path = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.mp4')
-    video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
+    # video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
     os.makedirs(os.path.join(os.path.dirname(img_dir), 'vis_data'), exist_ok=True)
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
-    command = f"ffmpeg -f image2 -i \"{img_dir}\\%5d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path2}\""
-    if not os.path.exists(video_path) and not os.path.exists(video_path2) and os.path.exists(img_dir):
+    command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path}\""
+    if not os.path.exists(video_path) and not os.path.exists(video_path) and os.path.exists(img_dir):
         try:
             run(command, shell=True)
         except:

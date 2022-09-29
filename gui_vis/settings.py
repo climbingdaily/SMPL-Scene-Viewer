@@ -81,8 +81,8 @@ class Setting_panal(GUI_BASE):
 
     def __init__(self, width=1280, height=720):
         super(Setting_panal, self).__init__(width, height)
-        self.archive_data = []
         self.total_frames = 1
+        self.tracking_list = []
         self.tracked_frame = {}
         em = self.window.theme.font_size
 
@@ -332,7 +332,6 @@ class Setting_panal(GUI_BASE):
     def _start_tracking(self, path=None):
         if path is None:
             path = self.remote_info['folder'].text_value
-        self.tracking_list = []
         self.tracking_foler = path
 
         try:

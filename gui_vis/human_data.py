@@ -38,10 +38,15 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=32, move_back = 1, move_up =
     rotz = R.from_rotvec(np.deg2rad(rotz) * np.array([0, 0, 1])).as_matrix()
     move = rotz @ np.array([move_right, -move_back, move_up])
 
-    rots = np.zeros_like(rots)
+    # rots = np.zeros_like(rots)
     for i in range(rots.shape[0]):
-        rots[i] =  rotz @ lookdown
-    views = generate_views(positions + move, rots, dist=0, rad=np.deg2rad(0))
+        vv = rots[i][:2,1]
+        rot = np.eye(3)
+        rot[:2,1] = vv / np.linalg.norm(vv)
+        rot[0,0] = rot[1,1]
+        rot[1,0] = -rot[0,1]
+        rots[i] =  rot @ rotz @ lookdown
+    views = generate_views(positions + (rots @ move).squeeze(), rots, dist=0, rad=np.deg2rad(0))
     return views
 
 def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):

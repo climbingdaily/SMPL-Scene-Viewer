@@ -130,23 +130,25 @@ class o3dvis(setting, Menu):
             self.total_frames = humans[keys[0]]['verts'].shape[0]
             
             data = {}
-            # data['human points'] = o3d.geometry.PointCloud()
-            data['human points'] = o3d.geometry.TriangleMesh()
-            
             self.human_points = []
-
-            for ii in range(512):
-                p = o3d.geometry.TriangleMesh.create_sphere(0.015 * o3dvis.SCALE, resolution=5)
-                p.compute_vertex_normals()
-                p.paint_uniform_color(POSE_COLOR['points'])
-                data['human points'] += p
-                self.human_points.append(p)
+            if 'point cloud' in self.Human_data.vis_data_list:
+                data['human points'] = o3d.geometry.TriangleMesh()
+                human_points = self.Human_data.vis_data_list['point cloud'][0]
+                max_points = max([hp.shape[0] for hp in human_points])
+                for ii in range(max_points):
+                    p = o3d.geometry.TriangleMesh.create_sphere(0.01 * o3dvis.SCALE, resolution=5)
+                    p.compute_vertex_normals()
+                    p.paint_uniform_color(POSE_COLOR['points'])
+                    data['human points'] += p
+                    self.human_points.append(p)
 
             for key in keys:
+                humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0).numpy()
                 traj = o3d.geometry.PointCloud()
-                traj.points = o3d.utility.Vector3dVector(vertices_to_joints(humans[key]['verts'], 0).numpy())
+                traj.points = o3d.utility.Vector3dVector(humans[key]['trans'])
                 traj.paint_uniform_color(POSE_COLOR[key])
                 self.update_geometry(traj, f'traj_{key}')
+                data[f'seg_traj_{key}'] = traj
 
                 smpl = o3d.io.read_triangle_mesh(sample_path)
                 smpl.vertex_colors = o3d.utility.Vector3dVector()
@@ -154,6 +156,13 @@ class o3dvis(setting, Menu):
 
             self.fetched_data = dict(
                 sorted(data.items(), key=lambda x: x[0]))
+
+            if len(self.tracking_list) > 0:
+                try:
+                    start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
+                    self.tracking_list = self.tracking_list[start:end+1]
+                except Exception as e:
+                    print(e)
 
             self.add_thread(threading.Thread(target=self.thread))
 
@@ -218,44 +227,48 @@ class o3dvis(setting, Menu):
                 smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
 
         try:
-
             vis_data = self.Human_data.vis_data_list
 
-            for ii, p in enumerate(self.human_points):
-                p.translate(-p.get_center())
-
             if 'point cloud' in vis_data:
+                pts = self.fetched_data['human points']
                 points = vis_data['point cloud'][0]
                 indexes = vis_data['point cloud'][1]
-
+                pts.clear()
                 if ind in indexes:
                     index = indexes.index(ind)
-                    # pointcloud.points = o3d.utility.Vector3dVector(points[index])
-                    for ii, p in enumerate(self.human_points):
+                    dd = self.human_points[:points[index].shape[0]]
+                    for ii, p in enumerate(dd):
                         p.translate(points[index][ii] - p.get_center())
+                        pts += p
+                    # vertices = np.vstack([np.asarray(p.vertices) for p in dd])
+                    pts.vertex_normals = o3d.utility.Vector3dVector()
+                    pts.triangle_normals = o3d.utility.Vector3dVector()
+                    pts.compute_vertex_normals()
                 else:
                     index = -1
-                    # pointcloud.points = o3d.utility.Vector3dVector(np.array([[0,0,0]]))
-            pts = self.fetched_data['human points']
-            vertices = np.vstack([np.asarray(p.vertices) for p in self.human_points])
-            pts.vertices = o3d.utility.Vector3dVector(vertices)
-            pts.vertex_normals = o3d.utility.Vector3dVector()
-            pts.triangle_normals = o3d.utility.Vector3dVector()
-            pts.compute_vertex_normals()
-
-            for key, geometry in self.fetched_data.items():
-                iid = index if 'pred' in key.lower() else ind
-                if '(s)' in key.lower() or '(f)' in key.lower():
-                    set_smpl(geometry, key, iid)
         except Exception as e:
-            print(e)
-            pass
+            print("Error: %s" % e)
 
         try:
-            self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
-            
+            for key, geometry in self.fetched_data.items():
+                iid = index if 'pred' in key.lower() else ind
+                if ('(s)' in key.lower() or '(f)' in key.lower()) and 'seg_traj_' not in key.lower():
+                    set_smpl(geometry, key, iid)
+                    traj = self.fetched_data['seg_traj_' + key]
+
+                    xyz = vis_data['humans'][key]['trans'][:ind+1]
+                    traj.points = o3d.utility.Vector3dVector(xyz)
+                    traj.normals = o3d.utility.Vector3dVector()
+                    traj.paint_uniform_color(POSE_COLOR[key])
+                    
         except Exception as e:
-            pass
+            print(e)
+
+        if len(self.tracking_list)>0:
+            try:
+                self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
+            except Exception as e:
+                print(e)
 
         return self.fetched_data
 
@@ -306,7 +319,7 @@ class o3dvis(setting, Menu):
                 if not geometry.has_normals():
                     geometry.estimate_normals()
                 geometry.normalize_normals()
-                type = 'point'
+                gtype = 'point'
         except:
             try:
                 if not geometry.has_triangle_normals():
@@ -317,18 +330,23 @@ class o3dvis(setting, Menu):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-                type = 'mesh'
+                gtype = 'mesh'
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
             except Exception as e:
-                print(e)
-                print("[Info]", "not pointcloud or mehs.")
+                self.remove_geometry(name)
+                # print(e)
+                # print("[Info]", "not pointcloud or mesh.")
                 return 
 
         if name not in self.geo_list:
-            self.make_material(geometry, name, archive, point_size=2)
+            self.make_material(geometry, name, gtype, archive, point_size=2)
 
-        if self.geo_list[name]['box'].checked:
+        if self.geo_list[name]['box'].checked and geometry:
+            
+            if 'seg_traj' in name:
+                geometry = filter_traj(geometry)
+
             geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
             self.remove_geometry(name)
@@ -415,7 +433,7 @@ class o3dvis(setting, Menu):
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
         # self._scene_traj.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
-    def make_material(self, geometry, name, is_archive=False, point_size=2, color=[0.9, 0.9, 0.9, 1.0]):
+    def make_material(self, geometry, name, gtype, is_archive=False, point_size=2, color=[0.9, 0.9, 0.9, 1.0]):
         if is_archive:
             box = self.archive_box
         else:
@@ -440,11 +458,24 @@ class o3dvis(setting, Menu):
 
         self.geo_list[name] = {
             'geometry': geometry, 
-            'type': type, 
+            'type': gtype, 
             'box': box,
             'mat': settings, 
             'archive': is_archive,
             'freeze': False}
+
+def filter_traj(point_cloud, dist=0.1):
+    xyz = np.asarray(point_cloud.points)
+    diffs = np.linalg.norm(xyz[1:] - xyz[:-1], axis=-1)
+    indices = [0]
+    sum_diff = 0
+    for i in range(diffs.shape[0]):
+        sum_diff += diffs[i]
+        if sum_diff > dist:
+            indices.append(i+1)
+            sum_diff = 0
+    return point_cloud.select_by_index(indices)
+    # return point_cloud.uniform_down_sample(5)
 
 def main():
     gui.Application.instance.initialize()

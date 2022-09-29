@@ -406,9 +406,12 @@ class load_data_remote(object):
             for l in line:
                 ll += f"{l:.4f}\t"
             save_data.append(ll + '\n')
-        
-        with self.sftp_client.open(filepath, mode = mode) as f:
-            f.writelines(save_data)
+        if self.sftp_client is not None:
+            with self.sftp_client.open(filepath, mode = mode) as f:
+                f.writelines(save_data)
+        else:
+            with open(filepath, mode = mode) as f:
+                f.writelines(save_data)
 
     def read_poses(self, data_root_path):
         """
