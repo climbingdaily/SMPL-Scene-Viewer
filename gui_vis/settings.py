@@ -17,6 +17,7 @@ import sys
 import os
 import time
 import cv2
+import numpy as np
 
 sys.path.append('.')
 sys.path.append('..')
@@ -277,10 +278,21 @@ class Setting_panal(GUI_BASE):
         frame = int(new_val.split(':')[0])
         if is_dbl_click:
             self._scene.remove_3d_label(self.tracked_frame[frame][1])
+            try:
+                self._on_freeze_list(f'{frame}_freeze_{frame}_trkpts', True)
+            except Exception as e:
+                print(e)
+
             del self.tracked_frame[frame]
             self.update_tracked_points()
         else:
             self._on_slider(frame)
+            world = new_val.split(':')[1].split(',')
+            world = np.array([float(v.strip()) for v in world])
+            cam_to_select = world - self.get_camera_pos()
+            eye = world - 2.5 * Setting_panal.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
+            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
+            self._scene.look_at(world, eye, up)
 
     def update_tracked_points(self):
         keys = sorted(list(self.tracked_frame.keys()))
@@ -304,15 +316,15 @@ class Setting_panal(GUI_BASE):
             'archive': self.geo_list[name]['archive'],
             'freeze': True}
 
-        if not self._scene.scene.has_geometry(fname):
-            self._scene.scene.add_geometry(fname, geometry, mat)
+        self.remove_geometry(fname)
 
-            self.update_frozen_points()
+        self._scene.scene.add_geometry(fname, geometry, mat)
+
+        self.update_frozen_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):
         if is_dbl_click:
-            if self._scene.scene.has_geometry(new_val):
-                self._scene.scene.remove_geometry(new_val)
+            self.remove_geometry(new_val)
             try:
                 self.geo_list.pop(new_val)
             except Exception as e:
@@ -330,10 +342,15 @@ class Setting_panal(GUI_BASE):
         self.window.set_needs_layout()
 
     def _start_tracking(self, path=None):
+        self._on_show_skybox(False)
+        self._on_bg_color(gui.Color(0, 0, 0))
+
         if path is None:
             path = self.remote_info['folder'].text_value
         self.tracking_foler = path
 
+        self.tracking_list = []
+        
         try:
             self.data_loader = load_data_remote(False)
             pcd_paths = self.data_loader.list_dir(path)
@@ -492,8 +509,7 @@ class Setting_panal(GUI_BASE):
         nlist = [k for k in self.geo_list]
         for name in nlist:
             if self.geo_list[name]['freeze']:
-                if self._scene.scene.has_geometry(name):
-                    self._scene.scene.remove_geometry(name)
+                self.remove_geometry(name)
 
                 self.geo_list.pop(name)
 
@@ -514,6 +530,11 @@ class Setting_panal(GUI_BASE):
         for name, data in self.geo_list.items():
             self._scene.scene.show_geometry(name, data['box'].checked)
             self._scene_traj.scene.show_geometry(name, data['box'].checked)
+            if data['freeze'] == True and data['box'].checked:
+                origin_name = name.split('_freeze_')[-1]
+                box = self.geo_list[origin_name]['box']
+                self._scene.scene.show_geometry(name, box.checked)
+                self._scene_traj.scene.show_geometry(name, box.checked)
         # self._apply_settings()
 
     def _add_frame(self):
@@ -535,6 +556,9 @@ class Setting_panal(GUI_BASE):
         
     def _get_slider_value(self):
         return self.frame_slider_bar.int_value
+        
+    def _get_max_slider_value(self):
+        return self.frame_slider_bar.get_maximum_value
         
     def _set_slider_limit(self, min, max):
         self.frame_slider_bar.set_limits(min, max)

@@ -93,7 +93,8 @@ class Menu(GUI_BASE):
         self.window.show_dialog(dlg)
 
     def _updata_material(self, settings, name):
-        self._scene.scene.modify_geometry_material(name, settings.material)
+        if self._scene.scene.has_geometry(name):
+            self._scene.scene.modify_geometry_material(name, settings.material)
         if self._scene_traj.scene.has_geometry(name):
             self._scene_traj.scene.modify_geometry_material(name, settings.material)
 

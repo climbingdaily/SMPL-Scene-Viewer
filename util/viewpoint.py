@@ -102,10 +102,10 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 
         rot = func(r).as_matrix()
         rot = R.from_rotvec(-rad * rot[:, 0]).as_matrix() @ rot
 
-        view['trajectory'][0]['lookat'] = t + rot @ np.array([0, -dist, 0])
-        view['trajectory'][0]['up'] = rot[:, 2] 
         view['trajectory'][0]['front'] = -rot[:, 1]
-        view_list.append(view)
+        view['trajectory'][0]['up'] = rot[:, 2] 
+        view['trajectory'][0]['lookat'] = t + rot @ np.array([0, -dist, 0])
+        # view_list.append(view)
         
         front = view['trajectory'][0]['front']
         up = view['trajectory'][0]['up']
@@ -113,7 +113,7 @@ def generate_views(position, direction, filter=True, rad=np.deg2rad(10), dist = 
 
         extrinsic_list.append(view_to_extrinsic(origin, up, front))
     
-    return view_list, extrinsic_list
+    return position, extrinsic_list
 
 def view_to_extrinsic(lookat, up, front):
     extrinsic = np.eye(4)

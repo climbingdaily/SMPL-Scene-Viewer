@@ -17,10 +17,13 @@ import sys
 import threading
 import os
 import open3d as o3d
+import matplotlib.pyplot as plt
+import time
 
 sys.path.append('.')
 
 from main_gui import o3dvis as base_gui
+from util import load_scene as load_pts
 
 class trackingVis(base_gui):
     FRAME = 1
@@ -42,7 +45,12 @@ class trackingVis(base_gui):
         self.add_thread(threading.Thread(target=self.thread))
 
     def fetch_data(self, index):
-        return {'tracking frame': self.get_tracking_data(index)}
+        name = 'tracking frame'
+        geometry = self.get_tracking_data(index)
+        if name not in self.geo_list:
+            self.make_material(geometry, name, 'point', is_archive=False)
+            self.geo_list[name]['mat'].material.point_size = 6
+        return {name: geometry}
 
     def _on_mouse_widget3d(self, event):
         """
@@ -89,51 +97,76 @@ class trackingVis(base_gui):
                     text = ""
                 else:
                     world = self._scene.scene.camera.unproject(
-                        event.x, event.y, depth, self._scene.frame.width,
+                        x, y, depth, self._scene.frame.width,
                         self._scene.frame.height)
-                    text = "{:.3f}, {:.3f}, {:.3f}".format(
-                        world[0], world[1], world[2])
-
-                    def update_label():
-
-                        def create_box(world):
-                            square_box = o3d.geometry.TriangleMesh.create_sphere(0.05 * trackingVis.SCALE, 20, create_uv_map=True)
-                            square_box.translate(self.COOR_INIT[:3, :3].T @ world)
-                            self.update_geometry(square_box, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
-
-                        frame = self._get_slider_value()
-                        if frame in self.tracked_frame:
-                            self.tracked_frame[frame][0] = f'{frame}: {text}'
-                            self.tracked_frame[frame][1].position = world
-                            create_box(world)
-                        else:
-                            point_info = f'{frame}: {text}'
-                            label_3d = self._scene.add_3d_label(world, f'{frame}')
-                            label_3d.color = gui.Color(r=0, b=1, g=0.9)
-                            create_box(world)
-
-                            self.tracked_frame[frame] = []
-                            self.tracked_frame[frame].append(point_info)
-                            self.tracked_frame[frame].append(label_3d)
-
-                            # set the camera view
-                            cam_to_select = world - self.get_camera_pos()
-                            eye = world - 3.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
-                            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
-                            self._scene.look_at(world, eye, up)
-
-                        self.update_tracked_points()
-
-                        trackingVis.CLICKED = True
-                        self._on_slider(self._get_slider_value() +
-                                        trackingVis.TRACKING_STEP)
-
+                    frame = self._get_slider_value()
                     gui.Application.instance.post_to_main_thread(
-                        self.window, update_label)
+                        self.window, lambda: self.update_label(world, frame))
 
             self._scene.scene.scene.render_to_depth_image(depth_callback)
             return gui.Widget.EventCallbackResult.HANDLED
         return gui.Widget.EventCallbackResult.IGNORED
+
+    def update_label(self, world, frame):
+
+        text = "{:.3f}, {:.3f}, {:.3f}".format(
+            world[0], world[1], world[2])
+
+        def create_sphere(world):
+            ratio = min(frame / self._get_max_slider_value(), 1)
+            poinsition = self.COOR_INIT[:3, :3].T @ world
+            # name = f'{frame}_trkpts'
+            # point = o3d.geometry.PointCloud()
+            # point.points = o3d.utility.Vector3dVector(poinsition.reshape(-1, 3))
+            # point.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
+
+            # if name not in self.geo_list:
+            #     self.make_material(point, name, 'point', is_archive=False, point_size=9)
+            # self.update_geometry(
+            #     point, name, reset_bounding_box=False, freeze=True)
+
+            sphere = o3d.geometry.TriangleMesh.create_sphere(
+                0.05 * trackingVis.SCALE, 20, create_uv_map=True)
+            sphere.translate(poinsition)
+            sphere.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
+
+            self.update_geometry(
+                sphere, f'{frame}_trkpts', reset_bounding_box=False, freeze=True)
+        
+        if frame in self.tracked_frame:
+            self.tracked_frame[frame][0] = f'{frame}: {text}'
+            self.tracked_frame[frame][1].position = world
+            create_sphere(world)
+        else:
+            point_info = f'{frame}: {text}'
+            label_3d = self._scene.add_3d_label(world, f'{frame}')
+            label_3d.color = gui.Color(r=0, b=1, g=0.9)
+            create_sphere(world)
+
+            self.tracked_frame[frame] = []
+            self.tracked_frame[frame].append(point_info)
+            self.tracked_frame[frame].append(label_3d)
+
+            # set the camera view
+            cam_to_select = world - self.get_camera_pos()
+            eye = world - 2.5 * trackingVis.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
+            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
+            self._scene.look_at(world, eye, up)
+
+        self.update_tracked_points()
+
+        trackingVis.CLICKED = True
+        self._on_slider(self._get_slider_value() + trackingVis.TRACKING_STEP)
+
+    def load_traj(self, path, translate=[0,0,0], load_data_class=None):
+        self.window.close_dialog()
+        if not os.path.isfile(path):
+            self.warning_info(f'{path} is not a valid file')
+            return
+        trajs = np.loadtxt(path)
+        for p in trajs:
+            self._set_slider_value(int(p[3]))
+            self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))
 
     def _save_traj(self):
         """

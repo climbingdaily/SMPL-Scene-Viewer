@@ -35,6 +35,31 @@ for i, color in enumerate(POSE_KEY):
 POSE_COLOR['Ours(F)'] = [58/255, 147/255, 189/255]
 POSE_COLOR['Ours(S)'] = [228/255, 100/255, 100/255]
 
+def points_to_sphere(geometry):
+    """
+    > It takes a point cloud and returns a mesh of spheres, each sphere centered at a point in the point
+    cloud
+    
+    Args:
+        geometry: the geometry of the point cloud
+    
+    Returns:
+        A triangle mesh
+    """
+    points = np.asarray(geometry.points)
+
+    skip=20
+    traj = o3d.geometry.TriangleMesh()
+
+    for ii in range(0, points.shape[0], skip):
+        s = o3d.geometry.TriangleMesh.create_sphere(0.2 * o3dvis.SCALE, resolution=5)
+        s.translate(points[ii] - s.get_center())
+        s.compute_vertex_normals()
+        s.paint_uniform_color(POSE_COLOR['points'])
+        traj += s
+    
+    return traj
+
 class o3dvis(setting, Menu):
     # PAUSE = False
     IMG_COUNT = 0
@@ -71,33 +96,8 @@ class o3dvis(setting, Menu):
         # self._on_load_dialog_done(scene_path)
         traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)
         traj.translate(translate)
-        # traj = self.points_to_sphere(traj)
+        # traj = points_to_sphere(traj)
         self.add_geometry(traj, name=name)
-
-    def points_to_sphere(self, geometry):
-        """
-        > It takes a point cloud and returns a mesh of spheres, each sphere centered at a point in the point
-        cloud
-        
-        Args:
-          geometry: the geometry of the point cloud
-        
-        Returns:
-          A triangle mesh
-        """
-        points = np.asarray(geometry.points)
-
-        skip=20
-        traj = o3d.geometry.TriangleMesh()
-
-        for ii in range(0, points.shape[0], skip):
-            s = o3d.geometry.TriangleMesh.create_sphere(0.2 * o3dvis.SCALE, resolution=5)
-            s.translate(points[ii] - s.get_center())
-            s.compute_vertex_normals()
-            s.paint_uniform_color(POSE_COLOR['points'])
-            traj += s
-        
-        return traj
 
     def _on_load_smpl_done(self, filename):
         """
@@ -143,7 +143,7 @@ class o3dvis(setting, Menu):
                     self.human_points.append(p)
 
             for key in keys:
-                humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0).numpy()
+                humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0)
                 traj = o3d.geometry.PointCloud()
                 traj.points = o3d.utility.Vector3dVector(humans[key]['trans'])
                 traj.paint_uniform_color(POSE_COLOR[key])
@@ -280,14 +280,15 @@ class o3dvis(setting, Menu):
           ind: the index of the camera
           pov: the camera's point of view
         """
-        _, extrinsics = self.Human_data.get_extrinsic(pov)
+        posistions, extrinsics = self.Human_data.get_extrinsic(pov)
         if ind > 0 and o3dvis.FREE_VIEW:
-            camera_pose = self.get_camera()
-            relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
-            relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
-            camera_positon = -(camera_pose[:3, :3].T @ camera_pose[:3, 3])
-            camera_pose[:3, 3] = -(camera_pose[:3, :3] @ (camera_positon + relative_trans))
-            self.init_camera(camera_pose)
+            extrinsic = self.get_camera()
+            relative_trans = self.COOR_INIT[:3, :3] @ (posistions[ind] - posistions[ind-1])
+            # relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
+            # relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
+            camera_positon = -(extrinsic[:3, :3].T @ extrinsic[:3, 3])
+            extrinsic[:3, 3] = -(extrinsic[:3, :3] @ (camera_positon + relative_trans))
+            self.init_camera(extrinsic)
         else:
             self.init_camera(extrinsics[ind] @ self.COOR_INIT)  
 
@@ -345,7 +346,7 @@ class o3dvis(setting, Menu):
         if self.geo_list[name]['box'].checked and geometry:
             
             if 'seg_traj' in name:
-                geometry = filter_traj(geometry)
+                geometry = sample_traj(geometry)
 
             geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
@@ -369,12 +370,6 @@ class o3dvis(setting, Menu):
 
     def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
         self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
-
-    def remove_geometry(self, name):
-        if self._scene.scene.has_geometry(name):
-            self._scene.scene.remove_geometry(name)
-        if self._scene_traj.scene.has_geometry(name):
-            self._scene_traj.scene.remove_geometry(name)
 
     def set_view(self, view):
         pass
@@ -438,13 +433,13 @@ class o3dvis(setting, Menu):
             box = self.archive_box
         else:
             hh = gui.Horiz(0.5 * self.window.theme.font_size)
-            add_btn(hh, 'Property', self._on_material_setting)
+            btn = add_btn(hh, 'Property', self._on_material_setting)
             box = add_box(hh, name, self._on_show_geometry, True)
             self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
 
         self.window.set_needs_layout()
         settings = mat_set()
-        if 'traj_' in name.lower():
+        if 'traj' in name.lower() or 'tracking' in name.lower():
             shader = settings.UNLIT
             point_size = 4
             color[-1] = 0.8
@@ -464,7 +459,7 @@ class o3dvis(setting, Menu):
             'archive': is_archive,
             'freeze': False}
 
-def filter_traj(point_cloud, dist=0.1):
+def sample_traj(point_cloud, dist=0.1):
     xyz = np.asarray(point_cloud.points)
     diffs = np.linalg.norm(xyz[1:] - xyz[:-1], axis=-1)
     indices = [0]

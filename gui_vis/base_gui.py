@@ -731,6 +731,12 @@ class AppWindow:
             except Exception as e:
                 print(e)
 
+    def remove_geometry(self, name):
+        if self._scene.scene.has_geometry(name):
+            self._scene.scene.remove_geometry(name)
+        if self._scene_traj.scene.has_geometry(name):
+            self._scene_traj.scene.remove_geometry(name)
+
     def export_image(self, path, width, height):
 
         def on_image(image):
