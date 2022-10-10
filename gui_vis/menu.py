@@ -40,7 +40,7 @@ class Menu(GUI_BASE):
     MENU_SMPL = 32
     MENU_TRAJ = 33
 
-    # MENU_TRACKING_1 = 41
+    MENU_TRACKING_1 = 41
     # MENU_TRACKING_2 = 42
     MENU_TRACKING_3 = 43
 
@@ -92,9 +92,9 @@ class Menu(GUI_BASE):
 
             # tracking tool menu
             tracking_menu = gui.Menu()
-            # tracking_menu.add_item("Load remote pcds", Menu.MENU_TRACKING_1)
+            tracking_menu.add_item("Load remote pcds", Menu.MENU_TRACKING_1)
             # tracking_menu.add_item("Load local pcds", Menu.MENU_TRACKING_2)
-            tracking_menu.add_item("Load a tracked trajectory", Menu.MENU_TRACKING_3)
+            tracking_menu.add_item("Load tracking_traj", Menu.MENU_TRACKING_3)
 
             # help menu
             help_menu = gui.Menu()
@@ -138,7 +138,7 @@ class Menu(GUI_BASE):
         w.set_on_menu_item_activated(Menu.MENU_SMPL, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRAJ, self._on_menu_traj)
 
-        # w.set_on_menu_item_activated(Menu.MENU_TRACKING_1, self._on_menu_scene)
+        w.set_on_menu_item_activated(Menu.MENU_TRACKING_1, self._on_remote_pcd_folder)
         # w.set_on_menu_item_activated(Menu.MENU_TRACKING_2, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRACKING_3, self._on_menu_trackingtraj)
 
@@ -464,12 +464,6 @@ class Menu(GUI_BASE):
             remote_layout.add_child(gui.Label(key))
             remote_layout.add_child(text_edit)
 
-        # h = gui.Horiz(em)
-        # h.add_child(gui.Label('Load remote pcds'))
-        # h.add_child(creat_btn('Connect', lambda: self._start_tracking(None)))
-        # remote.add_fixed(separation_height)
-        # remote.add_child(h)
-
         remote.add_child(remote_layout)
         
         return remote
@@ -501,7 +495,9 @@ class Menu(GUI_BASE):
         dlg_layout.add_child(gui.Label("Copyright"))
         text = gui.Vert(em, gui.Margins(em, em, em, em))
         text.preferred_width = 30 * em
-        text.add_child(gui.Label("This is a visualization tool for LiDAR human and scene. The code is realeased on 'https://github.com/climbingdaily/vis_lidar_human_scene'. \nThe codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. Contact us if you are interested in commercial usage. \n\nyudidai@stu.xmu.edu.cn \nCopyright @ Yudi Dai. "))
+        text.add_child(gui.Label("This is a visualization tool for LiDAR Human Motion Program (http://lidarhumanmotion.net)."))
+        text.add_child(gui.Label("The code is realeased on \n'https://github.com/climbingdaily/vis_lidar_human_scene'."))
+        text.add_child(gui.Label("The codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. Contact us if you are interested in commercial usage. \n\nyudidai@stu.xmu.edu.cn \nCopyright@Yudi Dai. "))
         dlg_layout.add_child(text)
 
         # Add the Ok button. We need to define a callback function to handle
@@ -513,7 +509,7 @@ class Menu(GUI_BASE):
         # a stretch item to the layout, otherwise the button will be the size
         # of the entire row. A stretch item takes up as much space as it can,
         # which forces the button to be its minimum size.
-        h = gui.Horiz()
+        h = gui.Horiz(em)
         h.add_stretch()
         h.add_child(ok)
         # h.add_stretch()
