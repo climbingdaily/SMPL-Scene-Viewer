@@ -218,8 +218,8 @@ class Menu(GUI_BASE):
     def _on_load_smpl_done(self, filename):
         pass
 
-    def load_scene(self, scene_path):
-        pass
+    # def load_scene(self, scene_path):
+        # pass
 
     def load_traj(self, traj_path):
         pass

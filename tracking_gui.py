@@ -49,7 +49,7 @@ class trackingVis(base_gui):
         geometry = self.get_tracking_data(index)
         if name not in self.geo_list:
             self.make_material(geometry, name, 'point', is_archive=False)
-            self.geo_list[name]['mat'].material.point_size = 6
+            self.geo_list[name]['mat'].material.point_size = 8
         return {name: geometry}
 
     def _on_mouse_widget3d(self, event):
@@ -58,19 +58,14 @@ class trackingVis(base_gui):
         clicked. 
         
         The depth image is a 2D image that contains the depth of each pixel in the scene. 
-        
         The depth image is obtained by rendering the scene to a depth image. 
-        
         The depth image is then used to get the 3D coordinates of the point clicked. 
-        
+
         The 3D coordinates are then used to create a 3D label and a sphere at the clicked point. 
-        
         The 3D label and the sphere are added to the scene and the dictionary `tracked_frame`. 
-        
+
         The dictionary `tracked_frame` is used to store the 3D labels and the spheres. 
-        
-        The dictionary `tracked_frame` is used to update the 3D labels and the spheres when the slider is
-        moved.
+        The dictionary `tracked_frame` is used to update the 3D labels and the spheres when the slider ismoved.
         
         Args:
           event: The event that triggered the callback.
@@ -109,15 +104,21 @@ class trackingVis(base_gui):
 
     def update_label(self, world, frame):
 
+        # position 
+        position = self.COOR_INIT[:3, :3].T @ world
         text = "{:.3f}, {:.3f}, {:.3f}".format(
-            world[0], world[1], world[2])
+            position[0], position[1], position[2])
+        try:
+            time = self.tracking_list[frame].split('.')[0].replace('_', '.')
+            text = f'{text} time: {time}'
+        except:
+            pass
 
         def create_sphere(world):
             ratio = min(frame / self._get_max_slider_value(), 1)
-            poinsition = self.COOR_INIT[:3, :3].T @ world
             # name = f'{frame}_trkpts'
             # point = o3d.geometry.PointCloud()
-            # point.points = o3d.utility.Vector3dVector(poinsition.reshape(-1, 3))
+            # point.points = o3d.utility.Vector3dVector(position.reshape(-1, 3))
             # point.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
 
             # if name not in self.geo_list:
@@ -127,7 +128,7 @@ class trackingVis(base_gui):
 
             sphere = o3d.geometry.TriangleMesh.create_sphere(
                 0.05 * trackingVis.SCALE, 20, create_uv_map=True)
-            sphere.translate(poinsition)
+            sphere.translate(position)
             sphere.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
 
             self.update_geometry(
@@ -163,7 +164,16 @@ class trackingVis(base_gui):
         if not os.path.isfile(path):
             self.warning_info(f'{path} is not a valid file')
             return
-        trajs = np.loadtxt(path)
+        try:
+            trajs = np.loadtxt(path)
+        except Exception as e:
+            self.warning_info('Load traj failed.')
+            return 
+
+        if trajs.shape[1] > 5 or trajs.shape[1] < 4:
+            self.warning_info("Tracking trajs must contains: 'x y z frameid time' in every line!!!")
+            return 
+
         for p in trajs:
             self._set_slider_value(int(p[3]))
             self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))

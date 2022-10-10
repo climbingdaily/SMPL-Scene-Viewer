@@ -26,7 +26,7 @@ from util import load_scene as load_pts
 
 sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
 
-POSE_KEY = ['Ours(F)', 'Ours(S)', 'Baseline2(F)', 'Baseline2(S)',
+POSE_KEY = ['Ours(F)', 'Baseline2(F)', 'Baseline2(S)', 'Ours(S)',
             'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
 POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
 for i, color in enumerate(POSE_KEY):
@@ -71,7 +71,7 @@ class o3dvis(setting, Menu):
         self.Human_data = HUMAN_DATA(is_remote)
         self.fetched_data = {}
         for i, plane in enumerate(creat_chessboard()):
-            self.add_geometry(plane, name=f'ground_{i}', archive=True)
+            self.add_geometry(plane, name=f'ground_{i}', archive=True, reset_bounding_box=True)
         self.load_scene(sample_path, [0,0,0.16])
         self.window.set_needs_layout()
 
@@ -94,10 +94,13 @@ class o3dvis(setting, Menu):
             return
         name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
-        traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)
-        traj.translate(translate)
-        # traj = points_to_sphere(traj)
-        self.add_geometry(traj, name=name)
+        try:
+            traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+            traj.translate(translate)
+            # traj = points_to_sphere(traj)
+            self.add_geometry(traj, name=name)
+        except Exception as e:
+            self.warning_info("xyz = [1,2,3] if traj.shape[0] == 9 else [0,1,2]")
 
     def _on_load_smpl_done(self, filename):
         """
@@ -136,7 +139,7 @@ class o3dvis(setting, Menu):
                 human_points = self.Human_data.vis_data_list['point cloud'][0]
                 max_points = max([hp.shape[0] for hp in human_points])
                 for ii in range(max_points):
-                    p = o3d.geometry.TriangleMesh.create_sphere(0.01 * o3dvis.SCALE, resolution=5)
+                    p = o3d.geometry.TriangleMesh.create_sphere(0.015 * o3dvis.SCALE, resolution=5)
                     p.compute_vertex_normals()
                     p.paint_uniform_color(POSE_COLOR['points'])
                     data['human points'] += p
@@ -266,7 +269,8 @@ class o3dvis(setting, Menu):
 
         if len(self.tracking_list)>0:
             try:
-                self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
+                if 'LiDAR frame' not in self.geo_list or self.geo_list['LiDAR frame']['box'].checked:
+                    self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
             except Exception as e:
                 print(e)
 
@@ -296,7 +300,7 @@ class o3dvis(setting, Menu):
                     geometry, 
                     name=None, 
                     mat=None, 
-                    reset_bounding_box=True, 
+                    reset_bounding_box=False, 
                     archive=False, 
                     freeze=False):
         """

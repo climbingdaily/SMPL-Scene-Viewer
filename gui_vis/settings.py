@@ -288,11 +288,14 @@ class Setting_panal(GUI_BASE):
         else:
             self._on_slider(frame)
             world = new_val.split(':')[1].split(',')
-            world = np.array([float(v.strip()) for v in world])
-            cam_to_select = world - self.get_camera_pos()
-            eye = world - 2.5 * Setting_panal.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
-            up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
-            self._scene.look_at(world, eye, up)
+            try:
+                world = self.COOR_INIT[:3, :3] @ np.array([float(v.strip().split(' ')[0]) for v in world])
+                cam_to_select = world - self.get_camera_pos()
+                eye = world - 2.5 * Setting_panal.SCALE * cam_to_select / np.linalg.norm(cam_to_select) 
+                up = self.COOR_INIT[:3, :3] @ np.array([0, 0, 1])
+                self._scene.look_at(world, eye, up)
+            except Exception as e:
+                print(e)
 
     def update_tracked_points(self):
         keys = sorted(list(self.tracked_frame.keys()))
@@ -653,7 +656,6 @@ class Setting_panal(GUI_BASE):
 
                 if Setting_panal.RENDER:
                     gui.Application.instance.post_to_main_thread(self.window, lambda: self.save_imgs(image_dir))
-                    # self.window.post_redraw()
                     time.sleep(0.02)
 
                 while True:
@@ -676,7 +678,7 @@ class Setting_panal(GUI_BASE):
                     
                 self._set_slider_value(index+1)
 
-            images_to_video(image_dir, video_name, delete=True)
+            images_to_video(image_dir, video_name, delete=True, inpu_fps=20)
             # Setting_panal.RENDER = False
 
             self._on_slider(0)

@@ -612,7 +612,10 @@ class AppWindow:
 
     def _on_load_dialog_done(self, filename):
         self.window.close_dialog()
-        self.load(filename)
+        try:
+            self.load_scene(filename)
+        except Exception as e:
+            self.load(filename)
 
     def _on_menu_export(self):
         dlg = gui.FileDialog(gui.FileDialog.SAVE, "Choose file to save",

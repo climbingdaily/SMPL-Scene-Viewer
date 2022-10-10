@@ -24,7 +24,7 @@ def vertices_to_joints(vertices, index = 15):
     smpl = SMPL()
     return smpl.get_full_joints(torch.FloatTensor(vertices))[..., index, :].numpy()
 
-def make_3rd_view(positions, rots, rotz=0, lookdown=18, move_back = 1, move_up = 1.0, move_right = 0.5, filter=True):
+def make_3rd_view(positions, rots, rotz=0, lookdown=12, move_back = 1, move_up = 1.0, move_right = 0.5, filter=True):
     """
     It takes the positions and rotations of the camera, and returns the positions and rotations of the
     camera, but with the camera rotated by `rotz` degrees around the z-axis, and moved to a new position
