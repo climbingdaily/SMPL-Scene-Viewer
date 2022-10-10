@@ -287,7 +287,7 @@ class load_data_remote(object):
             
         if file_name.endswith('.txt'):
             pts = np.loadtxt(file_name)
-            xyz = [1,2,3] if pts.shape[0] == 9 else [0,1,2]
+            xyz = [1,2,3] if pts.shape[1] == 9 else [0,1,2]
             pointcloud.points = o3d.utility.Vector3dVector(pts[:, xyz]) 
         elif file_name.endswith('.pcd'):
             if self.remote:

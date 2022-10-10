@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.append('.')
 sys.path.append('..')
-from .base_gui import AppWindow as GUI_BASE
+from .base_gui import AppWindow as GUI_BASE, creat_btn
 from util import load_data_remote, images_to_video
 
 def create_combobox(func, names=None):
@@ -32,15 +32,6 @@ def create_combobox(func, names=None):
     combobox.set_on_selection_changed(func)
     return combobox
 
-def creat_btn(name, func, color=None):
-    btn = gui.Button(name)
-    btn.horizontal_padding_em = 0.2
-    btn.vertical_padding_em = 0
-    if color is not None:
-        btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
-    btn.set_on_clicked(func)
-    return btn
-    
 def add_btn(layout, name, func, color=None):
     btn = gui.Button(name)
     btn.horizontal_padding_em = 0.2
@@ -112,7 +103,7 @@ class Setting_panal(GUI_BASE):
         self.tracking_setting.visible = False
         # self._settings_panel.add_child(collapse)
         self._settings_panel.get_children()[0].add_tab('Setting', collapse)
-        self._settings_panel.get_children()[0].add_tab('PCDs', self.remote_setting())
+        # self._settings_panel.get_children()[0].add_tab('PCDs', self.remote_setting())
         self._settings_panel.get_children()[0].add_tab('Camera', camera_setting)
 
     def _on_setting_layout(self, layout_context):
@@ -194,52 +185,6 @@ class Setting_panal(GUI_BASE):
         self.frame_slider_bar, self.play_btn, self.frame_edit = frame_slider, play_btn, frame_edit
 
         return vert_layout
-
-    def remote_setting(self):
-        em = self.window.theme.font_size
-        separation_height = int(round(0.5 * em))
-        remote = gui.Vert(0.15 * em)
-        folder = gui.TextEdit()
-        folder.set_on_value_changed(self._start_tracking)
-        username = gui.TextEdit()
-        hostname = gui.TextEdit()
-        port = gui.TextEdit()
-        pwd = gui.TextEdit()
-        folder.text_value = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
-        username.text_value = 'dyd'
-        hostname.text_value = '10.24.80.241'
-        port.text_value = '911'
-        self.remote_info = {}
-        self.remote_info['username'] = username
-        self.remote_info['hostname'] = hostname
-        self.remote_info['port'] = port
-        self.remote_info['folder'] = folder
-        self.remote_info['pwd'] = pwd
-        remote_layout = gui.VGrid(2, 0.15 * em)
-        remote_layout.add_child(gui.Label('user'))
-        remote_layout.add_child(username)
-        remote_layout.add_child(gui.Label('host'))
-        remote_layout.add_child(hostname)
-        remote_layout.add_child(gui.Label('port'))
-        remote_layout.add_child(port)
-        remote_layout.add_child(gui.Label('pwd'))
-        remote_layout.add_child(pwd)
-        remote_layout.add_child(gui.Label('folder'))
-        remote_layout.add_child(folder)
-
-        h = gui.Horiz(em)
-        h.add_child(gui.Label('Load remote pcds'))
-        h.add_child(creat_btn('Connect', lambda: self._start_tracking(None)))
-        remote.add_fixed(separation_height)
-        remote.add_child(h)
-        remote.add_child(remote_layout)
-        remote.add_child(gui.Label('--------------------------------'))
-
-        h = gui.Horiz(em)
-        h.add_child(gui.Label('Load local pcds'))
-        h.add_child(creat_btn('Folder', self._on_traj_folder))
-        remote.add_child(h)
-        return remote
 
     def tracking_tool_setting(self):
         em = self.window.theme.font_size
@@ -384,20 +329,6 @@ class Setting_panal(GUI_BASE):
     
     def _save_traj(self):
         pass
-
-    def _on_traj_folder(self):
-        filedlg = gui.FileDialog(gui.FileDialog.OPEN_DIR, "Select file",
-                                 self.window.theme)
-        filedlg.add_filter(".obj .ply .stl", "Triangle mesh (.obj, .ply, .stl)")
-        filedlg.add_filter("", "All files")
-        filedlg.set_on_cancel(self._on_file_dialog_cancel)
-        filedlg.set_on_done(self._on_filedlg_done)
-        self.window.show_dialog(filedlg)
-        
-    def _on_filedlg_done(self, path):
-        self.remote_info['folder'].text_value = path
-        self.window.close_dialog()
-        self._start_tracking(path)
         
     def create_humandata_settings(self, collapse=None, checkboxes=None):
         em = self.window.theme.font_size

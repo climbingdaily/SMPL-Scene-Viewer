@@ -39,15 +39,16 @@ from .gui_material import Settings
 
 isMacOS = (platform.system() == "Darwin")
 
+def creat_btn(name, func, color=None):
+    btn = gui.Button(name)
+    btn.horizontal_padding_em = 0.2
+    btn.vertical_padding_em = 0
+    if color is not None:
+        btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
+    btn.set_on_clicked(func)
+    return btn
 
 class AppWindow:
-    MENU_OPEN = 1
-    MENU_EXPORT = 2
-    # MENU_SMPL = 3
-    MENU_QUIT = 4
-    MENU_SHOW_SETTINGS = 11
-    WINDOW_SHOW_SETTINGS = 12
-    MENU_ABOUT = 21
 
     DEFAULT_IBL = "default"
 
@@ -321,64 +322,6 @@ class AppWindow:
         w.add_child(self._scene_traj)
         w.add_child(self._settings_panel)
 
-        # ---- Menu ----
-        # The menu is global (because the macOS menu is global), so only create
-        # it once, no matter how many windows are created
-        if gui.Application.instance.menubar is None:
-            if isMacOS:
-                app_menu = gui.Menu()
-                app_menu.add_item("About", AppWindow.MENU_ABOUT)
-                app_menu.add_separator()
-                app_menu.add_item("Quit", AppWindow.MENU_QUIT)
-            file_menu = gui.Menu()
-            file_menu.add_item("Open...", AppWindow.MENU_OPEN)
-            # file_menu.add_item("Open smpl pkl", AppWindow.MENU_SMPL)
-            file_menu.add_item("Export Current Image...", AppWindow.MENU_EXPORT)
-            if not isMacOS:
-                file_menu.add_separator()
-                file_menu.add_item("Quit", AppWindow.MENU_QUIT)
-            settings_menu = gui.Menu()
-            settings_menu.add_item("Settings",
-                                   AppWindow.MENU_SHOW_SETTINGS)
-            settings_menu.add_item("Window 0", 
-                                    AppWindow.WINDOW_SHOW_SETTINGS)
-
-            settings_menu.set_checked(AppWindow.MENU_SHOW_SETTINGS, True)
-            settings_menu.set_checked(AppWindow.WINDOW_SHOW_SETTINGS, True)
-            help_menu = gui.Menu()
-            help_menu.add_item("About", AppWindow.MENU_ABOUT)
-
-            menu = gui.Menu()
-            if isMacOS:
-                # macOS will name the first menu item for the running application
-                # (in our case, probably "Python"), regardless of what we call
-                # it. This is the application menu, and it is where the
-                # About..., Preferences..., and Quit menu items typically go.
-                menu.add_menu("Example", app_menu)
-                menu.add_menu("File", file_menu)
-                menu.add_menu("View", settings_menu)
-                # Don't include help menu unless it has something more than
-                # About...
-            else:
-                menu.add_menu("File", file_menu)
-                menu.add_menu("View", settings_menu)
-                menu.add_menu("About", help_menu)
-            gui.Application.instance.menubar = menu
-
-        # The menubar is global, but we need to connect the menu items to the
-        # window, so that the window can call the appropriate function when the
-        # menu item is activated.
-        w.set_on_menu_item_activated(AppWindow.MENU_OPEN, self._on_menu_open)
-        # w.set_on_menu_item_activated(AppWindow.MENU_SMPL, self._on_menu_smpl)
-        w.set_on_menu_item_activated(AppWindow.MENU_EXPORT, self._on_menu_export)
-        w.set_on_menu_item_activated(AppWindow.MENU_QUIT, self._on_menu_quit)
-        w.set_on_menu_item_activated(AppWindow.MENU_SHOW_SETTINGS,
-                                     self._on_menu_toggle_settings_panel)
-        w.set_on_menu_item_activated(AppWindow.WINDOW_SHOW_SETTINGS,
-                                     self._on_WINDOW_toggle_settings_panel)
-        w.set_on_menu_item_activated(AppWindow.MENU_ABOUT, self._on_menu_about)
-        # ----
-
         self._apply_settings()
 
     def _apply_settings(self):
@@ -562,119 +505,10 @@ class AppWindow:
         self.settings.apply_material = True
         self._apply_settings()
 
-    
-    def _on_menu_smpl(self):
-        pass
-        # dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose pkl file to load",
-        #                      self.window.theme)
-        # dlg.add_filter(
-        #     ".pkl",
-        #     "SMPL files")
-
-        # dlg.set_on_cancel(self._on_file_dialog_cancel)
-        # dlg.set_on_done(self._on_load_dialog_done)
-        # self.window.show_dialog(dlg)
-
-
-    def _on_menu_open(self):
-        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose file to load",
-                             self.window.theme)
-        dlg.add_filter(
-            ".ply .stl .fbx .obj .off .gltf .glb",
-            "Triangle mesh files (.ply, .stl, .fbx, .obj, .off, "
-            ".gltf, .glb)")
-        dlg.add_filter(
-            ".xyz .xyzn .xyzrgb .ply .pcd .pts",
-            "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, "
-            ".pcd, .pts)")
-        dlg.add_filter(".ply", "Polygon files (.ply)")
-        dlg.add_filter(".stl", "Stereolithography files (.stl)")
-        dlg.add_filter(".fbx", "Autodesk Filmbox files (.fbx)")
-        dlg.add_filter(".obj", "Wavefront OBJ files (.obj)")
-        dlg.add_filter(".off", "Object file format (.off)")
-        dlg.add_filter(".gltf", "OpenGL transfer files (.gltf)")
-        dlg.add_filter(".glb", "OpenGL binary transfer files (.glb)")
-        dlg.add_filter(".xyz", "ASCII point cloud files (.xyz)")
-        dlg.add_filter(".xyzn", "ASCII point cloud with normals (.xyzn)")
-        dlg.add_filter(".xyzrgb",
-                       "ASCII point cloud files with colors (.xyzrgb)")
-        dlg.add_filter(".pcd", "Point Cloud Data files (.pcd)")
-        dlg.add_filter(".pts", "3D Points files (.pts)")
-        dlg.add_filter("", "All files")
-
-        # A file dialog MUST define on_cancel and on_done functions
-        dlg.set_on_cancel(self._on_file_dialog_cancel)
-        dlg.set_on_done(self._on_load_dialog_done)
-        self.window.show_dialog(dlg)
-
-    def _on_file_dialog_cancel(self):
-        self.window.close_dialog()
-
-    def _on_load_dialog_done(self, filename):
-        self.window.close_dialog()
-        try:
-            self.load_scene(filename)
-        except Exception as e:
-            self.load(filename)
-
-    def _on_menu_export(self):
-        dlg = gui.FileDialog(gui.FileDialog.SAVE, "Choose file to save",
-                             self.window.theme)
-        dlg.add_filter(".png", "PNG files (.png)")
-        dlg.set_on_cancel(self._on_file_dialog_cancel)
-        dlg.set_on_done(self._on_export_dialog_done)
-        self.window.show_dialog(dlg)
-
     def _on_export_dialog_done(self, filename):
         self.window.close_dialog()
         frame = self._scene.frame
         self.export_image(filename, frame.width, frame.height)
-
-    def _on_menu_quit(self):
-        gui.Application.instance.quit()
-
-    def _on_menu_toggle_settings_panel(self):
-        self._settings_panel.visible = not self._settings_panel.visible
-        gui.Application.instance.menubar.set_checked(
-            AppWindow.MENU_SHOW_SETTINGS, self._settings_panel.visible)
-
-    def _on_WINDOW_toggle_settings_panel(self):
-        self._scene_traj.visible = not self._scene_traj.visible
-        gui.Application.instance.menubar.set_checked(
-            AppWindow.WINDOW_SHOW_SETTINGS, self._scene_traj.visible)
-
-    def _on_menu_about(self):
-        # Show a simple dialog. Although the Dialog is actually a widget, you can
-        # treat it similar to a Window for layout and put all the widgets in a
-        # layout which you make the only child of the Dialog.
-        em = self.window.theme.font_size
-        dlg = gui.Dialog("About")
-
-        # Add the text
-        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label("Copyright"))
-        text = gui.Vert(em, gui.Margins(em, em, em, em))
-        text.preferred_width = 30 * em
-        text.add_child(gui.Label("This is a visualization tool for LiDAR human and scene. The code is realeased on 'https://github.com/climbingdaily/vis_lidar_human_scene'. \nThe codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. Contact us if you are interested in commercial usage. \n\nCopyright@Yudi Dai.\nyudidai@stu.xmu.edu.cn "))
-        dlg_layout.add_child(text)
-
-        # Add the Ok button. We need to define a callback function to handle
-        # the click.
-        ok = gui.Button("OK")
-        ok.set_on_clicked(self._on_about_ok)
-
-        # We want the Ok button to be an the right side, so we need to add
-        # a stretch item to the layout, otherwise the button will be the size
-        # of the entire row. A stretch item takes up as much space as it can,
-        # which forces the button to be its minimum size.
-        h = gui.Horiz()
-        h.add_stretch()
-        h.add_child(ok)
-        # h.add_stretch()
-        dlg_layout.add_child(h)
-
-        dlg.add_child(dlg_layout)
-        self.window.show_dialog(dlg)
 
     def _on_about_ok(self):
         self.window.close_dialog()
@@ -763,6 +597,8 @@ class AppWindow:
         # self._scene.scene.set_view_size(x, y)
         self._scene.scene.scene.render_to_image(on_image)
 
+    def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
+        self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
 
 def main():
     # We need to initalize the application, which finds the necessary shaders

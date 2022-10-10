@@ -159,24 +159,12 @@ class trackingVis(base_gui):
         trackingVis.CLICKED = True
         self._on_slider(self._get_slider_value() + trackingVis.TRACKING_STEP)
 
-    def load_traj(self, path, translate=[0,0,0], load_data_class=None):
-        self.window.close_dialog()
-        if not os.path.isfile(path):
-            self.warning_info(f'{path} is not a valid file')
-            return
-        try:
-            trajs = np.loadtxt(path)
-        except Exception as e:
-            self.warning_info('Load traj failed.')
-            return 
-
-        if trajs.shape[1] > 5 or trajs.shape[1] < 4:
-            self.warning_info("Tracking trajs must contains: 'x y z frameid time' in every line!!!")
-            return 
-
-        for p in trajs:
-            self._set_slider_value(int(p[3]))
-            self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))
+    def _load_tracked_traj(self, path, translate=[0,0,0], load_data_class=None):
+        trajs = super(trackingVis, self)._load_tracked_traj(path, translate, load_data_class)
+        if trajs is not None:
+            for p in trajs:
+                self._set_slider_value(int(p[3]))
+                self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))
 
     def _save_traj(self):
         """
