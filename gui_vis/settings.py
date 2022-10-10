@@ -294,7 +294,7 @@ class Setting_panal(GUI_BASE):
         self._on_bg_color(gui.Color(0, 0, 0))
 
         if path is None:
-            path = self.remote_info['folder'].text_value
+            path = self.remote_info['folder'].strip()
         self.tracking_foler = path
 
         self.tracking_list = []
@@ -304,10 +304,10 @@ class Setting_panal(GUI_BASE):
             pcd_paths = self.data_loader.list_dir(path)
         except:
             try:
-                password = self.remote_info['pwd'].text_value.strip()
-                username = self.remote_info['username'].text_value.strip()
-                hostname = self.remote_info['hostname'].text_value.strip()
-                port = self.remote_info['port'].text_value.strip()
+                password = self.remote_info['pwd'].strip()
+                username = self.remote_info['username'].strip()
+                hostname = self.remote_info['hostname'].strip()
+                port = self.remote_info['port'].strip()
                 self.data_loader = load_data_remote(True, username, hostname, int(port), password)
                 pcd_paths = self.data_loader.list_dir(path)
             except Exception as e:
@@ -322,6 +322,9 @@ class Setting_panal(GUI_BASE):
             if pcd_path.endswith('.pcd'):
                 self.tracking_list.append(pcd_path)
         self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x.split('.')[0].replace('_', '.')))
+        if not Setting_panal.PAUSE:
+            self.change_pause_status()
+        self.warning_info(f"Pcd loaded from '{path}'", type='info')
         
     
     def _set_tracking_step(self, value):

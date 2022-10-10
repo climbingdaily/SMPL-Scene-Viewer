@@ -14,8 +14,10 @@
 import open3d.visualization.gui as gui
 import sys
 import os
+import functools
+import platform
 
-from regex import F
+# from regex import F
 
 sys.path.append('.')
 sys.path.append('..')
@@ -23,7 +25,6 @@ sys.path.append('..')
 from .base_gui import AppWindow as GUI_BASE, creat_btn
 from .gui_material import Settings
 
-import platform
 isMacOS = (platform.system() == "Darwin")
 
 class Menu(GUI_BASE):
@@ -39,8 +40,8 @@ class Menu(GUI_BASE):
     MENU_SMPL = 32
     MENU_TRAJ = 33
 
-    MENU_TRACKING_1 = 41
-    MENU_TRACKING_2 = 42
+    # MENU_TRACKING_1 = 41
+    # MENU_TRACKING_2 = 42
     MENU_TRACKING_3 = 43
 
     MENU_ABOUT = 51
@@ -48,7 +49,7 @@ class Menu(GUI_BASE):
     def __init__(self, width=1280, height=768):
         super(Menu, self).__init__(width, height)
         self.geo_settings = {}
-        self.remote_setting = self._remote_setting()
+        # self.remote_setting = self._remote_setting()
         self.add_menu()
 
     def add_menu(self):
@@ -91,13 +92,13 @@ class Menu(GUI_BASE):
 
             # tracking tool menu
             tracking_menu = gui.Menu()
-            tracking_menu.add_item("Load remote pcds", Menu.MENU_TRACKING_1)
-            tracking_menu.add_item("Load local pcds", Menu.MENU_TRACKING_2)
+            # tracking_menu.add_item("Load remote pcds", Menu.MENU_TRACKING_1)
+            # tracking_menu.add_item("Load local pcds", Menu.MENU_TRACKING_2)
             tracking_menu.add_item("Load a tracked trajectory", Menu.MENU_TRACKING_3)
 
             # help menu
             help_menu = gui.Menu()
-            help_menu.add_item("About", Menu.MENU_ABOUT)
+            help_menu.add_item("Copyright", Menu.MENU_ABOUT)
 
             menu = gui.Menu()
             if isMacOS:
@@ -137,8 +138,8 @@ class Menu(GUI_BASE):
         w.set_on_menu_item_activated(Menu.MENU_SMPL, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRAJ, self._on_menu_traj)
 
-        w.set_on_menu_item_activated(Menu.MENU_TRACKING_1, self._on_menu_scene)
-        w.set_on_menu_item_activated(Menu.MENU_TRACKING_2, self._on_menu_smpl)
+        # w.set_on_menu_item_activated(Menu.MENU_TRACKING_1, self._on_menu_scene)
+        # w.set_on_menu_item_activated(Menu.MENU_TRACKING_2, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRACKING_3, self._on_menu_trackingtraj)
 
         w.set_on_menu_item_activated(Menu.MENU_ABOUT, self._on_menu_about)
@@ -160,12 +161,15 @@ class Menu(GUI_BASE):
 
         # Add the Ok button. We need to define a callback function to handle
         # the click.
-        ok = gui.Button("OK")
-        ok.set_on_clicked(self._on_about_ok)
+        cancel = gui.Button("Cancel")
+        cancel.set_on_clicked(self._on_about_ok)
 
-        h = gui.Horiz()
+        connect = creat_btn('Connect', lambda: self._start_tracking(None))
+
+        h = gui.Horiz(em)
         h.add_stretch()
-        h.add_child(ok)
+        h.add_child(connect)
+        h.add_child(cancel)
         h.add_stretch()
         dlg_layout.add_child(h)
 
@@ -202,6 +206,7 @@ class Menu(GUI_BASE):
 
     def _load_tracked_traj(self, path, translate=[0,0,0], load_data_class=None):
         import numpy as np
+
         self.window.close_dialog()
         if not os.path.isfile(path):
             self.warning_info(f'{path} is not a valid file')
@@ -442,43 +447,29 @@ class Menu(GUI_BASE):
     def _on_file_dialog_cancel(self):
         self.window.close_dialog()
 
+    def _change_remote_info(self, text, key=None):
+        self.remote_info[key] = text
+
     def _remote_setting(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
         remote = gui.Vert(0.15 * em)
-        folder = gui.TextEdit()
-        folder.set_on_value_changed(self._start_tracking)
-        username = gui.TextEdit()
-        hostname = gui.TextEdit()
-        port = gui.TextEdit()
-        pwd = gui.TextEdit()
-        folder.text_value = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
-        username.text_value = 'dyd'
-        hostname.text_value = '10.24.80.241'
-        port.text_value = '911'
-        self.remote_info = {}
-        self.remote_info['username'] = username
-        self.remote_info['hostname'] = hostname
-        self.remote_info['port'] = port
-        self.remote_info['folder'] = folder
-        self.remote_info['pwd'] = pwd
-        remote_layout = gui.VGrid(2, 0.15 * em)
-        remote_layout.add_child(gui.Label('user'))
-        remote_layout.add_child(username)
-        remote_layout.add_child(gui.Label('host'))
-        remote_layout.add_child(hostname)
-        remote_layout.add_child(gui.Label('port'))
-        remote_layout.add_child(port)
-        remote_layout.add_child(gui.Label('pwd'))
-        remote_layout.add_child(pwd)
-        remote_layout.add_child(gui.Label('folder'))
-        remote_layout.add_child(folder)
 
-        h = gui.Horiz(em)
-        h.add_child(gui.Label('Load remote pcds'))
-        h.add_child(creat_btn('Connect', lambda: self._start_tracking(None)))
-        remote.add_fixed(separation_height)
-        remote.add_child(h)
+        remote_layout = gui.VGrid(2, 0.15 * em)
+        tlist = ['username', 'hostname', 'port', 'folder', 'pwd']
+        for key in tlist:
+            text_edit = gui.TextEdit()
+            text_edit.set_on_value_changed(functools.partial(self._change_remote_info, key=key))
+            text_edit.text_value = self.remote_info[key]
+            remote_layout.add_child(gui.Label(key))
+            remote_layout.add_child(text_edit)
+
+        # h = gui.Horiz(em)
+        # h.add_child(gui.Label('Load remote pcds'))
+        # h.add_child(creat_btn('Connect', lambda: self._start_tracking(None)))
+        # remote.add_fixed(separation_height)
+        # remote.add_child(h)
+
         remote.add_child(remote_layout)
         
         return remote

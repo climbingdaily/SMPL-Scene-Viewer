@@ -62,6 +62,7 @@ class AppWindow:
         resource_path = gui.Application.instance.resource_path
         self.settings.new_ibl_name = resource_path + "/" + AppWindow.DEFAULT_IBL
 
+        self._make_remote_gui()
         self.window = gui.Application.instance.create_window(
             "Open3D", width, height)
         w = self.window  # to make the code more concise
@@ -599,6 +600,27 @@ class AppWindow:
 
     def update_geometry(self, geometry, name, mat=None, reset_bounding_box=False, archive=False, freeze=False):
         self.add_geometry(geometry, name, mat, reset_bounding_box, archive, freeze) 
+
+
+    def _make_remote_gui(self):
+        # folder = gui.TextEdit()
+        # username = gui.TextEdit()
+        # hostname = gui.TextEdit()
+        # port = gui.TextEdit()
+        # pwd = gui.TextEdit()
+
+        folder = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
+        username = 'dyd'
+        hostname = '10.24.80.241'
+        port = '911'
+        pwd = ''
+        
+        self.remote_info = {}
+        self.remote_info['username'] = username
+        self.remote_info['hostname'] = hostname
+        self.remote_info['port'] = port
+        self.remote_info['folder'] = folder
+        self.remote_info['pwd'] = pwd
 
 def main():
     # We need to initalize the application, which finds the necessary shaders

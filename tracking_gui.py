@@ -103,7 +103,6 @@ class trackingVis(base_gui):
         return gui.Widget.EventCallbackResult.IGNORED
 
     def update_label(self, world, frame):
-
         # position 
         position = self.COOR_INIT[:3, :3].T @ world
         text = "{:.3f}, {:.3f}, {:.3f}".format(
