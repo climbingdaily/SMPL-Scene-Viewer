@@ -24,7 +24,7 @@ sys.path.append('.')
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn, vertices_to_joints
 from util import load_scene as load_pts
 
-sample_path = os.path.join(os.path.dirname(__file__), 'smpl', 'sample.ply')
+sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'smpl', 'sample.ply')
 
 POSE_KEY = ['Ours(F)', 'Baseline2(F)', 'Baseline2(S)', 'Ours(S)',
             'Baseline1(F)', 'Baseline1(S)', 'Second pred', 'Ours_opt(F)']
@@ -167,10 +167,13 @@ class o3dvis(setting, Menu):
                 except Exception as e:
                     print(e)
 
+
+            self.update_data = self.update_smpl
+            self.fetch_data = self.fetch_smpl
             self.add_thread(threading.Thread(target=self.thread))
 
-    def _start_tracking(self, path):
-        super(o3dvis, self)._start_tracking(path)
+    def _loading_pcds(self, path):
+        super(o3dvis, self)._loading_pcds(path)
         if len(self.tracking_list) > 0:
             try:
                 start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
@@ -184,7 +187,7 @@ class o3dvis(setting, Menu):
                 self.add_thread(threading.Thread(target=self.thread))
                 print(e)
 
-    def update_data(self, data, initialized=True):
+    def update_smpl(self, data, initialized=True):
         """
         The "update_data" function is called by the "thread" function. 
         
@@ -205,7 +208,7 @@ class o3dvis(setting, Menu):
         if not initialized:
             self.change_pause_status()
 
-    def fetch_data(self, ind):
+    def fetch_smpl(self, ind):
         """
         It takes in a frame number, and returns a dictionary of all the data for that frame. 
         
@@ -270,7 +273,9 @@ class o3dvis(setting, Menu):
         if len(self.tracking_list)>0:
             try:
                 if 'LiDAR frame' not in self.geo_list or self.geo_list['LiDAR frame']['box'].checked:
-                    self.fetched_data['LiDAR frame'] = self.get_tracking_data(ind)
+                    point_cloud = self.get_tracking_data(ind)
+                    if len(point_cloud.points) > 0:
+                        self.fetched_data['LiDAR frame'] = point_cloud
             except Exception as e:
                 print(e)
 

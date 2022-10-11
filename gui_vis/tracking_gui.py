@@ -22,7 +22,7 @@ import time
 
 sys.path.append('.')
 
-from main_gui import o3dvis as base_gui
+from gui_vis.main_gui import o3dvis as base_gui
 from util import load_scene as load_pts
 
 class trackingVis(base_gui):
@@ -35,22 +35,6 @@ class trackingVis(base_gui):
         self._scene.set_on_mouse(self._on_mouse_widget3d)
         self.tracking_setting.visible = True
         self.window.set_needs_layout()
-
-    def _start_tracking(self, path):
-        super(trackingVis, self)._start_tracking(path)
-        self.frame_slider_bar.enabled = True
-        self.frame_edit.enabled = True
-        self.play_btn.enabled = True
-        self.total_frames = len(self.tracking_list)
-        self.add_thread(threading.Thread(target=self.thread))
-
-    def fetch_data(self, index):
-        name = 'tracking frame'
-        geometry = self.get_tracking_data(index)
-        if name not in self.geo_list:
-            self.make_material(geometry, name, 'point', is_archive=False)
-            self.geo_list[name]['mat'].material.point_size = 8
-        return {name: geometry}
 
     def _on_mouse_widget3d(self, event):
         """

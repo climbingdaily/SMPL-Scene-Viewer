@@ -92,7 +92,7 @@ class Menu(GUI_BASE):
 
             # tracking tool menu
             tools_menu = gui.Menu()
-            tools_menu.add_item("Load remote pcds", Menu.MENU_TOOLS_1)
+            tools_menu.add_item("Load remote pcds for tracking", Menu.MENU_TOOLS_1)
             tools_menu.add_item("Load remote images(.png .jpg)", Menu.MENU_TOOLS_2)
             tools_menu.add_item("Load tracking_traj", Menu.MENU_TOOLS_3)
 
@@ -164,7 +164,7 @@ class Menu(GUI_BASE):
         cancel = gui.Button("Cancel")
         cancel.set_on_clicked(self._on_about_ok)
 
-        connect = creat_btn('Connect', lambda: self._start_tracking(None))
+        connect = creat_btn('Connect', lambda: self._loading_pcds(None))
 
         h = gui.Horiz(em)
         h.add_stretch()
@@ -220,9 +220,9 @@ class Menu(GUI_BASE):
     def _on_filedlg_done(self, path):
         # self.remote_info['folder'].text_value = path
         self.window.close_dialog()
-        self._start_tracking(path)
+        self._loading_pcds(path)
 
-    def _start_tracking(path):
+    def _loading_pcds(path):
         pass
 
     def _loading_imgs(path):

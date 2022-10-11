@@ -289,19 +289,13 @@ class Setting_panal(GUI_BASE):
         self.frozen_list.set_items(frozen_list)
         self.window.set_needs_layout()
 
-    def _start_tracking(self, path=None):
-        self._on_show_skybox(False)
-        self._on_bg_color(gui.Color(0, 0, 0))
-
-        if path is None:
-            path = self.remote_info['folder'].strip()
+    def _list_dir(self, path):
         self.tracking_foler = path
-
-        self.tracking_list = []
         
+        files = []
         try:
             self.data_loader = load_data_remote(False)
-            pcd_paths = self.data_loader.list_dir(path)
+            files = self.data_loader.list_dir(path)
         except:
             try:
                 password = self.remote_info['pwd'].strip()
@@ -309,22 +303,38 @@ class Setting_panal(GUI_BASE):
                 hostname = self.remote_info['hostname'].strip()
                 port = self.remote_info['port'].strip()
                 self.data_loader = load_data_remote(True, username, hostname, int(port), password)
-                pcd_paths = self.data_loader.list_dir(path)
+                files = self.data_loader.list_dir(path)
             except Exception as e:
                 print(e)
                 self.warning_info(f"'{path}' \n Not valid! Please input the right remote info!!!")
-                return
-        if len(pcd_paths) <=0:
+
+        if len(files) <=0:
             self.warning_info(f"'{path}' \n Not valid! Please input the right folder info!!!")
-            return
+        
+        return files
+
+    def _loading_pcds(self, path=None):
+        self._on_show_skybox(False)
+        self._on_bg_color(gui.Color(0, 0, 0))
+
+        if path is None:
+            path = self.remote_info['folder'].strip()
+        pcd_paths = self._list_dir(path)
+
+        self.tracking_list = []
 
         for pcd_path in pcd_paths:
             if pcd_path.endswith('.pcd'):
                 self.tracking_list.append(pcd_path)
-        self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x.split('.')[0].replace('_', '.')))
-        if not Setting_panal.PAUSE:
-            self.change_pause_status()
-        self.warning_info(f"Pcd loaded from '{path}'", type='info')
+
+        if len(self.tracking_list) > 0:
+            self.tracking_list = sorted(self.tracking_list, key=lambda x: float(
+                x.split('.')[0].replace('_', '.')))
+
+            if not Setting_panal.PAUSE:
+                self.change_pause_status()
+
+            self.warning_info(f"Pcd loaded from '{path}'", type='info')
         
     
     def _set_tracking_step(self, value):
@@ -633,15 +643,25 @@ class Setting_panal(GUI_BASE):
         
     def fetch_data(self, index):
         # your function here
-        return {}
+        name = 'Tracking frame'
+        geometry = self.get_tracking_data(index)
+        if len(geometry.points) > 0 and name not in self.geo_list:
+            self.make_material(geometry, name, 'point', is_archive=False)
+            self.geo_list[name]['mat'].material.point_size = 8
+        return {name: geometry}
 
     def update_data(self, data, initialized=True):
         def func():
             # your function here
-            pass
+            for name in data:
+                self.update_geometry(data[name], name, reset_bounding_box=False, freeze=Setting_panal.FREEZE)
+            self.window.set_needs_layout()
+            self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
+
         if not initialized:
             # your function here
+
             self.change_pause_status()
 
 def _async_raise(tid, exctype):
