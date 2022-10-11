@@ -40,9 +40,9 @@ class Menu(GUI_BASE):
     MENU_SMPL = 32
     MENU_TRAJ = 33
 
-    MENU_TRACKING_1 = 41
-    # MENU_TRACKING_2 = 42
-    MENU_TRACKING_3 = 43
+    MENU_TOOLS_1 = 41
+    MENU_TOOLS_2 = 42
+    MENU_TOOLS_3 = 43
 
     MENU_ABOUT = 51
 
@@ -91,10 +91,10 @@ class Menu(GUI_BASE):
             smpl_menu.add_item("Load a trajectory", Menu.MENU_TRAJ)
 
             # tracking tool menu
-            tracking_menu = gui.Menu()
-            tracking_menu.add_item("Load remote pcds", Menu.MENU_TRACKING_1)
-            # tracking_menu.add_item("Load local pcds", Menu.MENU_TRACKING_2)
-            tracking_menu.add_item("Load tracking_traj", Menu.MENU_TRACKING_3)
+            tools_menu = gui.Menu()
+            tools_menu.add_item("Load remote pcds", Menu.MENU_TOOLS_1)
+            tools_menu.add_item("Load remote images(.png .jpg)", Menu.MENU_TOOLS_2)
+            tools_menu.add_item("Load tracking_traj", Menu.MENU_TOOLS_3)
 
             # help menu
             help_menu = gui.Menu()
@@ -109,7 +109,7 @@ class Menu(GUI_BASE):
                 menu.add_menu("Example", app_menu)
                 menu.add_menu("File", file_menu)
                 menu.add_menu("View", settings_menu)
-                menu.add_menu("Tracking", tracking_menu)
+                menu.add_menu("Tools", tools_menu)
                 menu.add_menu("SMPL", smpl_menu)
                 # Don't include help menu unless it has something more than
                 # About...
@@ -117,7 +117,7 @@ class Menu(GUI_BASE):
                 menu.add_menu("File", file_menu)
                 menu.add_menu("View", settings_menu)
                 menu.add_menu("SMPL", smpl_menu)
-                menu.add_menu("Tracking", tracking_menu)
+                menu.add_menu("Tools", tools_menu)
                 menu.add_menu("About", help_menu)
             gui.Application.instance.menubar = menu
 
@@ -138,9 +138,9 @@ class Menu(GUI_BASE):
         w.set_on_menu_item_activated(Menu.MENU_SMPL, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRAJ, self._on_menu_traj)
 
-        w.set_on_menu_item_activated(Menu.MENU_TRACKING_1, self._on_remote_pcd_folder)
-        # w.set_on_menu_item_activated(Menu.MENU_TRACKING_2, self._on_menu_smpl)
-        w.set_on_menu_item_activated(Menu.MENU_TRACKING_3, self._on_menu_trackingtraj)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_1, self._on_remote_pcd_folder)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_2, self._on_remote_imgs)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_3, self._on_menu_trackingtraj)
 
         w.set_on_menu_item_activated(Menu.MENU_ABOUT, self._on_menu_about)
 
@@ -176,6 +176,38 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
+    def _on_remote_imgs(self):
+        # Show a simple dialog. Although the Dialog is actually a widget, you can
+        # treat it similar to a Window for layout and put all the widgets in a
+        # layout which you make the only child of the Dialog.
+        em = self.window.theme.font_size
+        dlg = gui.Dialog("Connect remote machine with SSH")
+
+        # Add the text
+        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
+        dlg_layout.add_child(gui.Label("Connect remote machine with SSH"))
+        remote_info = gui.Vert(em, gui.Margins(em, em, em, em))
+        remote_info.preferred_width = 30 * em
+        remote_info.add_child(self._remote_setting())
+        dlg_layout.add_child(remote_info)
+
+        # Add the Ok button. We need to define a callback function to handle
+        # the click.
+        cancel = gui.Button("Cancel")
+        cancel.set_on_clicked(self._on_about_ok)
+
+        connect = creat_btn('Connect', lambda: self._loading_imgs(None))
+
+        h = gui.Horiz(em)
+        h.add_stretch()
+        h.add_child(connect)
+        h.add_child(cancel)
+        h.add_stretch()
+        dlg_layout.add_child(h)
+
+        dlg.add_child(dlg_layout)
+        self.window.show_dialog(dlg)
+
     def _on_pcd_folder(self):
         filedlg = gui.FileDialog(gui.FileDialog.OPEN_DIR, "Select file",
                                  self.window.theme)
@@ -191,6 +223,9 @@ class Menu(GUI_BASE):
         self._start_tracking(path)
 
     def _start_tracking(path):
+        pass
+
+    def _loading_imgs(path):
         pass
 
     def _on_menu_trackingtraj(self):

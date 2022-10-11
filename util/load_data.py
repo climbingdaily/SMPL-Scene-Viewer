@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import shutil
 import paramiko
 import config
+import cv2
 
 from util import pypcd
 
@@ -327,6 +328,17 @@ class load_data_remote(object):
             pass
         return pointcloud
 
+    def load_imgs(self, filepath):
+        if self.remote:
+            with self.sftp_client.open(filepath) as obj:
+                img_code = np.frombuffer(obj.read(), dtype=np.uint8)
+                img = cv2.imdecode(img_code, cv2.IMREAD_COLOR)[..., [2,1,0]]
+                img = o3d.geometry.Image(np.asarray(img, order="C"))
+        else:
+            img = o3d.io.read_image(filepath)
+
+        return img
+
     def load_pkl(self, filepath):
         """
         If the remote flag is set to True, then the function will open the filepath using the sftp_client
@@ -407,6 +419,11 @@ class load_data_remote(object):
                 ll += f"{l:.4f}\t"
             save_data.append(ll + '\n')
         if self.sftp_client is not None:
+            temp_path = os.path.abspath('./temp_traj.txt')
+            with open(temp_path, mode = mode) as f:
+                f.writelines(save_data)
+                print(f'[Write txt] Temp file saved in {temp_path}')
+                
             with self.sftp_client.open(filepath, mode = mode) as f:
                 f.writelines(save_data)
         else:
