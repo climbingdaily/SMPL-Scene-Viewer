@@ -22,7 +22,6 @@ import open3d as o3d
 sys.path.append('.')
 
 from gui_vis.main_gui import o3dvis as base_gui
-from util import load_data_remote
 
 class ImagWindow(base_gui):
 
@@ -80,7 +79,6 @@ class ImagWindow(base_gui):
             self.change_pause_status()
 
     def fetch_img(self, index):
-        # 2.这里定义你读取数据的方式，改成远程读取图片即可
         image = self.data_loader.load_imgs(self.tracking_foler + '/' + self.tracking_list[index])
         return {'imgs': image}
 
@@ -98,7 +96,6 @@ class ImagWindow(base_gui):
         The 3D label and the sphere are added to the scene and the dictionary `tracked_frame`. 
 
         The dictionary `tracked_frame` is used to store the 3D labels and the spheres. 
-        The dictionary `tracked_frame` is used to update the 3D labels and the spheres when the slider ismoved.
         
         Args:
           event: The event that triggered the callback.

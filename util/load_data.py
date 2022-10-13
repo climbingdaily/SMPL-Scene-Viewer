@@ -11,6 +11,7 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+from logging import raiseExceptions
 import numpy as np
 import pickle as pkl
 import os
@@ -19,7 +20,7 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 import shutil
 import paramiko
-import config
+# import config
 import cv2
 
 from util import pypcd
@@ -53,7 +54,10 @@ def client_server(username=None, hostname=None, port=None, password=None):
       A client object.
     """
     if not username or not hostname or not port:
-        username = config.username, hostname = config.hostname, port = config.port
+        # username = config.username, hostname = config.hostname, port = config.port
+        # raiseExceptions()
+        
+        return
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

@@ -1,19 +1,17 @@
 # vis_lidar_human_scene
 
-A **user-friendly** and **CPU-only** supported toolkit based on Open3D.
-
-- Visulize the 3D mesh model, PCD list, SMPL pkl
-- Edit every geometry's material
-- Visulize the  in a folder
-- Manually track the points in a frame
-- Render the view and automatically save the video. (need ffmpeg) 
+A **user-friendly** and **CPU-only** supported visualization toolkit based on Open3D.
 
 ### 
 
 
 ![](imgs/gui.jpg)
-
-- The sample SMPL file is in `imgs` folder
+- Load and visualize the 3D mesh model, PCD list, SMPL pkl
+- Edit every geometry's material
+- Manually pick and record the points in a frame
+- Render the view and save the video automatically.
+   
+### The sample SMPL file (.pkl) is in `imgs` folder
   ```bash
   # At least contains the 'pose' and 'mocap_trans'  
   smpl_sample.pkl/
@@ -41,15 +39,15 @@ python main_gui.py
 <!-- - *Set `remote` to `False` in `config.py` if your data is on local machine* -->
   
 ### Requirements
-1. Download the required body model `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl` from http://smpl.is.tue.mpg.de and placed it in `smpl` directory of this repository.
+1. Download the required body model `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl` and `J_regressor_extra.npy` from http://smpl.is.tue.mpg.de and put it in `smpl` directory.
 2. `open3d`(>0.15.0) 
-3. `torch torchvision torchaudio` (CPU version is enough for SMPL model converting) 
+3. `torch torchvision torchaudio` (CPU) 
 4. `ffmpeg` for video processing
 
 ## Todos
 
 - [x] Save the video with GUI
 - [x] Add shade, HDR map ...
+- [x] Load video
 - [ ] Save the video with headless mode
-- [ ] Load video
 - [ ] Generate / save camera trajectetory
