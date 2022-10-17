@@ -219,7 +219,10 @@ def main():
 
     w = ImagWindow(1280, 720, is_remote=True)
 
-    gui.Application.instance.run()
+    try:
+        gui.Application.instance.run()
+    except Exception as e:
+        print(e)
 
     w.close_thread()
 

@@ -138,8 +138,10 @@ class o3dvis(setting, Menu):
                 data['human points'] = o3d.geometry.TriangleMesh()
                 human_points = self.Human_data.vis_data_list['point cloud'][0]
                 max_points = max([hp.shape[0] for hp in human_points])
+                lenght = 0.015 * o3dvis.SCALE
                 for ii in range(max_points):
-                    p = o3d.geometry.TriangleMesh.create_sphere(0.015 * o3dvis.SCALE, resolution=5)
+                    p = o3d.geometry.TriangleMesh.create_sphere(lenght, resolution=5)
+                    # p = o3d.geometry.TriangleMesh.create_box(lenght,lenght,lenght)
                     p.compute_vertex_normals()
                     p.paint_uniform_color(POSE_COLOR['points'])
                     data['human points'] += p
@@ -377,6 +379,7 @@ class o3dvis(setting, Menu):
             except:
                 print("[WARNING] It is t.geometry type")
 
+        self._on_show_geometry(True)
 
     def set_view(self, view):
         pass
@@ -452,6 +455,9 @@ class o3dvis(setting, Menu):
             color[-1] = 0.8
         else:
             shader = settings.LIT
+
+        if ('(s)' in name.lower() or '(f)' in name.lower()) and 'ours' not in name.lower():
+            box.checked = False
 
         settings.set_material(shader)
         settings.material.point_size = int(point_size)
