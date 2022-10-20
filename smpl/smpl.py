@@ -11,7 +11,7 @@ import cv2
 import torch
 import torch.nn as nn
 import numpy as np
-
+import os
 try:
     import cPickle as pickle
 except ImportError:
@@ -62,8 +62,7 @@ def rodrigues(theta):
 class SMPL(nn.Module):
 
     def __init__(self, 
-                 model_file=cfg.SMPL_FILE,
-                 gender='neutral'):
+                 gender='male'):
         """
         Args:
             center_idx: index of center joint in our computations,
@@ -71,6 +70,15 @@ class SMPL(nn.Module):
             gender: 'neutral' (default) or 'female' or 'male'
         """
         super(SMPL, self).__init__()
+        if gender == 'male':
+            model_file = os.path.join(os.path.dirname(__file__), 'basicModel_m_lbs_10_207_0_v1.0.0.pkl') 
+        elif gender == 'female':
+            model_file = os.path.join(os.path.dirname(__file__), 'basicModel_f_lbs_10_207_0_v1.0.0.pkl') 
+        elif gender == 'neutral':
+            model_file = os.path.join(os.path.dirname(__file__), 'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl') 
+        else:
+            raise ValueError('Unknown gender: %s' % gender)
+
         with open(model_file, 'rb') as f:
             smpl_model = pickle.load(f, encoding='iso-8859-1')
         J_regressor = smpl_model['J_regressor'].tocoo()
@@ -247,7 +255,7 @@ def append_alpha(imtmp):
     return im_RGBA
 
 
-def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024):
+def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024, gender='male'):
     """
     It takes in a batch of poses and returns a batch of vertices
     
@@ -272,7 +280,7 @@ def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024):
     poses = poses.astype(np.float32)
     vertices = np.zeros((0, 6890, 3))
 
-    smpl = SMPL()
+    smpl = SMPL(gender=gender)
     n_batch = (n + batch_size - 1) // batch_size
 
     for i in range(n_batch):

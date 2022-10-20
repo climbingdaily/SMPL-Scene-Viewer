@@ -66,7 +66,6 @@ class o3dvis(setting, Menu):
 
     def __init__(self, width=1280, height=768, is_remote=False):
         super(o3dvis, self).__init__(width, height)
-        self.COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
         self.fetched_data = {}
@@ -359,15 +358,19 @@ class o3dvis(setting, Menu):
             if 'seg_traj' in name:
                 geometry = sample_traj(geometry)
 
-            geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
+            # geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
             self.remove_geometry(name)
             if freeze:
                 self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
             else:
                 self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                self._scene.scene.set_geometry_transform(name, self.COOR_INIT)
+
                 if self._scene_traj.visible:
                     self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                    self._scene_traj.scene.set_geometry_transform(name, self.COOR_INIT)
+
         else:
             self.remove_geometry(name)
                     

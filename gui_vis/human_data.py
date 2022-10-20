@@ -60,11 +60,17 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
             beta = [0] * 10
         else:
             beta = human_data['beta'].copy()
+
+        if 'gender' not in human_data:
+            gender = 'male'
+        else:
+            gender = human_data['gender']
+
         if tran_str in human_data:
             trans = human_data[tran_str].copy()
         else:
             trans = human_data[trans_str2].copy()
-        vert = poses_to_vertices(pose, trans, beta=beta)
+        vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
         verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end]}
         print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
 
@@ -91,13 +97,17 @@ def load_vis_data(humans, start=0, end=-1):
         pose = first_person['pose'][start:end].copy()
         if 'beta' not in first_person:
             first_person['beta'] = [0] * 10
+        if 'gender' not in first_person:
+            first_person['gender'] = 'male'
+
         beta = first_person['beta'].copy()
+        gender = first_person['gender']
 
         if 'mocap_trans' in first_person:
             trans = first_person['mocap_trans'].copy()
         else:
             trans = first_person['trans'].copy()
-        f_vert = poses_to_vertices(pose, beta=beta)
+        f_vert = poses_to_vertices(pose, beta=beta, gender=gender)
 
         # pose + trans
         save_trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
@@ -152,6 +162,11 @@ def load_vis_data(humans, start=0, end=-1):
         if 'pose' in second_person and end <= 0:
             end = second_person['pose'].shape[0]
 
+        if 'gender' not in second_person:
+            second_person['gender'] = 'male'
+
+        gender = second_person['gender']
+
         load_human_mesh(vis_data['humans'], 
                         second_person, 
                         start, 
@@ -191,7 +206,7 @@ def load_vis_data(humans, start=0, end=-1):
                 else:
                     trans = second_person['trans'].copy()
                 local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
-                verts = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'])
+                verts = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'], gender=gender)
                 vis_data['humans']['Second pred'] = {
                     'verts': verts, 
                     'trans': trans[valid_idx], 
@@ -278,10 +293,11 @@ class HUMAN_DATA:
                     print(e)
             self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
             self.cameras['3rd View back +3m'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0, filter=False)
-            self.cameras['3rd View +Y'] = make_3rd_view(root_position, root_rots, rotz=0)
-            self.cameras['3rd View -X'] = make_3rd_view(root_position, root_rots, rotz=90)
-            self.cameras['3rd View -Y'] = make_3rd_view(root_position, root_rots, rotz=180)
-            self.cameras['3rd View +X'] = make_3rd_view(root_position, root_rots, rotz=270)
+            self.cameras['3rd View front +3m'] = make_3rd_view(root_position, root_rots, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0, filter=False)
+            # self.cameras['3rd View +Y'] = make_3rd_view(root_position, root_rots, rotz=0)
+            # self.cameras['3rd View -X'] = make_3rd_view(root_position, root_rots, rotz=90)
+            # self.cameras['3rd View -Y'] = make_3rd_view(root_position, root_rots, rotz=180)
+            # self.cameras['3rd View +X'] = make_3rd_view(root_position, root_rots, rotz=270)
             self.cameras['3rd View +Z'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=90, move_up=6)
 
         except Exception as e:
@@ -307,10 +323,11 @@ class HUMAN_DATA:
             position = vertices_to_joints(second_verts, 0)
             rotation = get_head_global_rots(second_pose, parents=[0])
             self.cameras['(p2) 3rd View back +3m'] = make_3rd_view(position, rotation, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0)
-            self.cameras['(p2) 3rd View +Y'] = make_3rd_view(position, rotation, rotz=0)
-            self.cameras['(p2) 3rd View -X'] = make_3rd_view(position, rotation, rotz=90)
-            self.cameras['(p2) 3rd View -Y'] = make_3rd_view(position, rotation, rotz=180)
-            self.cameras['(p2) 3rd View +X'] = make_3rd_view(position, rotation, rotz=270)
+            self.cameras['(p2) 3rd View front +3m'] = make_3rd_view(position, rotation, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+            # self.cameras['(p2) 3rd View +Y'] = make_3rd_view(position, rotation, rotz=0)
+            # self.cameras['(p2) 3rd View -X'] = make_3rd_view(position, rotation, rotz=90)
+            # self.cameras['(p2) 3rd View -Y'] = make_3rd_view(position, rotation, rotz=180)
+            # self.cameras['(p2) 3rd View +X'] = make_3rd_view(position, rotation, rotz=270)
             self.cameras['(p2) 3rd View +Z'] = make_3rd_view(position, rotation, rotz=0, lookdown=90, move_up=6)
         except Exception as e:
             print(e)

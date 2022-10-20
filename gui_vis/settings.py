@@ -267,7 +267,7 @@ class Setting_panal(GUI_BASE):
         self.remove_geometry(fname)
 
         self._scene.scene.add_geometry(fname, geometry, mat)
-
+        self._scene.scene.set_geometry_transform(fname, self.COOR_INIT)
         self.update_frozen_points()
 
     def _on_freeze_list(self, new_val, is_dbl_click):

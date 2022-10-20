@@ -11,7 +11,7 @@ import sys
 from os.path import join
 os.path.dirname(__file__)
 
-SMPL_FILE = os.path.join(os.path.dirname(__file__), 'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl')
+SMPL_FILE = os.path.dirname(__file__)
 # seems all zeros.
 JOINT_REGRESSOR_TRAIN_EXTRA = os.path.join(os.path.dirname(__file__), 'J_regressor_extra.npy')
 

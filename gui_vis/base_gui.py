@@ -49,6 +49,8 @@ def creat_btn(name, func, color=None):
     return btn
 
 class AppWindow:
+    
+    COOR_INIT = np.array([[-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
 
     DEFAULT_IBL = "default"
 
@@ -559,11 +561,11 @@ class AppWindow:
                 print("[WARNING] Failed to read points", path)
 
         if geometry is not None:
-            geometry.transform(self.COOR_INIT)
+            # geometry.transform(self.COOR_INIT)
 
             try:
-                self._scene.scene.add_geometry(name, geometry,
-                                               self.settings.material)
+                self._scene.scene.add_geometry(name, geometry, self.settings.material)
+                self._scene.scene.set_geometry_transform(name, self.COOR_INIT)
                 bounds = geometry.get_axis_aligned_bounding_box()
                 self._scene.setup_camera(60, bounds, bounds.get_center())
             except Exception as e:
