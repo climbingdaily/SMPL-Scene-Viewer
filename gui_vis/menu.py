@@ -24,6 +24,7 @@ sys.path.append('..')
 
 from .base_gui import AppWindow as GUI_BASE, creat_btn
 from .gui_material import Settings
+from .utils import generate_mesh
 
 isMacOS = (platform.system() == "Darwin")
 
@@ -43,6 +44,7 @@ class Menu(GUI_BASE):
     MENU_TOOLS_1 = 41
     MENU_TOOLS_2 = 42
     MENU_TOOLS_3 = 43
+    MENU_TOOLS_4 = 44
 
     MENU_ABOUT = 51
 
@@ -95,6 +97,7 @@ class Menu(GUI_BASE):
             tools_menu.add_item("Load remote pcds for tracking", Menu.MENU_TOOLS_1)
             tools_menu.add_item("Load remote images(.png .jpg)", Menu.MENU_TOOLS_2)
             tools_menu.add_item("Load tracking_traj", Menu.MENU_TOOLS_3)
+            tools_menu.add_item("Mesh generating", Menu.MENU_TOOLS_4)
 
             # help menu
             help_menu = gui.Menu()
@@ -125,22 +128,26 @@ class Menu(GUI_BASE):
         # window, so that the window can call the appropriate function when the
         # menu item is activated.
 
+        # menu for file loading
         w.set_on_menu_item_activated(Menu.MENU_OPEN, self._on_pcd_folder)
         w.set_on_menu_item_activated(Menu.MENU_OPEN_REMOTE, self._on_remote_pcd_folder)
         w.set_on_menu_item_activated(Menu.MENU_EXPORT, self._on_menu_export)
         w.set_on_menu_item_activated(Menu.MENU_QUIT, self._on_menu_quit)
 
+        # menu for view settings
         w.set_on_menu_item_activated(Menu.MENU_SHOW_SETTINGS,self._on_menu_toggle_settings_panel)
         w.set_on_menu_item_activated(Menu.MENU_SHOW_WINDOWS,self._on_WINDOW_toggle_settings_panel)
 
-
+        # menu for smpl file loading
         w.set_on_menu_item_activated(Menu.MENU_SCENE, self._on_menu_scene)
         w.set_on_menu_item_activated(Menu.MENU_SMPL, self._on_menu_smpl)
         w.set_on_menu_item_activated(Menu.MENU_TRAJ, self._on_menu_traj)
 
+        # menu for tools functions
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_1, self._on_remote_pcd_folder)
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_2, self._on_remote_imgs)
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_3, self._on_menu_trackingtraj)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_4, self._on_mesh_generating)
 
         w.set_on_menu_item_activated(Menu.MENU_ABOUT, self._on_menu_about)
 
@@ -238,6 +245,21 @@ class Menu(GUI_BASE):
         dlg.set_on_cancel(self._on_file_dialog_cancel)
         dlg.set_on_done(self._load_tracked_traj)
         self.window.show_dialog(dlg)
+
+    def _on_mesh_generating(self):
+        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose traj file to load",
+                             self.window.theme)
+        dlg.add_filter(
+            ".xyz .xyzn .xyzrgb .txt .pcd .pts",
+            "trajectory files (.xyz, .xyzn, .xyzrgb, .txt, .pcd, .pts)")
+
+        dlg.set_on_cancel(self._on_file_dialog_cancel)
+        dlg.set_on_done(self._generate_mesh)
+        self.window.show_dialog(dlg)
+
+    def _generate_mesh(self, path):
+        generate_mesh(path, depth=13, radius=0.1)
+        self.window.close_dialog()
 
     def _load_tracked_traj(self, path, translate=[0,0,0], load_data_class=None):
         import numpy as np
