@@ -25,8 +25,8 @@ from gui_vis.main_gui import o3dvis as base_gui
 
 class ImagWindow(base_gui):
 
-    def __init__(self, width=1280, height=768, is_remote=False):
-        super(ImagWindow, self).__init__(width, height)
+    def __init__(self, width=1280, height=768, is_remote=False, name='MyWindow'):
+        super(ImagWindow, self).__init__(width, height, is_remote, name)
         self.tracked_frame = {}
         self.remote = is_remote
         self._scene.set_on_mouse(self._on_mouse_widget3d)
@@ -212,12 +212,18 @@ class ImagWindow(base_gui):
         except Exception as e:
             self.warning_info(e.args[0])
 
-
-
-def main():
+if __name__ == "__main__":
+    
+    import argparse
+    parser = argparse.ArgumentParser(description='Run Vis Tools')
+    parser.add_argument('--width', type=int, default=1280)  # predicted by IPNet
+    parser.add_argument('--height', type=int, default=720)  # predicted by IPNet
+    parser.add_argument('--name', type=str, default='MyWindow')  # predicted by IPNet
+    args = parser.parse_args()
+    
     gui.Application.instance.initialize()
 
-    w = ImagWindow(1280, 720, is_remote=True)
+    w = ImagWindow(args.width, args.height, name=args.name)
 
     try:
         gui.Application.instance.run()
@@ -225,6 +231,3 @@ def main():
         print(e)
 
     w.close_thread()
-
-if __name__ == "__main__":
-    main()

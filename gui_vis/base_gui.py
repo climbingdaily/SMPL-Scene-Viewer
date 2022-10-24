@@ -59,14 +59,14 @@ class AppWindow:
         Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH, Settings.Transparency, Settings.LitSSR
     ]
 
-    def __init__(self, width, height):
+    def __init__(self, width, height, name='Open3D'):
         self.settings = Settings()
         resource_path = gui.Application.instance.resource_path
         self.settings.new_ibl_name = resource_path + "/" + AppWindow.DEFAULT_IBL
 
         self._make_remote_gui()
         self.window = gui.Application.instance.create_window(
-            "Open3D", width, height)
+            name, width, height)
         w = self.window  # to make the code more concise
 
         # 3D widget

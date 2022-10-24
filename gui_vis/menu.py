@@ -46,8 +46,8 @@ class Menu(GUI_BASE):
 
     MENU_ABOUT = 51
 
-    def __init__(self, width=1280, height=768):
-        super(Menu, self).__init__(width, height)
+    def __init__(self, width=1280, height=768, name='Menu'):
+        super(Menu, self).__init__(width, height, name)
         self.geo_settings = {}
         # self.remote_setting = self._remote_setting()
         self.add_menu()
@@ -68,6 +68,7 @@ class Menu(GUI_BASE):
                 
             # file menu
             file_menu = gui.Menu()
+            file_menu.add_item("Open file...", Menu.MENU_SCENE)
             file_menu.add_item("Open pcds folder...", Menu.MENU_OPEN)
             file_menu.add_item("Open remote pcds folder...", Menu.MENU_OPEN_REMOTE)
             # file_menu.add_item("Open smpl pkl", Menu.MENU_SMPL)
@@ -86,7 +87,6 @@ class Menu(GUI_BASE):
 
             # smpl file tool menu
             smpl_menu = gui.Menu()
-            smpl_menu.add_item("Open scene PCD", Menu.MENU_SCENE)
             smpl_menu.add_item("Open SMPL pkl", Menu.MENU_SMPL)
             smpl_menu.add_item("Load a trajectory", Menu.MENU_TRAJ)
 
@@ -264,6 +264,7 @@ class Menu(GUI_BASE):
         dlg.add_filter(
             ".xyz .xyzn .xyzrgb .ply .pcd .pts",
             "Point cloud files (.xyz, .xyzn, .xyzrgb, .ply, .pcd, .pts)")
+        dlg.add_filter(".obj", "Wavefront OBJ files (.obj)")
 
         dlg.set_on_cancel(self._on_file_dialog_cancel)
         dlg.set_on_done(self.load_scene)

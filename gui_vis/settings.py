@@ -71,8 +71,8 @@ class Setting_panal(GUI_BASE):
     MYTHREAD = None
     IMG_COUNT = 0
 
-    def __init__(self, width=1280, height=720):
-        super(Setting_panal, self).__init__(width, height)
+    def __init__(self, width=1280, height=720, name='Settings'):
+        super(Setting_panal, self).__init__(width, height, name)
         self.total_frames = 1
         self.tracking_list = []
         self.tracked_frame = {}

@@ -64,8 +64,8 @@ class o3dvis(setting, Menu):
     # PAUSE = False
     IMG_COUNT = 0
 
-    def __init__(self, width=1280, height=768, is_remote=False):
-        super(o3dvis, self).__init__(width, height)
+    def __init__(self, width=1280, height=768, is_remote=False, name='MainGui'):
+        super(o3dvis, self).__init__(width, height, name)
         self.scene_name = 'ramdon'
         self.Human_data = HUMAN_DATA(is_remote)
         self.fetched_data = {}
@@ -321,7 +321,7 @@ class o3dvis(setting, Menu):
           freeze: If True, the geometry will be added to the scene as a frozen object. Defaults to False
         """
         if mat is None:
-            mat =self.settings.material 
+            mat = self.settings.material 
         if name is None:
             name = self.scene_name
 

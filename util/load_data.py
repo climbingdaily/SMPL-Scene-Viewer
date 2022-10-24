@@ -327,7 +327,13 @@ class load_data_remote(object):
                 pointcloud = pointcloud.select_by_index(np.arange(len(rule1))[rule]) 
         elif  file_name.endswith('.ply'):
             pointcloud = o3d.io.read_triangle_mesh(file_name)
+            pointcloud.compute_vertex_normals()        
+        elif  file_name.endswith('.obj'):
+            pointcloud = o3d.io.read_triangle_mesh(file_name, True)
+            # pointcloud.textures[0] = [o3d.io.read_image(file_name.replace('.obj', '.jpg'))]
             pointcloud.compute_vertex_normals()
+            # pointcloud = o3d.t.geometry.TriangleMesh.from_legacy(pointcloud)
+
         else:
             pass
         return pointcloud
