@@ -271,9 +271,9 @@ def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024, gen
 
     n = len(poses)
     beta = np.array(beta)
-    if not (beta != 0).sum():
-        beta = np.array([ 0.13718624, -0.32368565,  0.06066366,  0.22490674, -0.3380233 ,
-                          -0.1569234,  0.32280767, -0.00115923, -0.04938826,  0.04286334])
+    # if not (beta != 0).sum():
+    #     beta = np.array([ 0.13718624, -0.32368565,  0.06066366,  0.22490674, -0.3380233 ,
+    #                       -0.1569234,  0.32280767, -0.00115923, -0.04938826,  0.04286334])
     if beta.shape[0] != poses.shape[0] or len(beta.shape) != len(poses.shape):
         beta = beta.squeeze()[None, :].repeat(n, axis=0).astype(np.float32)
 

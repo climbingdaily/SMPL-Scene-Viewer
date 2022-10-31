@@ -68,8 +68,10 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
 
         if tran_str in human_data:
             trans = human_data[tran_str].copy()
-        else:
+        elif trans_str2 is not None and trans_str2 in human_data:
             trans = human_data[trans_str2].copy()
+        else:
+            return
         vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
         verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end]}
         print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
@@ -207,7 +209,7 @@ def load_vis_data(humans, start=0, end=-1):
                     trans = second_person['trans'].copy()
                 local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
                 verts = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'], gender=gender)
-                vis_data['humans']['Second pred'] = {
+                vis_data['humans']['Pred(S)'] = {
                     'verts': verts, 
                     'trans': trans[valid_idx], 
                     'pose': pose[local_id]}
@@ -324,6 +326,8 @@ class HUMAN_DATA:
             rotation = get_head_global_rots(second_pose, parents=[0])
             self.cameras['(p2) 3rd View back +3m'] = make_3rd_view(position, rotation, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0)
             self.cameras['(p2) 3rd View front +3m'] = make_3rd_view(position, rotation, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+            self.cameras['(p2) 3rd View left +3m'] = make_3rd_view(position, rotation, rotz=90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+            self.cameras['(p2) 3rd View right +3m'] = make_3rd_view(position, rotation, rotz=-90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
             # self.cameras['(p2) 3rd View +Y'] = make_3rd_view(position, rotation, rotz=0)
             # self.cameras['(p2) 3rd View -X'] = make_3rd_view(position, rotation, rotz=90)
             # self.cameras['(p2) 3rd View -Y'] = make_3rd_view(position, rotation, rotz=180)
