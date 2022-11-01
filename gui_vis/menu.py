@@ -81,10 +81,10 @@ class Menu(GUI_BASE):
 
             # setting menu
             settings_menu = gui.Menu()
-            settings_menu.add_item("Settings",Menu.MENU_SHOW_SETTINGS)
+            # settings_menu.add_item("Settings",Menu.MENU_SHOW_SETTINGS)
             settings_menu.add_item("Window 0", Menu.MENU_SHOW_WINDOWS)
 
-            settings_menu.set_checked(Menu.MENU_SHOW_SETTINGS, True)
+            # settings_menu.set_checked(Menu.MENU_SHOW_SETTINGS, True)
             settings_menu.set_checked(Menu.MENU_SHOW_WINDOWS, True)
 
             # smpl file tool menu
@@ -135,7 +135,7 @@ class Menu(GUI_BASE):
         w.set_on_menu_item_activated(Menu.MENU_QUIT, self._on_menu_quit)
 
         # menu for view settings
-        w.set_on_menu_item_activated(Menu.MENU_SHOW_SETTINGS,self._on_menu_toggle_settings_panel)
+        # w.set_on_menu_item_activated(Menu.MENU_SHOW_SETTINGS,self._on_menu_toggle_settings_panel)
         w.set_on_menu_item_activated(Menu.MENU_SHOW_WINDOWS,self._on_WINDOW_toggle_settings_panel)
 
         # menu for smpl file loading

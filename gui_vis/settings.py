@@ -131,19 +131,23 @@ class Setting_panal(GUI_BASE):
             else:
                 w = int(h/720*1280)
             return w, h
-        w, h = resize_1280(r.width, r.height - play_btn_height)
-        # self._scene.frame = gui.Rect(0, 0, 1280, 720)
-        if not self._settings_panel.visible:
-            self._scene.frame = gui.Rect(r.get_left(), r.y, w, h)
-        else:
-            self._scene.frame = gui.Rect(r.get_left() + setting_width, r.y, w, h)
 
+        if not self._settings_panel.visible:
+            w, h = resize_1280(r.width, r.height - play_btn_height)
+            self._scene.frame = gui.Rect(int((r.width - w)/2), r.y, w, h)
+            self.stream_setting.frame = gui.Rect(
+                r.get_left(), r.get_bottom() - pref.height, r.width, pref.height)
+        else:
+            w, h = resize_1280(r.width - setting_width, r.height - play_btn_height)
+            self._scene.frame = gui.Rect(r.get_left() + setting_width, r.y, w, h)
+            height = max(pref.height, r.get_bottom() - h)
+            self.stream_setting.frame = gui.Rect(
+                r.get_left() + setting_width, r.get_bottom() - height, r.width - setting_width, height)
+
+        self._settings_panel.frame = gui.Rect(r.get_left(), r.y, setting_width, r.height)
         self._scene_traj.frame = gui.Rect(r.width * 3/4, r.y, r.width/4, r.height/4)
-        self._settings_panel.frame = gui.Rect(r.get_left(), r.y, setting_width, r.height - play_btn_height)
         # self.stream_setting.frame = gui.Rect(
         #     (r.width-bar_width)/2, r.get_bottom() - pref.height, bar_width, pref.height)
-        self.stream_setting.frame = gui.Rect(
-            r.get_left(), r.get_bottom() - pref.height, r.width, pref.height)
 
     def create_stream_settings(self):
         em = self.window.theme.font_size
