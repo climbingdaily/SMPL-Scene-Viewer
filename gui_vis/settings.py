@@ -452,7 +452,7 @@ class Setting_panal(GUI_BASE):
         Setting_panal.SCALE = int(value)
         for name, g in self.geo_list.items():
             g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
-            g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
+            # g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g['geometry'], name)
 
     def _on_camera_view(self, show):
