@@ -65,6 +65,7 @@ class Setting_panal(GUI_BASE):
     PAUSE = False
     POV = 'first'
     RENDER = False
+    VIDEO_SAVE = False
     CLICKED = False
     INTRINSIC_FACTOR = 1
     SCALE = 1
@@ -171,7 +172,8 @@ class Setting_panal(GUI_BASE):
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
-        add_Switch(h2, 'Auto Render', self.change_render_states)
+        add_Switch(h2, 'Render Img', self._change_render_states)
+        add_btn(h2, 'Save Video', self._click_video_saving)
 
         vert_layout.add_child(horiz_layout)
         vert_layout.add_child(h2)
@@ -491,8 +493,11 @@ class Setting_panal(GUI_BASE):
         if self.frame_slider_bar.int_value > 0:
             self._on_slider(self.frame_slider_bar.int_value-1)
 
-    def change_render_states(self, render):
-        Setting_panal.RENDER = render
+    def _change_render_states(self, is_render):
+        Setting_panal.RENDER = is_render
+        
+    def _click_video_saving(self):
+        Setting_panal.VIDEO_SAVE = True
 
     def _clicked(self):
         Setting_panal.CLICKED = False
@@ -563,6 +568,7 @@ class Setting_panal(GUI_BASE):
 
     def reset_settings(self):
         Setting_panal.IMG_COUNT = 0
+        Setting_panal.VIDEO_SAVE = False
         # Setting_panal.FREE_VIEW = False
         # Setting_panal.PAUSE = False
         # Setting_panal.POV = 'first'
@@ -577,12 +583,30 @@ class Setting_panal(GUI_BASE):
         """
         initialized = False
         self._set_slider_limit(0, self.total_frames - 1)
-        while True:
+        def set_video_name():
             try:
                 video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             except Exception as e:
                 video_name = 'test' + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
+            return video_name
+
+        def save_video(image_dir, video_name, delete=True):
+            if Setting_panal.VIDEO_SAVE:
+                try:
+                    info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
+                    video_name = set_video_name()
+                    self.warning_info(info, type='info')
+                except Exception as e:
+                    self.warning_info(e.args[0])
+                Setting_panal.VIDEO_SAVE = False
+                Setting_panal.IMG_COUNT = 0
+                if not Setting_panal.PAUSE:
+                    self.change_pause_status()
+
+        while True:
+            video_name = set_video_name()
             image_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f'temp_{video_name}')
+
             self.reset_settings()
             self._set_slider_value(0)
 
@@ -598,9 +622,12 @@ class Setting_panal(GUI_BASE):
 
                 initialized = True
 
-                if Setting_panal.RENDER:
+                if Setting_panal.RENDER and not Setting_panal.PAUSE:
                     gui.Application.instance.post_to_main_thread(self.window, lambda: self.save_imgs(image_dir))
                     time.sleep(0.02)
+
+                if Setting_panal.VIDEO_SAVE:
+                    video_name = save_video(image_dir, video_name)
 
                 while True:
                     time.sleep(0.01)
@@ -617,13 +644,16 @@ class Setting_panal(GUI_BASE):
                             print(e)
                             
                         self._clicked()
+
+                    if Setting_panal.VIDEO_SAVE:
+                        video_name = save_video(image_dir, video_name)
+
                     if not Setting_panal.PAUSE:
                         break
                     
                 self._set_slider_value(index+1)
 
-            images_to_video(image_dir, video_name, delete=True, inpu_fps=20)
-            # Setting_panal.RENDER = False
+            video_name = save_video(image_dir, video_name, delete=True)
 
             self._on_slider(0)
 

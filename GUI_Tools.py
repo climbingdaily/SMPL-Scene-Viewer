@@ -82,7 +82,6 @@ class ImagWindow(base_gui):
         image = self.data_loader.load_imgs(self.tracking_foler + '/' + self.tracking_list[index])
         return {'imgs': image}
 
-
     def _on_mouse_widget3d(self, event):
         """
         It takes the mouse click event, and then uses the depth image to get the 3D coordinates of the point
