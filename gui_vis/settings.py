@@ -58,7 +58,7 @@ def add_box(layout, name, func, checked=False):
     return box
 
 class Setting_panal(GUI_BASE):
-    TRACKING_STEP = 50
+    TRACKING_STEP = 1
     FREEZE = False
     FREE_VIEW = False
     FIX_CAMERA = False
@@ -109,27 +109,41 @@ class Setting_panal(GUI_BASE):
 
     def _on_setting_layout(self, layout_context):
         r = self.window.content_rect
-        # self._scene.frame = gui.Rect(0, 0, 1280, 720)
-        self._scene.frame = r
-        self._scene_traj.frame = gui.Rect(r.width * 3/4, r.y, r.width/4, r.height/4)
 
-        width = 17 * layout_context.theme.font_size
         pref = self.stream_setting.calc_preferred_size(layout_context,
                                              gui.Widget.Constraints())
         play_btn_height = min(r.height, pref.height)
 
-        height = min(
+        setting_width = 17 * layout_context.theme.font_size
+        setting_height = min(
             r.height - play_btn_height,
             self._settings_panel.calc_preferred_size(
                 layout_context, gui.Widget.Constraints()).height)
         # self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
-        self._settings_panel.frame = gui.Rect(r.get_left(), r.y, width, height)
 
         bar_width = pref.width if r.width / 2 < pref.width else r.width/2
         bar_width = min(bar_width, r.width)
         # leftup x, leftup y, width, height
+
+        def resize_1280(w, h):
+            if h >= int(w/1280*720):
+                h = int(w/1280*720)
+            else:
+                w = int(h/720*1280)
+            return w, h
+        w, h = resize_1280(r.width, r.height - play_btn_height)
+        # self._scene.frame = gui.Rect(0, 0, 1280, 720)
+        if not self._settings_panel.visible:
+            self._scene.frame = gui.Rect(r.get_left(), r.y, w, h)
+        else:
+            self._scene.frame = gui.Rect(r.get_left() + setting_width, r.y, w, h)
+
+        self._scene_traj.frame = gui.Rect(r.width * 3/4, r.y, r.width/4, r.height/4)
+        self._settings_panel.frame = gui.Rect(r.get_left(), r.y, setting_width, r.height - play_btn_height)
+        # self.stream_setting.frame = gui.Rect(
+        #     (r.width-bar_width)/2, r.get_bottom() - pref.height, bar_width, pref.height)
         self.stream_setting.frame = gui.Rect(
-            (r.width-bar_width)/2, r.get_bottom() - pref.height, bar_width, pref.height)
+            r.get_left(), r.get_bottom() - pref.height, r.width, pref.height)
 
     def create_stream_settings(self):
         em = self.window.theme.font_size
@@ -371,7 +385,7 @@ class Setting_panal(GUI_BASE):
         tabs = gui.Vert(0.15 * em)
         # check_boxes = gui.VGrid(2, 0.15 * em)
         data_list = gui.Horiz(0.15 * em)
-        data_list.preferred_height = 15 * em
+        data_list.preferred_height = 25 * em
         self.check_boxes = gui.TreeView()
         data_list.add_child(self.check_boxes)
         self.check_boxes.set_on_selection_changed(self._on_tree)
