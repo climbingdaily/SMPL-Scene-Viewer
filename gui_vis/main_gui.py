@@ -405,6 +405,19 @@ class o3dvis(setting, Menu):
         ex = self.get_camera()
         return -ex[:3, :3].T @ ex[:3, 3]
 
+    def camera_fix(self, axsis = 'roll', extrinsic=None):
+        if extrinsic is None:
+            extrinsic = self.get_camera()
+        cam = np.eye(4)
+        cam[:3, :3] = extrinsic[:3, :3].T @ np.array([[1,0,0],[0,-1,0],[0,0,-1]])
+        cam[:3, 3] =  -extrinsic[:3, :3].T @ extrinsic[:3, 3]
+        cam_pos = cam[:3, 3]
+        if axsis == 'roll':
+            z_direction = cam[:3, 2]    # cam's Z direction in world coordinates
+            world = cam_pos - 4 * z_direction
+            up = self.COOR_INIT[:3, :3] @ np.array([0,0,1])
+        self._scene.look_at(world, cam_pos, up)
+
     def init_camera(self, extrinsic_matrix=None): 
         """
         > The function `init_camera` sets up the camera for the scene. 
@@ -433,13 +446,15 @@ class o3dvis(setting, Menu):
         self.intrinsic = np.array([[fx, 0., cx],
                                     [0. , fy, cy],
                                     [0. , 0., 1.]])
-
         if o3dvis.FIX_CAMERA or extrinsic_matrix is None:
             extrinsic_matrix = self.get_camera()
 
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
         self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
-        # self._scene_traj.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
+
+        if self._fix_roll.is_on:
+            self.camera_fix('roll')
+
 
     def make_material(self, geometry, name, gtype, is_archive=False, point_size=2, color=[0.9, 0.9, 0.9, 1.0]):
         if is_archive:

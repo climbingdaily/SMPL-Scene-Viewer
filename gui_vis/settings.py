@@ -404,6 +404,7 @@ class Setting_panal(GUI_BASE):
             pass
 
         cameras = create_combobox(self._on_select_camera)
+        self._fix_roll = gui.ToggleSwitch('')
         cam_grid = gui.VGrid(2, 0.25 * em)
         cam_grid.add_child(gui.Label('POV'))
         cam_grid.add_child(cameras)
@@ -411,6 +412,10 @@ class Setting_panal(GUI_BASE):
         cam_grid.add_child(factor_slider)
         cam_grid.add_child(gui.Label('Geometry scale'))
         cam_grid.add_child(scale_slider)
+        cam_grid.add_child(gui.Label('Fix Roll'))
+        cam_grid.add_child(self._fix_roll)
+        cam_grid.add_child(creat_btn('+ Up', self.camera_fix))
+        # cam_grid.add_child(scale_slider)
 
         # horz = gui.Horiz(0.25 * em)
         # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
