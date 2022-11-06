@@ -123,7 +123,7 @@ class ImagWindow(base_gui):
                     world = self._scene.scene.camera.unproject(
                         x, y, depth, self._scene.frame.width,
                         self._scene.frame.height)
-                    frame = self._get_slider_value()
+                    frame = self._get_slider_value() + ImagWindow._START_FRAME_NUM
                     gui.Application.instance.post_to_main_thread(
                         self.window, lambda: self.update_label(world, frame))
 

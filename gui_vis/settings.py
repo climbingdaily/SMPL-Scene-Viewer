@@ -71,6 +71,7 @@ class Setting_panal(GUI_BASE):
     SCALE = 1
     MYTHREAD = None
     IMG_COUNT = 0
+    _START_FRAME_NUM = 0
 
     def __init__(self, width=1280, height=720, name='Settings'):
         super(Setting_panal, self).__init__(width, height, name)
@@ -251,7 +252,7 @@ class Setting_panal(GUI_BASE):
             del self.tracked_frame[frame]
             self.update_tracked_points()
         else:
-            self._on_slider(frame)
+            self._on_slider(frame -  Setting_panal._START_FRAME_NUM)
             world = new_val.split(':')[1].split(',')
             try:
                 world = self.COOR_INIT[:3, :3] @ np.array([float(v.strip().split(' ')[0]) for v in world])

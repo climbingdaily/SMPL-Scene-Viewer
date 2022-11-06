@@ -126,7 +126,7 @@ class o3dvis(setting, Menu):
         
         if self.Human_data:
             self.tracking_setting.visible = True
-
+            setting._START_FRAME_NUM = self.Human_data.humans['frame_num'][0]
             humans = self.Human_data.vis_data_list['humans']
             keys = list(humans.keys())
             self.total_frames = humans[keys[0]]['verts'].shape[0]
@@ -179,6 +179,7 @@ class o3dvis(setting, Menu):
             try:
                 start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
                 self.tracking_list = self.tracking_list[start:end+1]
+
             except Exception as e:
                 # self.update_data = setting.update_data
                 self.frame_slider_bar.enabled = True
