@@ -275,7 +275,7 @@ class Menu(GUI_BASE):
             return 
 
         if trajs.shape[1] > 5 or trajs.shape[1] < 4:
-            self.warning_info("Tracking trajs must contains: 'x y z frameid time' in every line!!!")
+            self.warning_info("Tracking trajs must contains: 'x y z frameid' in every line!!!")
             return 
 
         return trajs

@@ -201,7 +201,10 @@ class ImagWindow(base_gui):
         try:
             keys = sorted(list(self.tracked_frame.keys()))
             positions = [self.tracked_frame[frame][1].position for frame in keys]
-            times = [float(self.tracking_list[frame].split('.')[0].replace('_', '.')) for frame in keys]
+            try:
+                times = [float(self.tracking_list[frame].split('.')[0].replace('_', '.')) for frame in keys]
+            except Exception as e:
+                times = [0] * len(keys)
             traj = np.hstack((np.array(positions) @ self.COOR_INIT[:3, :3], 
                             np.array(keys)[:, None], 
                             np.array(times)[:, None]))
