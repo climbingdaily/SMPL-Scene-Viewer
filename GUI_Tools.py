@@ -123,7 +123,7 @@ class ImagWindow(base_gui):
                     world = self._scene.scene.camera.unproject(
                         x, y, depth, self._scene.frame.width,
                         self._scene.frame.height)
-                    frame = self._get_slider_value() + ImagWindow._START_FRAME_NUM
+                    frame = self._get_slider_value()
                     gui.Application.instance.post_to_main_thread(
                         self.window, lambda: self.update_label(world, frame))
 
@@ -138,10 +138,10 @@ class ImagWindow(base_gui):
             position[0], position[1], position[2])
         try:
             time = self.tracking_list[frame].split('.')[0].replace('_', '.')
-            text = f'{text} time: {time}'
+            text = f'{text} T: {time}'
         except:
             pass
-
+        frame += ImagWindow._START_FRAME_NUM
         def create_sphere(world):
             ratio = min(frame / self._get_max_slider_value(), 1)
             # name = f'{frame}_trkpts'
