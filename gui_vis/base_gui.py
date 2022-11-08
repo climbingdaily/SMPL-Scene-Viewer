@@ -80,8 +80,8 @@ class AppWindow:
         self._scene_traj.visible = False
 
         # geometry type list
-        self.geo_list = {}
-
+        self._geo_list = {}
+        self._camera_list = {}
         # ---- Settings panel ----
         # Rather than specifying sizes in pixels, which may vary in size based
         # on the monitor, especially on macOS which has 220 dpi monitors, use
@@ -363,14 +363,14 @@ class AppWindow:
             # self._scene.scene.update_material(self.settings.material)
             # update material for point cloud
             if self.point_box.checked:
-                for name in self.geo_list:
-                    if 'point' == self.geo_list[name]['type']:
+                for name in self._geo_list:
+                    if 'point' == self._geo_list[name]['type']:
                         scene.modify_geometry_material(name, self.settings.material)
 
             # update material for mesh
             if self.mesh_box.checked:
-                for name in self.geo_list:
-                    if 'mesh' == self.geo_list[name]['type']:
+                for name in self._geo_list:
+                    if 'mesh' == self._geo_list[name]['type']:
                         scene.modify_geometry_material(name, self.settings.material)
 
             self.settings.apply_material = False
@@ -536,7 +536,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
-                self.geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
+                self._geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -556,7 +556,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
-                self.geo_list[name] = {'geometry': geometry, 'type': 'point'}
+                self._geo_list[name] = {'geometry': geometry, 'type': 'point'}
             else:
                 print("[WARNING] Failed to read points", path)
 

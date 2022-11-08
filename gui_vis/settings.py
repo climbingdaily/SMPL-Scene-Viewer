@@ -18,6 +18,7 @@ import os
 import time
 import cv2
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 sys.path.append('.')
 sys.path.append('..')
@@ -193,6 +194,7 @@ class Setting_panal(GUI_BASE):
         h2.add_child(self._show_ground_plane)
         add_Switch(h2, 'Render Img', self._change_render_states)
         add_btn(h2, 'Save Video', self._click_video_saving)
+        add_btn(h2, 'Get camera', lambda: self._click_camera_saving(True))
 
         vert_layout.add_child(horiz_layout)
         vert_layout.add_child(h2)
@@ -245,7 +247,7 @@ class Setting_panal(GUI_BASE):
         if is_dbl_click:
             self._scene.remove_3d_label(self.tracked_frame[frame][1])
             try:
-                self._on_freeze_list(f'{frame}_freeze_{frame}_trkpts', True)
+                self._on_freeze_list(f'{frame-Setting_panal._START_FRAME_NUM}_freeze_{frame}_trkpts', True)
             except Exception as e:
                 print(e)
 
@@ -268,21 +270,26 @@ class Setting_panal(GUI_BASE):
         items = [self.tracked_frame[k][0] for k in keys]
         self.trackpoints_list.set_items(items)
         self.window.set_needs_layout()
+        
+    def update_tracked_cameras(self):
+        keys = sorted(list(self._camera_list))
+        self.camera_list_view.set_items(keys)
+        self.window.set_needs_layout()
 
     def add_freeze_data(self, name, geometry, mat):
         frameidx = self._get_slider_value()
 
-        if not self.geo_list[name]['freeze']:
+        if not self._geo_list[name]['freeze']:
             fname = f'{frameidx}_freeze_{name}' 
         else:
             fname = name
 
-        self.geo_list[fname] = {
+        self._geo_list[fname] = {
             'geometry': geometry, 
-            'type': self.geo_list[name]['type'], 
+            'type': self._geo_list[name]['type'], 
             'box': self.freeze_box,
-            'mat': self.geo_list[name]['mat'], 
-            'archive': self.geo_list[name]['archive'],
+            'mat': self._geo_list[name]['mat'], 
+            'archive': self._geo_list[name]['archive'],
             'freeze': True}
 
         self.remove_geometry(fname)
@@ -295,17 +302,76 @@ class Setting_panal(GUI_BASE):
         if is_dbl_click:
             self.remove_geometry(new_val)
             try:
-                self.geo_list.pop(new_val)
+                self._geo_list.pop(new_val)
             except Exception as e:
                 print(e)
             self.update_frozen_points()
         else:
             print(new_val)
+            
+    def _on_camera_list(self, new_val, is_dbl_click):
+        if is_dbl_click:
+            self.remove_geometry(new_val)
+            try:
+                self._camera_list.pop(new_val)
+            except Exception as e:
+                print(e)
+            self.update_tracked_cameras()
+        else:
+            try:
+                ex = np.array(self._camera_list[new_val]['extrinsic']).reshape(4,4)
+                self.init_camera(ex @ self.COOR_INIT, int(self._camera_list[new_val]['intrin_scale']))
+            except Exception as e:
+                self.warning_info(e.args[0])
+            # print(new_val)
 
+    def _load_camera_list(self):
+        import json
+        def load_json(path):
+            self.window.close_dialog()
+            try:
+                with open(path, 'r') as fb:
+                    self._camera_list.update(json.load(fb))
+                self.update_tracked_cameras()
+            except Exception as e:
+                print(e.args[0])
+
+        dlg = gui.FileDialog(gui.FileDialog.OPEN, "Choose camera file to load",
+                             self.window.theme)
+        dlg.add_filter(
+            ".json",
+            "JSON files (.json)")
+
+        dlg.set_on_cancel(self.window.close_dialog)
+        dlg.set_on_done(load_json)
+        self.window.show_dialog(dlg)
+
+    def _save_camera_list(self):
+        import json
+
+        def save_came(path):
+            try:
+                with open(path, 'w') as fp:
+                    for cam in self._camera_list:
+                        self._camera_list[cam]['extrinsic'] = self._camera_list[cam]['extrinsic'].tolist()
+                    json.dump(self._camera_list, fp, indent=4)
+                self.warning_info(f'Camera list saved in {path}', 'INFO')
+            except Exception as e:
+                self.warning_info(e.args[0])  
+
+        dlg = gui.FileDialog(gui.FileDialog.SAVE, "Choose file to save",
+                             self.window.theme)
+        dlg.add_filter(".json", "JSON files (.json)")
+        dlg.set_on_cancel(self.window.close_dialog)
+
+        dlg.set_on_done(save_came)
+        self.window.show_dialog(dlg)   
+
+    
     def update_frozen_points(self):
         frozen_list = []
-        for name in self.geo_list:
-            if self.geo_list[name]['freeze']:
+        for name in self._geo_list:
+            if self._geo_list[name]['freeze']:
                 frozen_list.append(name)
         self.frozen_list.set_items(frozen_list)
         self.window.set_needs_layout()
@@ -421,11 +487,19 @@ class Setting_panal(GUI_BASE):
         # horz = gui.Horiz(0.25 * em)
         # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
         # add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
+        self.camera_list_view = gui.ListView()
+        self.camera_list_view.set_max_visible_items(15)
+        self.camera_list_view.set_on_selection_changed(self._on_camera_list)
 
         tab2 = gui.Vert(0.25 * em)
         # tab2 = gui.CollapsableVert("Cameras", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
         tab2.add_child(cam_grid)
+        tab2.add_child(gui.Label('Camera lists') )
+        tab2.add_child(self.camera_list_view)
+        tab2.add_child(creat_btn('Save cameras', self._save_camera_list))
+        tab2.add_child(creat_btn('load cameras', self._load_camera_list))
+        
         # tab2.add_child(horz)
 
         temp_layout = gui.Horiz(0.25 * em)
@@ -460,7 +534,7 @@ class Setting_panal(GUI_BASE):
     def _on_scale_slider(self, value):
         pre_scale = Setting_panal.SCALE
         Setting_panal.SCALE = int(value)
-        for name, g in self.geo_list.items():
+        for name, g in self._geo_list.items():
             g['geometry'].scale(1/pre_scale, (0.0, 0.0, 0.0))
             # g['geometry'].rotate(self.COOR_INIT[:3, :3].T, self.COOR_INIT[:3, 3])
             self.update_geometry(g['geometry'], name)
@@ -479,12 +553,12 @@ class Setting_panal(GUI_BASE):
         Setting_panal.CLICKED = True
 
     def _clear_freeze(self):
-        nlist = [k for k in self.geo_list]
+        nlist = [k for k in self._geo_list]
         for name in nlist:
-            if self.geo_list[name]['freeze']:
+            if self._geo_list[name]['freeze']:
                 self.remove_geometry(name)
 
-                self.geo_list.pop(name)
+                self._geo_list.pop(name)
 
         self.update_frozen_points()
 
@@ -500,12 +574,12 @@ class Setting_panal(GUI_BASE):
         Setting_panal.FREEZE = False
 
     def _on_show_geometry(self, show):
-        for name, data in self.geo_list.items():
+        for name, data in self._geo_list.items():
             self._scene.scene.show_geometry(name, data['box'].checked)
             self._scene_traj.scene.show_geometry(name, data['box'].checked)
             if data['freeze'] == True and data['box'].checked:
                 origin_name = name.split('_freeze_')[-1]
-                box = self.geo_list[origin_name]['box']
+                box = self._geo_list[origin_name]['box']
                 self._scene.scene.show_geometry(name, box.checked)
                 self._scene_traj.scene.show_geometry(name, box.checked)
         # self._apply_settings()
@@ -522,6 +596,30 @@ class Setting_panal(GUI_BASE):
         
     def _click_video_saving(self):
         Setting_panal.VIDEO_SAVE = True
+
+    def _click_camera_saving(self, is_print=True):
+        extrinsic = self._scene.scene.camera.get_view_matrix()
+        extrinsic[1, :] = - extrinsic[1, :]
+        extrinsic[2, :] = - extrinsic[2, :]
+        extrinsic[:3, 3] /= self.SCALE 
+
+        extrinsic = extrinsic @ self.COOR_INIT
+        cam_pose = self._scene.scene.camera.get_model_matrix()
+        cam_pose = self.COOR_INIT @ cam_pose
+        if is_print:
+            quat = R.from_matrix(cam_pose[:3, :3]).as_quat()
+            print(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}')
+            self.warning_info(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}', type='Extrinsic')
+
+        frame = self._get_slider_value()
+        cam_name = f'cam_{frame}'
+        while cam_name in self._camera_list:
+            cam_name = f'cam_{frame+1}_manual'
+            frame +=1
+        self._camera_list[cam_name] = {'extrinsic': extrinsic, 
+                                       'intrin_scale': Setting_panal.INTRINSIC_FACTOR}
+        self.update_tracked_cameras()
+        return extrinsic, cam_pose
 
     def _clicked(self):
         Setting_panal.CLICKED = False
@@ -699,9 +797,9 @@ class Setting_panal(GUI_BASE):
         # your function here
         name = 'Tracking frame'
         geometry = self.get_tracking_data(index)
-        if len(geometry.points) > 0 and name not in self.geo_list:
+        if len(geometry.points) > 0 and name not in self._geo_list:
             self.make_material(geometry, name, 'point', is_archive=False)
-            self.geo_list[name]['mat'].material.point_size = 8
+            self._geo_list[name]['mat'].material.point_size = 8
         return {name: geometry}
 
     def update_data(self, data, initialized=True):

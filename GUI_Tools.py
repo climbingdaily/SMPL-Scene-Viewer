@@ -123,7 +123,7 @@ class ImagWindow(base_gui):
                     world = self._scene.scene.camera.unproject(
                         x, y, depth, self._scene.frame.width,
                         self._scene.frame.height)
-                    frame = self._get_slider_value()
+                    frame = self._get_slider_value() +  ImagWindow._START_FRAME_NUM
                     gui.Application.instance.post_to_main_thread(
                         self.window, lambda: self.update_label(world, frame))
 
@@ -137,11 +137,10 @@ class ImagWindow(base_gui):
         text = "{:.3f}, {:.3f}, {:.3f}".format(
             position[0], position[1], position[2])
         try:
-            time = self.tracking_list[frame].split('.')[0].replace('_', '.')
+            time = self.tracking_list[frame - ImagWindow._START_FRAME_NUM].split('.')[0].replace('_', '.')
             text = f'{text} T: {time}'
         except:
             pass
-        frame += ImagWindow._START_FRAME_NUM
         def create_sphere(world):
             ratio = min(frame / self._get_max_slider_value(), 1)
             # name = f'{frame}_trkpts'
@@ -149,7 +148,7 @@ class ImagWindow(base_gui):
             # point.points = o3d.utility.Vector3dVector(position.reshape(-1, 3))
             # point.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
 
-            # if name not in self.geo_list:
+            # if name not in self._geo_list:
             #     self.make_material(point, name, 'point', is_archive=False, point_size=9)
             # self.update_geometry(
             #     point, name, reset_bounding_box=False, freeze=True)
@@ -191,7 +190,7 @@ class ImagWindow(base_gui):
         trajs = super(base_gui, self)._load_tracked_traj(path, translate, load_data_class)
         if trajs is not None:
             for p in trajs:
-                self._set_slider_value(int(p[3]))
+                self._set_slider_value(int(p[3]) - self._START_FRAME_NUM)
                 self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))
 
     def _save_traj(self):

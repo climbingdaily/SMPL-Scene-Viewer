@@ -274,7 +274,7 @@ class o3dvis(setting, Menu):
 
         if len(self.tracking_list)>0:
             try:
-                if 'LiDAR frame' not in self.geo_list or self.geo_list['LiDAR frame']['box'].checked:
+                if 'LiDAR frame' not in self._geo_list or self._geo_list['LiDAR frame']['box'].checked:
                     point_cloud = self.get_tracking_data(ind)
                     if len(point_cloud.points) > 0:
                         self.fetched_data['LiDAR frame'] = point_cloud
@@ -351,10 +351,10 @@ class o3dvis(setting, Menu):
                 # print("[Info]", "not pointcloud or mesh.")
                 return 
 
-        if name not in self.geo_list:
+        if name not in self._geo_list:
             self.make_material(geometry, name, gtype, archive, point_size=2)
 
-        if self.geo_list[name]['box'].checked and geometry:
+        if self._geo_list[name]['box'].checked and geometry:
             
             if 'seg_traj' in name:
                 geometry = sample_traj(geometry)
@@ -363,13 +363,13 @@ class o3dvis(setting, Menu):
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
             self.remove_geometry(name)
             if freeze:
-                self.add_freeze_data(name, geometry, self.geo_list[name]['mat'].material)
+                self.add_freeze_data(name, geometry, self._geo_list[name]['mat'].material)
             else:
-                self._scene.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                self._scene.scene.add_geometry(name, geometry, self._geo_list[name]['mat'].material)
                 self._scene.scene.set_geometry_transform(name, self.COOR_INIT)
 
                 if self._scene_traj.visible:
-                    self._scene_traj.scene.add_geometry(name, geometry, self.geo_list[name]['mat'].material)
+                    self._scene_traj.scene.add_geometry(name, geometry, self._geo_list[name]['mat'].material)
                     self._scene_traj.scene.set_geometry_transform(name, self.COOR_INIT)
 
         else:
@@ -419,7 +419,7 @@ class o3dvis(setting, Menu):
             up = self.COOR_INIT[:3, :3] @ np.array([0,0,1])
         self._scene.look_at(world, cam_pos, up)
 
-    def init_camera(self, extrinsic_matrix=None): 
+    def init_camera(self, extrinsic_matrix=None, intrinsic_factor=None): 
         """
         > The function `init_camera` sets up the camera for the scene. 
         
@@ -443,7 +443,9 @@ class o3dvis(setting, Menu):
         y = self._scene.frame.height
 
         cx, cy = x/2, y/2
-        fx = fy = cx * o3dvis.INTRINSIC_FACTOR
+        if intrinsic_factor is None:
+            intrinsic_factor = o3dvis.INTRINSIC_FACTOR
+        fx = fy = cx * intrinsic_factor
         self.intrinsic = np.array([[fx, 0., cx],
                                     [0. , fy, cy],
                                     [0. , 0., 1.]])
@@ -483,7 +485,7 @@ class o3dvis(setting, Menu):
         settings.material.base_color = color
         # settings.apply_material_prefab(settings.DEFAULT_MATERIAL_NAME)
 
-        self.geo_list[name] = {
+        self._geo_list[name] = {
             'geometry': geometry, 
             'type': gtype, 
             'box': box,
