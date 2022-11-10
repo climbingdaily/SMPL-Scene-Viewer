@@ -194,7 +194,6 @@ class Setting_panal(GUI_BASE):
         h2.add_child(self._show_ground_plane)
         add_Switch(h2, 'Render Img', self._change_render_states)
         add_btn(h2, 'Save Video', self._click_video_saving)
-        add_btn(h2, 'Get camera', lambda: self._click_camera_saving(True))
 
         vert_layout.add_child(horiz_layout)
         vert_layout.add_child(h2)
@@ -320,7 +319,7 @@ class Setting_panal(GUI_BASE):
         else:
             try:
                 ex = np.array(self._camera_list[new_val]['extrinsic']).reshape(4,4)
-                self.init_camera(ex @ self.COOR_INIT, int(self._camera_list[new_val]['intrin_scale']))
+                self.init_camera(ex @ self.COOR_INIT, self._camera_list[new_val]['intrin_scale'])
             except Exception as e:
                 self.warning_info(e.args[0])
             # print(new_val)
@@ -351,9 +350,9 @@ class Setting_panal(GUI_BASE):
 
         def save_came(path):
             try:
+                for cam in self._camera_list:
+                    self._camera_list[cam]['extrinsic'] = np.array(self._camera_list[cam]['extrinsic']).tolist()
                 with open(path, 'w') as fp:
-                    for cam in self._camera_list:
-                        self._camera_list[cam]['extrinsic'] = self._camera_list[cam]['extrinsic'].tolist()
                     json.dump(self._camera_list, fp, indent=4)
                 self.warning_info(f'Camera list saved in {path}', 'INFO')
             except Exception as e:
@@ -497,8 +496,10 @@ class Setting_panal(GUI_BASE):
         tab2.add_child(cam_grid)
         tab2.add_child(gui.Label('Camera lists') )
         tab2.add_child(self.camera_list_view)
-        tab2.add_child(creat_btn('Save cameras', self._save_camera_list))
-        tab2.add_child(creat_btn('load cameras', self._load_camera_list))
+        tab2.add_child(creat_btn('Add camera', lambda: self._click_camera_saving(True)))
+        tab2.add_fixed(separation_height)
+        tab2.add_child(creat_btn('Export cameras', self._save_camera_list))
+        tab2.add_child(creat_btn('Load cameras', self._load_camera_list))
         
         # tab2.add_child(horz)
 
