@@ -30,7 +30,7 @@ POSE_KEY = ['Ours(F)', 'Baseline2(F)',
             'Baseline2(S)', 'Ours(S)',
             'Baseline1(F)', 'Baseline1(S)', 
             'Pred(S)', 'Ours_opt(F)',
-            'GLAMR(S)']
+            'GLAMR(S)', 'GLAMR_our_trans(S)']
 
 POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
 for i, color in enumerate(POSE_KEY):
