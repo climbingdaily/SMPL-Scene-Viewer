@@ -26,8 +26,12 @@ from util import load_scene as load_pts
 
 sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'smpl', 'sample.ply')
 
-POSE_KEY = ['Ours(F)', 'Baseline2(F)', 'Baseline2(S)', 'Ours(S)',
-            'Baseline1(F)', 'Baseline1(S)', 'Pred(S)', 'Ours_opt(F)']
+POSE_KEY = ['Ours(F)', 'Baseline2(F)', 
+            'Baseline2(S)', 'Ours(S)',
+            'Baseline1(F)', 'Baseline1(S)', 
+            'Pred(S)', 'Ours_opt(F)',
+            'GLAMR(S)']
+
 POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
