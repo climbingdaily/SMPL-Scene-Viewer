@@ -199,7 +199,7 @@ def load_vis_data(humans, start=0, end=-1):
                         end, 
                         'glamr_pose',
                         'opt_trans', 
-                        info='GLAMR(S)')
+                        info='GLAMR_our_trans(S)')
 
         load_human_mesh(vis_data['humans'], 
                         second_person, 
