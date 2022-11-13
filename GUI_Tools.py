@@ -226,9 +226,6 @@ if __name__ == "__main__":
 
     w = ImagWindow(args.width, args.height, name=args.name)
 
-    try:
-        gui.Application.instance.run()
-    except Exception as e:
-        print(e)
+    gui.Application.instance.run()
 
     w.close_thread()

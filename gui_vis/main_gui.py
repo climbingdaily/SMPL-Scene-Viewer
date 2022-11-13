@@ -22,23 +22,18 @@ import matplotlib.pyplot as plt
 sys.path.append('.')
 
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn, vertices_to_joints
-from util import load_scene as load_pts
+from util import load_scene as load_pts, read_json_file
 
 sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'smpl', 'sample.ply')
 
-POSE_KEY = ['Ours(F)', 'Baseline2(F)', 
-            'Baseline2(S)', 'Ours(S)',
-            'Baseline1(F)', 'Baseline1(S)', 
-            'Pred(S)', 'Ours_opt(F)',
-            'GLAMR(S)', 'GLAMR_our_trans(S)']
+data_format = read_json_file(os.path.join(os.path.dirname(__file__), 'smpl_key.json'))
 
-# POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
-POSE_COLOR = {'points': [0/255, 187/255, 255/255]}
-for i, color in enumerate(POSE_KEY):
-    POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
-
-POSE_COLOR['Ours(F)'] = [58/255, 147/255, 189/255]
-POSE_COLOR['Ours(S)'] = [228/255, 100/255, 100/255]
+POSE_COLOR = {}
+for i, key in enumerate(data_format['color_order']):
+    if len(data_format['color_order'][key]) > 0:
+        POSE_COLOR[key] = np.array(data_format['color_order'][key])/255
+    else:
+        POSE_COLOR[key] = plt.get_cmap(data_format['color_map'])(i*2 + 1)[:3]
 
 def points_to_sphere(geometry):
     """
@@ -364,7 +359,6 @@ class o3dvis(setting, Menu):
             if 'seg_traj' in name:
                 geometry = sample_traj(geometry)
 
-            # geometry.rotate(self.COOR_INIT[:3, :3], self.COOR_INIT[:3, 3])
             geometry.scale(o3dvis.SCALE, (0.0, 0.0, 0.0))
             self.remove_geometry(name)
             if freeze:

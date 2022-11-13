@@ -1,0 +1,132 @@
+{
+    "first_person": {
+        "Baseline1(F)": {
+            "pose": "pose",
+            "trans": "mocap_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Baseline2(F)": {
+            "pose": "pose",
+            "trans": "lidar_traj",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Ours(F)": {
+            "pose": "opt_pose",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                58,
+                147,
+                189
+            ]
+        },
+        "Ours_opt(F)": {
+            "pose": "full_pose",
+            "trans": "mocap_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "second_person": {
+        "Baseline1(S)": {
+            "pose": "pose",
+            "trans": "mocap_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Baseline2(S)": {
+            "pose": "pose",
+            "trans": "trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Ours(S)": {
+            "pose": "opt_pose",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                228,
+                100,
+                100
+            ]
+        },
+        "Ours_opt(S)": {
+            "pose": "full_pose",
+            "trans": "mocap_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "Pred(S)": {
+            "pose": "pred_pose",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "GLAMR(S)": {
+            "pose": "glamr_pose",
+            "trans": "glamr_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "GLAMR_our_trans(S)": {
+            "pose": "glamr_pose",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "color_order": 
+    {
+        "Ours(F)": [58, 147, 189],
+        "Baseline2(F)":[],
+        "Baseline2(S)":[],
+        "Ours(S)":[228, 100, 100],
+        "Baseline1(F)":[],
+        "Baseline1(S)":[],
+        "Pred(S)":[],
+        "Ours_opt(F)":[],
+        "GLAMR(S)":[],
+        "GLAMR_our_trans(S)": [],
+        "points":[0, 187, 255],
+        "points_2":[119, 230, 191]
+    },
+    "color_map": "tab20"
+}

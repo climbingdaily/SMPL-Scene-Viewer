@@ -188,7 +188,7 @@ class Setting_panal(GUI_BASE):
         h2 = gui.Horiz(1 * em)
         add_Switch(h2, 'Follow camera', self._on_camera_view, True)
         self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
-        self.archive_box = add_box(h2, 'Chess Board', lambda c : self._show_geo_by_name('Chess Board', c), True)
+        self.archive_box = add_box(h2, 'Chess Board', self._on_show_geometry, True)
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
@@ -668,7 +668,7 @@ class Setting_panal(GUI_BASE):
 
     def _on_factor_slider(self, value):
         Setting_panal.INTRINSIC_FACTOR = value/10
-        Setting_panal.CLICKED = True
+        # Setting_panal.CLICKED = True
         self.init_camera()
     
     def init_camera(self):

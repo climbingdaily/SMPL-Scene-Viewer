@@ -16,6 +16,7 @@ import torch
 from scipy.spatial.transform import Rotation as R
 
 from util import load_data_remote, generate_views, get_head_global_rots
+from util.tool_func import read_json_file
 from smpl import SMPL, poses_to_vertices
 from util.viewpoint import extrinsic_to_view
 
@@ -88,150 +89,78 @@ def load_vis_data(humans, start=0, end=-1):
     Returns:
       vis_data
     """
-
+    import os
+    data_format = read_json_file(os.path.join(os.path.dirname(__file__), 'smpl_key.json'))
     vis_data = {}
     vis_data['humans'] = {}
 
-    first_person = humans['first_person']
+    for person in data_format:
+        if person in humans and 'pose' in humans[person]:
+            end = humans[person]['pose'].shape[0] if end <= 0 else end 
+            if 'beta' not in humans[person]:
+                humans[person]['beta'] = [0] * 10
+            if 'gender' not in humans[person]:
+                humans[person]['gender'] = 'male'
 
-    if 'pose' in first_person:
-        end = first_person['pose'].shape[0] if end <= 0 else end 
-        pose = first_person['pose'][start:end].copy()
-        if 'beta' not in first_person:
-            first_person['beta'] = [0] * 10
-        if 'gender' not in first_person:
-            first_person['gender'] = 'male'
+            if 'point_clouds' in humans[person]:
+                global_frame_id = humans[person]['point_frame']
+                global_frame_id = set(global_frame_id).intersection(humans['frame_num'][start: end])
+                valid_idx = [humans['frame_num'].index(l) for l in global_frame_id]
+                vis_data['point cloud'] = [humans[person]['point_clouds'], valid_idx]
+                print(f'[PointCloud] {person} point cloud loaded')
 
-        beta = first_person['beta'].copy()
-        gender = first_person['gender']
+            for info, values in data_format[person].items():
+                
+                if values['pose'] == 'pred_pose' and 'pred_pose' in humans[person]:
+                    pose = humans[person]['pred_pose'].copy()
+                    if 'opt_trans' in humans[person]:
+                        trans = humans[person]['opt_trans'].copy()
+                    else:
+                        trans = humans[person]['trans'].copy()
+                    local_id = [humans[person]['point_frame'].tolist().index(i) for i in global_frame_id]
+                    verts = poses_to_vertices(pose[local_id], 
+                                              trans[valid_idx], 
+                                              beta = humans[person]['beta'], 
+                                              gender=humans[person]['gender'])
+                    vis_data['humans']['Pred(S)'] = {
+                        'verts': verts, 
+                        'trans': trans[valid_idx], 
+                        'pose': pose[local_id]}
+                    print(f'[SMPL MODEL] Predicted person loaded')
 
-        if 'mocap_trans' in first_person:
-            trans = first_person['mocap_trans'].copy()
-        else:
-            trans = first_person['trans'].copy()
-        f_vert = poses_to_vertices(pose, beta=beta, gender=gender)
+                elif values['trans'] == 'lidar_traj' and 'lidar_traj' in humans[person]:
+                    f_vert = vis_data['humans']['Baseline1(F)']['verts']
+                    pose = vis_data['humans']['Baseline1(F)']['psoe']
+                    trans = vis_data['humans']['Baseline1(F)']['trans']
+                    lidar_traj = humans[person]['lidar_traj'][:, 1:4]
+                    head = vertices_to_joints(f_vert, 15)
+                    root = vertices_to_joints(f_vert, 0)
+                    head_rots = get_head_global_rots(pose)
 
-        # pose + trans
-        save_trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
-        vis_data['humans']['Baseline1(F)'] = {
-            'verts': f_vert + save_trans, 
-            'trans': save_trans,
-            'pose': pose}
+                    def lidar2head(i):
+                        return head_rots[i].T @ (head[i] - lidar_traj[i])
 
-        # load first person
-        if 'lidar_traj' in first_person:
-            lidar_traj = first_person['lidar_traj'][:, 1:4]
-            head = vertices_to_joints(f_vert, 15)
-            root = vertices_to_joints(f_vert, 0)
-            head_rots = get_head_global_rots(pose)
+                    lidar_to_head = head_rots @ lidar2head(0)
+                    head_to_root = root - head
+                    smpl_offset = trans[0] - root[0]
 
-            def lidar2head(i):
-                return head_rots[i].T @ (head[i] - lidar_traj[i] + trans[i])
+                    lidar_trans = lidar_traj[start: end] + lidar_to_head + head_to_root + smpl_offset
+                    lidar_trans = np.expand_dims(trans.astype(np.float32), 1)
 
-            lidar_to_head = head_rots @ lidar2head(0)
-
-            ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            ### !!!   It's very important: -root[0]   !!
-            ### !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            trans = lidar_traj + lidar_to_head - head + root - root[0]  
-            trans = np.expand_dims(trans.astype(np.float32), 1)[start: end]
-
-            vis_data['humans']['Baseline2(F)'] = {'verts': f_vert + trans, 
-                                                  'trans': trans.squeeze(),
-                                                  'pose': pose}
-            
-    
-        print(f'[SMPL MODEL] First pose loaded')
-
-        load_human_mesh(vis_data['humans'], 
-                        first_person, 
-                        start, 
-                        end, 
-                        'opt_pose', 
-                        'opt_trans', 
-                        info='Ours(F)')
-
-        load_human_mesh(vis_data['humans'], 
-                        first_person, 
-                        start, 
-                        end, 
-                        'full_pose', 
-                        'mocap_trans', 
-                        info='Ours_opt(F)')
-
-    if 'second_person' in humans:
-        second_person = humans['second_person']    
-        if 'pose' in second_person and end <= 0:
-            end = second_person['pose'].shape[0]
-
-        if 'gender' not in second_person:
-            second_person['gender'] = 'male'
-
-        gender = second_person['gender']
-
-        load_human_mesh(vis_data['humans'], 
-                        second_person, 
-                        start, 
-                        end, 
-                        'pose',
-                        'mocap_trans', 
-                        info='Baseline1(S)')
-
-        load_human_mesh(vis_data['humans'], 
-                        second_person, 
-                        start, 
-                        end, 
-                        'pose',
-                        'trans', 
-                        info='Baseline2(S)')
-
-        load_human_mesh(vis_data['humans'], 
-                        second_person, 
-                        start, 
-                        end, 
-                        'glamr_pose',
-                        'glamr_tran', 
-                        info='GLAMR(S)')
-
-        load_human_mesh(vis_data['humans'], 
-                        second_person, 
-                        start, 
-                        end, 
-                        'glamr_pose',
-                        'opt_trans', 
-                        info='GLAMR_our_trans(S)')
-
-        load_human_mesh(vis_data['humans'], 
-                        second_person, 
-                        start, 
-                        end, 
-                        'opt_pose',
-                        'opt_trans', 
-                        info='Ours(S)')
-
-        if 'point_clouds' in second_person:
-            global_frame_id = second_person['point_frame']
-            global_frame_id = set(global_frame_id).intersection(humans['frame_num'][start: end])
-            valid_idx = [humans['frame_num'].index(l) for l in global_frame_id]
-
-            vis_data['point cloud'] = [second_person['point_clouds'], valid_idx]
-            print(f'[PointCloud] Second point cloud loaded')
-
-            if 'pred_pose' in second_person:
-                pose = second_person['pred_pose'].copy()
-                if 'opt_trans' in second_person:
-                    trans = second_person['opt_trans'].copy()
+                    vis_data['humans'][info] = {'verts': f_vert-trans+lidar_trans, 
+                                                'trans': lidar_trans.squeeze(),
+                                                'pose': pose}
                 else:
-                    trans = second_person['trans'].copy()
-                local_id = [second_person['point_frame'].tolist().index(i) for i in global_frame_id]
-                verts = poses_to_vertices(pose[local_id], trans[valid_idx], beta = second_person['beta'], gender=gender)
-                vis_data['humans']['Pred(S)'] = {
-                    'verts': verts, 
-                    'trans': trans[valid_idx], 
-                    'pose': pose[local_id]}
-                print(f'[SMPL MODEL] Predicted person loaded')
+                    load_human_mesh(vis_data['humans'], 
+                                    humans[person], 
+                                    start, 
+                                    end, 
+                                    values['pose'],
+                                    values['trans'], 
+                                    values['trans_bak'], 
+                                    info=info)
 
-    print(f'[Data loading end] ==============')
+    print(f'[SMPL LOADED] ==============')
 
     return vis_data
 

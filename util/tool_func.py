@@ -17,6 +17,21 @@ from scipy.spatial.transform import Rotation as R
 import os
 from subprocess import run
 import time
+import json
+
+def read_json_file(file_name):
+    """
+    Reads a json file
+    Args:
+        file_name:
+    Returns:
+    """
+    with open(file_name) as f:
+        try:
+            data = json.load(f)
+        except:
+            data = None
+    return data
 
 def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     if filename is None:
