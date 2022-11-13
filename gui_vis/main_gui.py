@@ -32,7 +32,8 @@ POSE_KEY = ['Ours(F)', 'Baseline2(F)',
             'Pred(S)', 'Ours_opt(F)',
             'GLAMR(S)', 'GLAMR_our_trans(S)']
 
-POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
+# POSE_COLOR = {'points': [119/255, 230/255, 191/255]}
+POSE_COLOR = {'points': [0/255, 187/255, 255/255]}
 for i, color in enumerate(POSE_KEY):
     POSE_COLOR[color] = plt.get_cmap("tab20")(i*2 + 1)[:3]
 
@@ -468,9 +469,10 @@ class o3dvis(setting, Menu):
             box = self.archive_box
         else:
             hh = gui.Horiz(0.5 * self.window.theme.font_size)
-            btn = add_btn(hh, 'Property', self._on_material_setting)
-            box = add_box(hh, name, self._on_show_geometry, True)
-            self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
+            btn = add_btn(hh, 'Set', lambda: self._on_material_setting(name))
+            box = add_box(hh, name, lambda c : self._show_geo_by_name(name, c), True)
+            root = self.check_boxes.get_root_item()
+            self.check_boxes.add_item(root, hh)
 
         self.window.set_needs_layout()
         settings = mat_set()

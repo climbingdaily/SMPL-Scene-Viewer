@@ -351,16 +351,16 @@ class Menu(GUI_BASE):
         # self._material_color.color_value = c
         # self._point_size.double_value = settings.material.point_size
 
-    def _on_material_setting(self):
-        name_list = []
-        for name, item in self._geo_list.items():
-            if not item['freeze'] and not item['archive']:
-                name_list.append(name)
+    def _on_material_setting(self, name):
+        # name_list = []
+        # for name, item in self._geo_list.items():
+        #     if not item['freeze'] and not item['archive']:
+        #         name_list.append(name)
 
-        name = name_list[self.data_id-1]
-        if name not in self._geo_list:
-            self.warning_info(f'No such geometry: {name} ')
-            return 
+        # name = name_list[self.check_boxes.selected_item-1]
+        # if name not in self._geo_list:
+        #     self.warning_info(f'No such geometry: {name} ')
+        #     return 
 
         if 'mat' not in self._geo_list[name]:
             self._geo_list[name]['mat'] = Settings()

@@ -188,7 +188,7 @@ class Setting_panal(GUI_BASE):
         h2 = gui.Horiz(1 * em)
         add_Switch(h2, 'Follow camera', self._on_camera_view, True)
         self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
-        self.archive_box = add_box(h2, 'Chess Board', self._on_show_geometry, True)
+        self.archive_box = add_box(h2, 'Chess Board', lambda c : self._show_geo_by_name('Chess Board', c), True)
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
@@ -211,10 +211,12 @@ class Setting_panal(GUI_BASE):
     def tracking_tool_setting(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
-        collapse = gui.CollapsableVert("Traking tool", 0.33 * em,
+        tracking_tool = gui.CollapsableVert("Tracking tool", 0.33 * em,
                                         gui.Margins(em, 0, 0, 0))
-        # collapse = gui.Vert(0.15 * em)
-
+        # tracking_tool = gui.Vert(0.15 * em)
+        tracking_tool.add_child(gui.Label("Ctrl-click to pick a point"))
+        tracking_tool.add_child(gui.Label('Double click to delete'))
+        tracking_tool.add_child(gui.Label("The camera will look at the point"))
         btn = creat_btn('Save traj', self._save_traj)
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
@@ -235,11 +237,11 @@ class Setting_panal(GUI_BASE):
         self.trackpoints_list.set_on_selection_changed(self._on_track_list)
 
         # collapse.add_child(remote_layout)
-        collapse.add_child(horiz)
-        collapse.add_child(gui.Label('Tracked points'))
-        collapse.add_child(self.trackpoints_list)
+        tracking_tool.add_child(horiz)
+        tracking_tool.add_child(gui.Label('Tracked label'))
+        tracking_tool.add_child(self.trackpoints_list)
 
-        return collapse
+        return tracking_tool
 
     def _on_track_list(self, new_val, is_dbl_click):
         frame = int(new_val.split(':')[0])
@@ -434,7 +436,7 @@ class Setting_panal(GUI_BASE):
         separation_height = int(round(0.5 * em))
 
         if collapse is None:
-            collapse = gui.CollapsableVert("Human data", 0.33 * em,
+            collapse = gui.CollapsableVert("Geometries", 0.33 * em,
                                             gui.Margins(em, 0, 0, 0))
             # collapse = gui.Vert(0.15 * em)
                                             
@@ -464,7 +466,7 @@ class Setting_panal(GUI_BASE):
             for box in checkboxes:
                 hh = gui.Horiz()
                 hh.add_child(box)
-                add_btn(hh, 'Property', self._on_material_setting, True)
+                add_btn(hh, 'Set', self._on_material_setting, True)
                 self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
         except:
             pass
@@ -518,10 +520,8 @@ class Setting_panal(GUI_BASE):
 
         tabs.add_child(data_list)
         tabs.add_fixed(separation_height)
-        tabs.add_fixed(separation_height)
-        tabs.add_fixed(separation_height)
 
-        tabs.add_child(gui.Label('frozen data'))
+        tabs.add_child(gui.Label('Frozen data'))
         tabs.add_child(tab3)
         tabs.add_fixed(separation_height)
 
@@ -573,6 +573,15 @@ class Setting_panal(GUI_BASE):
     
     def _unfreeze(self):
         Setting_panal.FREEZE = False
+
+    def _show_geo_by_name(self, name, show):
+        self._scene.scene.show_geometry(name, show)
+        self._scene_traj.scene.show_geometry(name, show)
+        if self._geo_list[name]['freeze'] == True and show:
+            origin_name = name.split('_freeze_')[-1]
+            box = self._geo_list[origin_name]['box']
+            self._scene.scene.show_geometry(name, box.checked)
+            self._scene_traj.scene.show_geometry(name, box.checked)
 
     def _on_show_geometry(self, show):
         for name, data in self._geo_list.items():
