@@ -429,11 +429,6 @@ class load_data_remote(object):
                 ll += f"{l:.4f}\t"
             save_data.append(ll + '\n')
         if self.sftp_client is not None:
-            temp_path = os.path.abspath('./temp_traj.txt')
-            with open(temp_path, mode = mode) as f:
-                f.writelines(save_data)
-                print(f'[Write txt] Temp file saved in {temp_path}')
-                
             with self.sftp_client.open(filepath, mode = mode) as f:
                 f.writelines(save_data)
         else:

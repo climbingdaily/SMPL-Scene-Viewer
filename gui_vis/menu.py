@@ -318,11 +318,50 @@ class Menu(GUI_BASE):
         dlg.set_on_done(self._on_load_smpl_done)
         self.window.show_dialog(dlg)
 
+    def pop_up_text(self, info, func, type='Info'):
+        em = self.window.theme.font_size
+        dlg = gui.Dialog(f'[{type}]')
+        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
+        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
+        text_step = gui.TextEdit()
+        text_step.set_on_value_changed(func)
+        
+        ok = gui.Button("OK")
+        ok.set_on_clicked(self._on_about_ok)
+        h = gui.Horiz()
+        h.add_stretch()
+        h.add_child(text_step)
+        h.add_stretch()
+        dlg_layout.add_child(h)
+        dlg_layout.add_child(ok)
+
+        dlg.add_child(dlg_layout)
+        self.window.show_dialog(dlg)
+
+    def dlg_yes_or_no(self, info, type='Info'):
+        em = self.window.theme.font_size
+        dlg = gui.Dialog(f'[{type}]')
+        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
+        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
+        yes = gui.Button("Yes")
+        no = gui.Button("No")
+        yes.set_on_clicked(self._on_about_ok)
+        no.set_on_clicked(self._on_about_ok)
+        h = gui.Horiz()
+        h.add_stretch()
+        h.add_child(yes)
+        h.add_child(no)
+        h.add_stretch()
+        dlg_layout.add_child(h)
+
+        dlg.add_child(dlg_layout)
+        self.window.show_dialog(dlg)
+
     def warning_info(self, info, type='Warning'):
         em = self.window.theme.font_size
         dlg = gui.Dialog(f'[{type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(f'[{type}]: {info}'))
+        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
         ok = gui.Button("OK")
         ok.set_on_clicked(self._on_about_ok)
         h = gui.Horiz()
@@ -357,7 +396,7 @@ class Menu(GUI_BASE):
         #     if not item['freeze'] and not item['archive']:
         #         name_list.append(name)
 
-        # name = name_list[self.check_boxes.selected_item-1]
+        # name = name_list[self.geo_check_boxes.selected_item-1]
         # if name not in self._geo_list:
         #     self.warning_info(f'No such geometry: {name} ')
         #     return 

@@ -105,7 +105,7 @@ class Setting_panal(GUI_BASE):
 
         self.tracking_setting.visible = False
         # self._settings_panel.add_child(collapse)
-        self._settings_panel.get_children()[0].add_tab('Setting', collapse)
+        self._settings_panel.get_children()[0].add_tab('Tools', collapse)
         # self._settings_panel.get_children()[0].add_tab('PCDs', self.remote_setting())
         self._settings_panel.get_children()[0].add_tab('Camera', camera_setting)
 
@@ -194,6 +194,7 @@ class Setting_panal(GUI_BASE):
         h2.add_child(self._show_ground_plane)
         add_Switch(h2, 'Render Img', self._change_render_states)
         add_btn(h2, 'Save Video', self._click_video_saving)
+        add_btn(h2, 'Freeze current frame', self._freeze_frame)
 
         vert_layout.add_child(horiz_layout)
         vert_layout.add_child(h2)
@@ -214,19 +215,18 @@ class Setting_panal(GUI_BASE):
         tracking_tool = gui.CollapsableVert("Tracking tool", 0.33 * em,
                                         gui.Margins(em, 0, 0, 0))
         # tracking_tool = gui.Vert(0.15 * em)
-        tracking_tool.add_child(gui.Label("Ctrl-click to pick a point"))
-        tracking_tool.add_child(gui.Label('Double click to delete'))
+        tracking_tool.add_child(gui.Label("Ctrl-click to pick / Double click to delete"))
         tracking_tool.add_child(gui.Label("The camera will look at the point"))
-        btn = creat_btn('Save traj', self._save_traj)
+        save_traj_btn = creat_btn('Save tracked traj', self._save_traj)
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
         text_step.text_value = str(Setting_panal.TRACKING_STEP)
         horiz = gui.Horiz(0.15 * em)
-        horiz.add_child(gui.Label('step'))
+        horiz.add_child(gui.Label('Auto Jump Step'))
         horiz.add_child(text_step)
         # horiz.add_child(gui.Label('frames'))
         # horiz.add_child(text_frames)
-        horiz.add_child(btn)
+        # horiz.add_child(save_traj_btn)
 
         # tracked_points = gui.Verts(0.15 * em)
         # tracked_points.background_color = gui.Color(r=0, b=0, g=0)
@@ -237,9 +237,13 @@ class Setting_panal(GUI_BASE):
         self.trackpoints_list.set_on_selection_changed(self._on_track_list)
 
         # collapse.add_child(remote_layout)
-        tracking_tool.add_child(horiz)
-        tracking_tool.add_child(gui.Label('Tracked label'))
+        tracked_info = gui.Horiz(0.25 * em)
+        tracked_info.add_child(gui.Label('Tracked label'))
+        tracked_info.add_child(creat_btn('Clear', self._clear_3dlabel))
+        tracking_tool.add_child(tracked_info)
         tracking_tool.add_child(self.trackpoints_list)
+        tracking_tool.add_child(horiz)
+        tracking_tool.add_child(save_traj_btn)
 
         return tracking_tool
 
@@ -436,9 +440,12 @@ class Setting_panal(GUI_BASE):
         separation_height = int(round(0.5 * em))
 
         if collapse is None:
-            collapse = gui.CollapsableVert("Geometries", 0.33 * em,
-                                            gui.Margins(em, 0, 0, 0))
-            # collapse = gui.Vert(0.15 * em)
+            # collapse = gui.CollapsableVert("Geometries", 0.33 * em,
+            #                                 gui.Margins(em, 0, 0, 0))
+            collapse = gui.Vert(0.15 * em)
+            geo_info = gui.Horiz(0.15 * em)
+            geo_info.add_child(gui.Label("Geometries"))
+            collapse.add_child(geo_info)
                                             
         factor_slider = gui.Slider(gui.Slider.INT)
         factor_slider.set_limits(2, 60)
@@ -450,7 +457,6 @@ class Setting_panal(GUI_BASE):
         scale_slider.int_value = 1
         scale_slider.set_on_value_changed(self._on_scale_slider)
 
-        freeze_btn   = creat_btn('Freeze', self._freeze_frame)
         clear_freeze_btn   = creat_btn('Clear', self._clear_freeze)
 
         # tabs = gui.TabControl()
@@ -458,16 +464,16 @@ class Setting_panal(GUI_BASE):
         # check_boxes = gui.VGrid(2, 0.15 * em)
         data_list = gui.Horiz(0.15 * em)
         data_list.preferred_height = 25 * em
-        self.check_boxes = gui.TreeView()
-        data_list.add_child(self.check_boxes)
-        self.check_boxes.set_on_selection_changed(self._on_tree)
+        self.geo_check_boxes = gui.TreeView()
+        data_list.add_child(self.geo_check_boxes)
+        self.geo_check_boxes.set_on_selection_changed(self._on_tree)
         try:
             # self.freeze_box = add_box(check_boxes, 'frozen data', self._on_show_freeze_geometry, True)
             for box in checkboxes:
                 hh = gui.Horiz()
                 hh.add_child(box)
                 add_btn(hh, 'Set', self._on_material_setting, True)
-                self.check_boxes.add_item(self.check_boxes.get_root_item(), hh)
+                self.geo_check_boxes.add_item(self.geo_check_boxes.get_root_item(), hh)
         except:
             pass
 
@@ -480,7 +486,7 @@ class Setting_panal(GUI_BASE):
         cam_grid.add_child(factor_slider)
         cam_grid.add_child(gui.Label('Geometry scale'))
         cam_grid.add_child(scale_slider)
-        cam_grid.add_child(gui.Label('Fix Roll'))
+        cam_grid.add_child(gui.Label('Stabilization'))
         cam_grid.add_child(self._fix_roll)
         cam_grid.add_child(creat_btn('+ Up', self.camera_fix))
         # cam_grid.add_child(scale_slider)
@@ -498,31 +504,32 @@ class Setting_panal(GUI_BASE):
         tab2.add_child(cam_grid)
         tab2.add_child(gui.Label('Camera lists') )
         tab2.add_child(self.camera_list_view)
-        tab2.add_child(creat_btn('Add camera', lambda: self._click_camera_saving(True)))
+        _click_camera = lambda: self.pop_up_text('Input a name', lambda name: self._click_camera_saving(name, True))
+        tab2.add_child(creat_btn('Add camera', _click_camera))
         tab2.add_fixed(separation_height)
         tab2.add_child(creat_btn('Export cameras', self._save_camera_list))
         tab2.add_child(creat_btn('Load cameras', self._load_camera_list))
         
         # tab2.add_child(horz)
 
-        temp_layout = gui.Horiz(0.25 * em)
-        temp_layout.add_child(freeze_btn)
-        temp_layout.add_child(clear_freeze_btn)
-        self.freeze_box = add_box(temp_layout, 'frozen frames', self._on_show_geometry, True)
+        freeze_info = gui.Horiz(0.25 * em)
+        # temp_layout.add_child(freeze_btn)
+        self.freeze_box = add_box(freeze_info, 'Show Frozen Data', self._on_show_geometry, True)
+        freeze_info.add_child(clear_freeze_btn)
 
         self.frozen_list = gui.ListView()
         self.frozen_list.set_max_visible_items(5)
         self.frozen_list.set_on_selection_changed(self._on_freeze_list)
 
-        tab3 = gui.Vert(0.15 * em)
-        tab3.add_child(temp_layout)
-        tab3.add_child(self.frozen_list)
+        freeze_data_layout = gui.Vert(0.15 * em)
+        freeze_data_layout.add_child(freeze_info)
+        freeze_data_layout.add_child(self.frozen_list)
 
         tabs.add_child(data_list)
         tabs.add_fixed(separation_height)
 
-        tabs.add_child(gui.Label('Frozen data'))
-        tabs.add_child(tab3)
+        # tabs.add_child(gui.Label('Frozen data'))
+        tabs.add_child(freeze_data_layout)
         tabs.add_fixed(separation_height)
 
         collapse.add_child(tabs)
@@ -563,6 +570,13 @@ class Setting_panal(GUI_BASE):
 
         self.update_frozen_points()
 
+        
+    def _clear_3dlabel(self):
+        for frame in self.tracked_frame:
+            self._scene.remove_3d_label(self.tracked_frame[frame][1])
+        self.tracked_frame.clear()
+        self.update_tracked_points()
+
     def _on_free_view(self, show):
         Setting_panal.FREE_VIEW = show
         # print(show)
@@ -574,14 +588,21 @@ class Setting_panal(GUI_BASE):
     def _unfreeze(self):
         Setting_panal.FREEZE = False
 
+    def _remove_geo_list(self, name):
+        self.geo_check_boxes.remove_item(self.geo_check_boxes.selected_item)
+        # self._geo_list.pop(name)
+        # self.remove_geometry(name)
+
+
     def _show_geo_by_name(self, name, show):
-        self._scene.scene.show_geometry(name, show)
-        self._scene_traj.scene.show_geometry(name, show)
-        if self._geo_list[name]['freeze'] == True and show:
-            origin_name = name.split('_freeze_')[-1]
-            box = self._geo_list[origin_name]['box']
-            self._scene.scene.show_geometry(name, box.checked)
-            self._scene_traj.scene.show_geometry(name, box.checked)
+        for geo_name, geo_data in self._geo_list.items():
+            if name in geo_name:
+                if geo_data['freeze'] == True:
+                    self._scene.scene.show_geometry(geo_name, geo_data['box'].checked and show)
+                    self._scene_traj.scene.show_geometry(geo_name, geo_data['box'].checked and show)
+                else:
+                    self._scene.scene.show_geometry(geo_name, show)
+                    self._scene_traj.scene.show_geometry(geo_name, show)
 
     def _on_show_geometry(self, show):
         for name, data in self._geo_list.items():
@@ -607,22 +628,23 @@ class Setting_panal(GUI_BASE):
     def _click_video_saving(self):
         Setting_panal.VIDEO_SAVE = True
 
-    def _click_camera_saving(self, is_print=True):
+    def _click_camera_saving(self, cam_name=None, is_print=True):
         extrinsic = self._scene.scene.camera.get_view_matrix()
         extrinsic[1, :] = - extrinsic[1, :]
         extrinsic[2, :] = - extrinsic[2, :]
         extrinsic[:3, 3] /= self.SCALE 
 
-        extrinsic = extrinsic @ self.COOR_INIT
+        extrinsic = extrinsic @ np.linalg.inv(self.COOR_INIT)
         cam_pose = self._scene.scene.camera.get_model_matrix()
+        cam_pose[:3, 3] /= self.SCALE 
         cam_pose = self.COOR_INIT @ cam_pose
         if is_print:
             quat = R.from_matrix(cam_pose[:3, :3]).as_quat()
             print(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}')
             self.warning_info(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}', type='Extrinsic')
-
         frame = self._get_slider_value()
-        cam_name = f'cam_{frame}'
+        if cam_name is None:
+            cam_name = f'cam_{frame}'
         while cam_name in self._camera_list:
             cam_name = f'cam_{frame+1}_manual'
             frame +=1

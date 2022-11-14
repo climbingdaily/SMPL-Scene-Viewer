@@ -207,10 +207,18 @@ class ImagWindow(base_gui):
                             np.array(keys)[:, None], 
                             np.array(times)[:, None]))
             savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
+            
+
             self.data_loader.write_txt(savepath, traj)
             self.warning_info(f'File saved in {savepath}', 'INFO')
         except Exception as e:
-            self.warning_info(e.args[0])
+            try:
+                temp_path = os.path.abspath('./temp_traj.txt')
+                np.savetxt(temp_path, traj)
+                print(f'[Write txt] Temp file saved in {temp_path}')
+                self.warning_info(f'Temp file saved in {temp_path}\nRemote faied: {e.args[0]}')
+            except Exception as e:
+                self.warning_info(f'Remote faied: {e.args[0]}')
 
 if __name__ == "__main__":
     

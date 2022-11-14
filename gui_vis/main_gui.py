@@ -474,10 +474,11 @@ class o3dvis(setting, Menu):
             box = self.archive_box
         else:
             hh = gui.Horiz(0.5 * self.window.theme.font_size)
-            btn = add_btn(hh, 'Set', lambda: self._on_material_setting(name))
+            add_btn(hh, 'Del', lambda: self._remove_geo_list(name))
+            add_btn(hh, 'Set', lambda: self._on_material_setting(name))
             box = add_box(hh, name, lambda c : self._show_geo_by_name(name, c), True)
-            root = self.check_boxes.get_root_item()
-            self.check_boxes.add_item(root, hh)
+            root = self.geo_check_boxes.get_root_item()
+            self.geo_check_boxes.add_item(root, hh)
 
         self.window.set_needs_layout()
         settings = mat_set()
