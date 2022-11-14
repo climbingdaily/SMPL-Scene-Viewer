@@ -77,20 +77,16 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
         verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end]}
         print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
 
-def load_vis_data(humans, start=0, end=-1):
+def load_vis_data(humans, start=0, end=-1, data_format=None):
     """
-    It loads the data from the pickle file into a dictionary
+    > This function loads the SMPL model and the point cloud data into the `vis_data` dictionary
     
     Args:
       humans: the dictionary containing the data
-      start: the first frame to load. Defaults to 0
-      end: the last frame to be visualized
-    
-    Returns:
-      vis_data
+      start: the start frame of the video. Defaults to 0
+      end: the end frame of the video
     """
     import os
-    data_format = read_json_file(os.path.join(os.path.dirname(__file__), 'smpl_key.json'))
     vis_data = {}
     vis_data['humans'] = {}
 
@@ -168,9 +164,11 @@ class HUMAN_DATA:
     FOV = 'first'
     FREE_VIEW = False
 
-    def __init__(self, is_remote=False):
+    def __init__(self, is_remote=False, data_format=None):
         self.is_remote = is_remote
         self.cameras = {}
+        self.humans = {}
+        self.data_format = data_format
 
     def load(self, filename):
         load_data_class = load_data_remote(self.is_remote)
@@ -188,9 +186,9 @@ class HUMAN_DATA:
               }
             # second_person is optional
             """
-        if 'first_person' not in self.humans:
-            self.humans = {'first_person': self.humans}
-        self.vis_data_list = load_vis_data(self.humans)
+        # if 'first_person' not in self.humans or 'second_person' not in self.humans:
+            # self.humans = {'first_person': self.humans}
+        self.vis_data_list = load_vis_data(self.humans, data_format = self.data_format)
         # self.set_cameras()
 
     def load_hdf5(self, filename):
@@ -199,88 +197,39 @@ class HUMAN_DATA:
         self.vis_data_list = load_vis_data(self.humans)
 
     def set_cameras(self, offset_center=-0.2):
-        humans_verts = self.humans
+        if 'cameras' not in self.data_format:
+            print("The camera information is not define in 'smpl_key.json'")
+            cameras = {self.vis_data_list['humans'].keys()[0]: {"abbr": "(RANDOM)"}}
+        else:
+            cameras = self.data_format['cameras']
 
-        # first lidar view generation
-        try:
-            lidar_pos = humans_verts['first_person']['lidar_traj'][:, 1:4]
-            if 'pose' not in humans_verts['first_person']:
-                head_rots = R.from_quat(humans_verts['first_person']['lidar_traj'][:, 4:8]).as_matrix()
-                head_rots = head_rots @ head_rots[0].T
-            else:    
-                head_rots = get_head_global_rots(humans_verts['first_person']['pose'])
-            self.cameras['First Lidar View'] = generate_views(lidar_pos, head_rots, dist=offset_center)
-        except Exception as e:
-            print(e)
-            print(f'No First Lidar View')
-            
-            try:
-                verts = self.vis_data_list['humans']['Baseline1(F)']['verts']
-                root_position = vertices_to_joints(verts, 0)
-                root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
-                self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
-                
-            except Exception as e:
-                print(e)
-                print(f'No First root View')
-        
-        # first person view generation
-        try:
-            try:
-                verts = self.vis_data_list['humans']['Baseline2(F)']['verts']
-                root_position = vertices_to_joints(verts, 0)
-                root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
-            except Exception as e:
-                print(e)
+        for name, camera in cameras.items():
+            if name in self.vis_data_list['humans']:
                 try:
-                    verts = self.vis_data_list['humans']['Baseline1(F)']['verts']
-                    root_position = vertices_to_joints(verts, 0)
-                    root_rots = get_head_global_rots(humans_verts['first_person']['pose'], parents=[0])
-                except Exception as e: 
-                    print(e)
-            self.cameras['First root View'] = generate_views(root_position, root_rots, rad=np.deg2rad(-10), dist=-0.3)
-            self.cameras['3rd View back +3m'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0, filter=False)
-            self.cameras['3rd View front +3m'] = make_3rd_view(root_position, root_rots, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0, filter=False)
-            # self.cameras['3rd View +Y'] = make_3rd_view(root_position, root_rots, rotz=0)
-            # self.cameras['3rd View -X'] = make_3rd_view(root_position, root_rots, rotz=90)
-            # self.cameras['3rd View -Y'] = make_3rd_view(root_position, root_rots, rotz=180)
-            # self.cameras['3rd View +X'] = make_3rd_view(root_position, root_rots, rotz=270)
-            self.cameras['3rd View +Z'] = make_3rd_view(root_position, root_rots, rotz=0, lookdown=90, move_up=6)
+                    abbr = camera['abbr']
+                    verts = self.vis_data_list['humans'][name]['verts']
+                    position = vertices_to_joints(verts, 0)
+                    head_rotation = get_head_global_rots(self.vis_data_list['humans'][name]['pose'])
+                    self.cameras[f'{abbr} View'] = generate_views(position + np.array([0, 0, 0.2]), head_rotation, dist=offset_center)
 
-        except Exception as e:
-            print(e)
-            print(f'No First person View')
+                    rotation = get_head_global_rots(self.vis_data_list['humans'][name]['pose'], parents=[0])
 
-        # second person view generation
-        try:
-            try:
-                second_verts = self.vis_data_list['humans']['Ours(S)']['verts']
-                second_pose = humans_verts['second_person']['opt_pose']
-            except:
-                try:
-                    second_verts = self.vis_data_list['humans']['Baseline2(S)']['verts']
-                    second_pose = humans_verts['second_person']['pose']
+                    self.cameras[f'{abbr} 3rd View back +3m'] = make_3rd_view(position, rotation, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+                    self.cameras[f'{abbr} 3rd View front +3m'] = make_3rd_view(position, rotation, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+                    self.cameras[f'{abbr} 3rd View left +3m'] = make_3rd_view(position, rotation, rotz=90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+                    self.cameras[f'{abbr} 3rd View right +3m'] = make_3rd_view(position, rotation, rotz=-90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
+                    self.cameras[f'{abbr} 3rd View +Z'] = make_3rd_view(position, rotation, rotz=0, lookdown=90, move_up=6)
                 except Exception as e:
-                    print(e)
-                    print(f'There is no second pose in the data')
-            rotation = get_head_global_rots(second_pose)
-            position = vertices_to_joints(second_verts) + np.array([0, 0, 0.2])
-            self.cameras['Second View'] = generate_views(position, rotation, dist=offset_center)
-
-            position = vertices_to_joints(second_verts, 0)
-            rotation = get_head_global_rots(second_pose, parents=[0])
-            self.cameras['(p2) 3rd View back +3m'] = make_3rd_view(position, rotation, rotz=0, lookdown=10, move_back=3, move_up=0.3, move_right=0)
-            self.cameras['(p2) 3rd View front +3m'] = make_3rd_view(position, rotation, rotz=180, lookdown=10, move_back=3, move_up=0.3, move_right=0)
-            self.cameras['(p2) 3rd View left +3m'] = make_3rd_view(position, rotation, rotz=90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
-            self.cameras['(p2) 3rd View right +3m'] = make_3rd_view(position, rotation, rotz=-90, lookdown=10, move_back=3, move_up=0.3, move_right=0)
-            # self.cameras['(p2) 3rd View +Y'] = make_3rd_view(position, rotation, rotz=0)
-            # self.cameras['(p2) 3rd View -X'] = make_3rd_view(position, rotation, rotz=90)
-            # self.cameras['(p2) 3rd View -Y'] = make_3rd_view(position, rotation, rotz=180)
-            # self.cameras['(p2) 3rd View +X'] = make_3rd_view(position, rotation, rotz=270)
-            self.cameras['(p2) 3rd View +Z'] = make_3rd_view(position, rotation, rotz=0, lookdown=90, move_up=6)
-        except Exception as e:
-            print(e)
-
+                    print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
+            elif 'trans' in camera:
+                try:
+                    position = self.humans[camera['person']][camera['trans']][:, 1:4]
+                    head_rots = R.from_quat(self.humans[camera['person']][camera['direction']][:, 4:8]).as_matrix()
+                    rotation = head_rots @ head_rots[0].T
+                    self.cameras[name] = generate_views(position, rotation, dist=offset_center)
+                except Exception as e:
+                    print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
+            
         views = list(self.cameras.keys())
         for view in views:
             print(f'[Camera]: {view}')

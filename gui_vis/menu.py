@@ -70,7 +70,7 @@ class Menu(GUI_BASE):
                 
             # file menu
             file_menu = gui.Menu()
-            file_menu.add_item("Open file...", Menu.MENU_SCENE)
+            file_menu.add_item("Open 3D file...", Menu.MENU_SCENE)
             file_menu.add_item("Open pcds folder...", Menu.MENU_OPEN)
             file_menu.add_item("Open remote pcds folder...", Menu.MENU_OPEN_REMOTE)
             # file_menu.add_item("Open smpl pkl", Menu.MENU_SMPL)

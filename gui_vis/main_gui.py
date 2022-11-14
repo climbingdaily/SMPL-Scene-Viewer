@@ -25,7 +25,6 @@ from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard
 from util import load_scene as load_pts, read_json_file
 
 sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'smpl', 'sample.ply')
-
 data_format = read_json_file(os.path.join(os.path.dirname(__file__), 'smpl_key.json'))
 
 POSE_COLOR = {}
@@ -57,7 +56,6 @@ def points_to_sphere(geometry):
         s.compute_vertex_normals()
         s.paint_uniform_color(POSE_COLOR['points'])
         traj += s
-    
     return traj
 
 class o3dvis(setting, Menu):
@@ -67,7 +65,7 @@ class o3dvis(setting, Menu):
     def __init__(self, width=1280, height=768, is_remote=False, name='MainGui'):
         super(o3dvis, self).__init__(width, height, name)
         self.scene_name = 'ramdon'
-        self.Human_data = HUMAN_DATA(is_remote)
+        self.Human_data = HUMAN_DATA(is_remote, data_format)
         self.fetched_data = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True, reset_bounding_box=True)
@@ -87,6 +85,17 @@ class o3dvis(setting, Menu):
         self.add_geometry(geometry, name=name, reset_bounding_box=reset_bounding_box)
 
     def load_traj(self, path, translate=[0,0,0], load_data_class=None):
+        """
+        `traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)`
+        
+        The `load_pts` function is defined in `open3d/open3d/io/point_cloud.py` and it's a function that
+        takes in a `pcd_path` and returns a `PointCloud` object
+        
+        Args:
+          path: the path to the file you want to load
+          translate: [0,0,0]
+          load_data_class: the class of the data to be loaded, which is used to determine the data format.
+        """
         self.window.close_dialog()
         if not os.path.isfile(path):
             self.warning_info(f'{path} is not a valid file')
@@ -112,18 +121,20 @@ class o3dvis(setting, Menu):
         self.window.close_dialog()
         self.Human_data.load(filename) 
 
+        # camera settings
         cams = self.Human_data.set_cameras(offset_center = -0.2)
         for cam in cams:
             self.camera_setting.add_item(cam)
+
+        # UI setting
         self.camera_setting.enabled = True
-        self.window.set_needs_layout()
-
         self._on_select_camera(cams[0], 0)
-
+        self.window.set_needs_layout()
         self.frame_slider_bar.enabled = True
         self.frame_edit.enabled = True
         self.play_btn.enabled = True
         
+        # data setting
         if self.Human_data:
             self.tracking_setting.visible = True
             setting._START_FRAME_NUM = self.Human_data.humans['frame_num'][0]

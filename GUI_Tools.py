@@ -88,8 +88,7 @@ class ImagWindow(base_gui):
         clicked. 
         
         The depth image is a 2D image that contains the depth of each pixel in the scene. 
-        The depth image is obtained by rendering the scene to a depth image. 
-        The depth image is then used to get the 3D coordinates of the point clicked. 
+        obtained by rendering the scene to a depth image and then used to get the 3D coordinates of the point clicked. 
 
         The 3D coordinates are then used to create a 3D label and a sphere at the clicked point. 
         The 3D label and the sphere are added to the scene and the dictionary `tracked_frame`. 

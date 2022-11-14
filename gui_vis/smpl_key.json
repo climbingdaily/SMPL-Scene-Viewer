@@ -128,5 +128,22 @@
         "points":[0, 187, 255],
         "points_2":[119, 230, 191]
     },
-    "color_map": "tab20"
+    "color_map": "tab20",
+    "cameras":
+    {
+        "Lidar View": {
+            "person": "first_person",
+            "trans": "lidar_traj",
+            "direction": "lidar_traj",
+            "head_rots": "YES"
+        },
+        "Ours(F)": {
+            "head_rots": "No",
+            "abbr": "(p1)"
+        },
+        "Ours(S)": {
+            "head_rots": "No",
+            "abbr": "(p2)"
+        }
+    }
 }
