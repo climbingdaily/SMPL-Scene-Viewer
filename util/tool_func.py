@@ -43,9 +43,9 @@ def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
     command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path}\""
     if os.path.exists(video_path) or os.path.exists(video_path):
-        return f"'{video_path}' existed."
+        return False, f"'{video_path}' existed."
     elif not os.path.exists(img_dir):
-        return f"'{img_dir}' not existed."
+        return False, f"'{img_dir}' not existed."
     else:
         try:
             run(command, shell=True)
@@ -62,7 +62,7 @@ def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
                 os.removedirs(img_dir)
             except Exception as e:
                 print(e)
-        return f'Video saved in {video_path}'
+        return True, f'Video saved in {video_path}'
 
 def filterTraj(traj_xyz, fit_time=None, segment=20, frame_time=0.05, keep_data = False):
 

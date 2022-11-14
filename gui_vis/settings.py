@@ -351,25 +351,28 @@ class Setting_panal(GUI_BASE):
         dlg.set_on_done(load_json)
         self.window.show_dialog(dlg)
 
-    def _save_camera_list(self):
+    
+    def _save_came(self, path, is_print=True):
         import json
-
-        def save_came(path):
-            try:
-                for cam in self._camera_list:
-                    self._camera_list[cam]['extrinsic'] = np.array(self._camera_list[cam]['extrinsic']).tolist()
-                with open(path, 'w') as fp:
-                    json.dump(self._camera_list, fp, indent=4)
+        try:
+            for cam in self._camera_list:
+                self._camera_list[cam]['extrinsic'] = np.array(self._camera_list[cam]['extrinsic']).tolist()
+            with open(path, 'w') as fp:
+                json.dump(self._camera_list, fp, indent=4)
+            if is_print:
                 self.warning_info(f'Camera list saved in {path}', 'INFO')
-            except Exception as e:
+        except Exception as e:
+            if is_print:
                 self.warning_info(e.args[0])  
+
+    def _save_camera_list(self):
 
         dlg = gui.FileDialog(gui.FileDialog.SAVE, "Choose file to save",
                              self.window.theme)
         dlg.add_filter(".json", "JSON files (.json)")
         dlg.set_on_cancel(self.window.close_dialog)
 
-        dlg.set_on_done(save_came)
+        dlg.set_on_done(self._save_came)
         self.window.show_dialog(dlg)   
 
     
@@ -747,7 +750,10 @@ class Setting_panal(GUI_BASE):
         def save_video(image_dir, video_name, delete=True):
             if Setting_panal.VIDEO_SAVE:
                 try:
-                    info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
+                    is_success, info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
+                    came_path = os.path.join((os.path.dirname(image_dir)), 'vis_data', video_name+'.json')
+                    if is_success:
+                        self._save_came(came_path, is_print=False)
                     video_name = set_video_name()
                     self.warning_info(info, type='info')
                 except Exception as e:
@@ -756,6 +762,7 @@ class Setting_panal(GUI_BASE):
                 Setting_panal.IMG_COUNT = 0
                 if not Setting_panal.PAUSE:
                     self.change_pause_status()
+            return video_name
 
         while True:
             video_name = set_video_name()
@@ -815,6 +822,7 @@ class Setting_panal(GUI_BASE):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
         img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.jpg')
+        self._click_camera_saving(f'VIDEO_{Setting_panal.IMG_COUNT:05d}', is_print=False)
         Setting_panal.IMG_COUNT += 1
         self.export_image(img_path, 1280, 720)
 
