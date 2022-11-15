@@ -849,7 +849,7 @@ class Setting_panal(GUI_BASE):
         img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.png')
         self._click_camera_saving(f'VIDEO_{Setting_panal.IMG_COUNT:05d}', is_print=False)
         Setting_panal.IMG_COUNT += 1
-        self.export_image(img_path, 1280, 720)
+        self.export_image(img_path, 1920, 1080)
 
     def set_camera(self, new_ind, ind, pov):
         pass
