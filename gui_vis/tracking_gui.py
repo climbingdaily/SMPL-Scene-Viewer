@@ -166,7 +166,7 @@ class trackingVis(base_gui):
         except Exception as e:
             self.warning_info(e.args[0])
 
-    def set_camera(self, ind, pov):
+    def set_camera(self, new_ind, ind, pov):
         pass
     
 def main():

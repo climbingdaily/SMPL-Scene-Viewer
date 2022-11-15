@@ -61,7 +61,6 @@ def add_box(layout, name, func, checked=False):
 class Setting_panal(GUI_BASE):
     TRACKING_STEP = 1
     FREEZE = False
-    FREE_VIEW = False
     FIX_CAMERA = False
     PAUSE = False
     POV = 'first'
@@ -79,6 +78,7 @@ class Setting_panal(GUI_BASE):
         self.total_frames = 1
         self.tracking_list = []
         self.tracked_frame = {}
+        self._selected_geo = 'sample'
         em = self.window.theme.font_size
 
         self.stream_setting = self.create_stream_settings()
@@ -186,14 +186,14 @@ class Setting_panal(GUI_BASE):
         horiz_layout.add_child(frame_slider)
         
         h2 = gui.Horiz(1 * em)
-        add_Switch(h2, 'Follow camera', self._on_camera_view, True)
-        self.only_trans =  add_Switch(h2, 'Only Trans', self._on_free_view, False)
+        # add_btn(h2, 'Follow camera', self._on_camera_view, True)
+        # self.btn_rela_trans =  add_Switch(h2, 'Rela trans', self._on_free_view, False)
         self.archive_box = add_box(h2, 'Chess Board', self._on_show_geometry, True)
         h2.add_child(self._show_skybox)
         h2.add_child(self._show_axes)
         h2.add_child(self._show_ground_plane)
         add_Switch(h2, 'Render Img', self._change_render_states)
-        add_btn(h2, 'Save Video', self._click_video_saving)
+        self.btn_video_save = add_btn(h2, 'Save Video', self._click_video_saving)
         add_btn(h2, 'Freeze current frame', self._freeze_frame)
 
         vert_layout.add_child(horiz_layout)
@@ -277,8 +277,8 @@ class Setting_panal(GUI_BASE):
         self.window.set_needs_layout()
         
     def update_tracked_cameras(self):
-        keys = sorted(list(self._camera_list))
-        self.camera_list_view.set_items(keys)
+        # keys = sorted(list(self._camera_list))
+        self.camera_list_view.set_items(list(self._camera_list))
         self.window.set_needs_layout()
 
     def add_freeze_data(self, name, geometry, mat):
@@ -448,6 +448,8 @@ class Setting_panal(GUI_BASE):
             collapse = gui.Vert(0.15 * em)
             geo_info = gui.Horiz(0.15 * em)
             geo_info.add_child(gui.Label("Geometries"))
+            geo_info.add_child(creat_btn('Delete', lambda: self.dlg_yes_or_no(None, self._remove_geo_list)))
+            collapse.add_fixed(separation_height)
             collapse.add_child(geo_info)
                                             
         factor_slider = gui.Slider(gui.Slider.INT)
@@ -481,7 +483,7 @@ class Setting_panal(GUI_BASE):
             pass
 
         cameras = create_combobox(self._on_select_camera)
-        self._fix_roll = gui.ToggleSwitch('')
+        self._fix_roll = gui.ToggleSwitch('Camera Stabilization')
         cam_grid = gui.VGrid(2, 0.25 * em)
         cam_grid.add_child(gui.Label('POV'))
         cam_grid.add_child(cameras)
@@ -489,14 +491,22 @@ class Setting_panal(GUI_BASE):
         cam_grid.add_child(factor_slider)
         cam_grid.add_child(gui.Label('Geometry scale'))
         cam_grid.add_child(scale_slider)
-        cam_grid.add_child(gui.Label('Stabilization'))
-        cam_grid.add_child(self._fix_roll)
-        cam_grid.add_child(creat_btn('+ Up', self.camera_fix))
+        # cam_grid.add_child(gui.Label('Stabilization'))
+        # cam_grid.add_child(self._fix_roll)
+        cam_grid_tool = gui.VGrid(3, 0.15 * em)
+        cam_grid_tool.add_child(creat_btn('Left +10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Up +10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Roll +10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Left -10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Up -10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Roll -10°', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Level', self.camera_fix))
+        cam_grid_tool.add_child(creat_btn('Look forward', lambda: self.camera_fix('forward')))
+        cam_grid_tool.add_child(creat_btn('Look Down', lambda: self.camera_fix('down')))
         # cam_grid.add_child(scale_slider)
 
         # horz = gui.Horiz(0.25 * em)
         # add_Switch(cam_grid, 'Follow camera', self._on_camera_view, True)
-        # add_Switch(cam_grid, 'Only Trans', self._on_free_view, False)
         self.camera_list_view = gui.ListView()
         self.camera_list_view.set_max_visible_items(15)
         self.camera_list_view.set_on_selection_changed(self._on_camera_list)
@@ -505,14 +515,22 @@ class Setting_panal(GUI_BASE):
         # tab2 = gui.CollapsableVert("Cameras", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
         tab2.add_child(cam_grid)
+        tab2.add_child(cam_grid_tool)
         tab2.add_child(gui.Label('Camera lists') )
         tab2.add_child(self.camera_list_view)
         _click_camera = lambda: self.pop_up_text('Input a name', lambda name: self._click_camera_saving(name, True))
         tab2.add_child(creat_btn('Add camera', _click_camera))
+
         tab2.add_fixed(separation_height)
         tab2.add_child(creat_btn('Export cameras', self._save_camera_list))
         tab2.add_child(creat_btn('Load cameras', self._load_camera_list))
-        
+
+        tab2.add_fixed(separation_height)
+        tab2.add_child(self._fix_roll)
+        add_Switch(tab2, 'Camera Following the POV', self._on_camera_view, True)
+        self.btn_freeview = add_box(tab2, 'Enable Free Viewpoint', self._on_free_view, False)
+        self.btn_rela_trans =  add_box(tab2, 'Lock rotation', lambda check: check, False)
+
         # tab2.add_child(horz)
 
         freeze_info = gui.Horiz(0.25 * em)
@@ -551,12 +569,17 @@ class Setting_panal(GUI_BASE):
             self.update_geometry(g['geometry'], name)
 
     def _on_camera_view(self, show):
-        self.only_trans.visible = show
+        self.btn_freeview.visible = show
+        self.btn_rela_trans.visible = show and self.btn_freeview.checked
         Setting_panal.FIX_CAMERA = not show
         self.window.set_needs_layout()
 
+    def _on_free_view(self, show):
+        self.btn_rela_trans.visible = show and not Setting_panal.FIX_CAMERA
+        self.window.set_needs_layout()
+
     def _on_tree(self, new_item_id):
-        self.data_id = new_item_id
+        pass
         # print(new_item_id)
 
     def _on_select_camera(self, name, index):
@@ -579,10 +602,6 @@ class Setting_panal(GUI_BASE):
             self._scene.remove_3d_label(self.tracked_frame[frame][1])
         self.tracked_frame.clear()
         self.update_tracked_points()
-
-    def _on_free_view(self, show):
-        Setting_panal.FREE_VIEW = show
-        # print(show)
         
     def _freeze_frame(self):
         Setting_panal.FREEZE = True
@@ -591,13 +610,16 @@ class Setting_panal(GUI_BASE):
     def _unfreeze(self):
         Setting_panal.FREEZE = False
 
-    def _remove_geo_list(self, name):
+    def _remove_geo_list(self, name=''):
         self.geo_check_boxes.remove_item(self.geo_check_boxes.selected_item)
-        # self._geo_list.pop(name)
-        # self.remove_geometry(name)
+        if self._selected_geo in self._geo_list:
+            self._geo_list.pop(self._selected_geo)
+        self.remove_geometry(self._selected_geo)
+        self.window.close_dialog()
 
 
     def _show_geo_by_name(self, name, show):
+        self._selected_geo = name
         for geo_name, geo_data in self._geo_list.items():
             if name in geo_name:
                 if geo_data['freeze'] == True:
@@ -726,7 +748,6 @@ class Setting_panal(GUI_BASE):
     def reset_settings(self):
         Setting_panal.IMG_COUNT = 0
         Setting_panal.VIDEO_SAVE = False
-        # Setting_panal.FREE_VIEW = False
         # Setting_panal.PAUSE = False
         # Setting_panal.POV = 'first'
         # Setting_panal.RENDER = False
@@ -748,20 +769,21 @@ class Setting_panal(GUI_BASE):
             return video_name
 
         def save_video(image_dir, video_name, delete=True):
-            if Setting_panal.VIDEO_SAVE:
-                try:
-                    is_success, info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
-                    came_path = os.path.join((os.path.dirname(image_dir)), 'vis_data', video_name+'.json')
-                    if is_success:
-                        self._save_came(came_path, is_print=False)
-                    video_name = set_video_name()
-                    self.warning_info(info, type='info')
-                except Exception as e:
-                    self.warning_info(e.args[0])
-                Setting_panal.VIDEO_SAVE = False
-                Setting_panal.IMG_COUNT = 0
-                if not Setting_panal.PAUSE:
-                    self.change_pause_status()
+            try:
+                is_success, info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
+                came_path = os.path.join((os.path.dirname(image_dir)), 'vis_data', video_name+'.json')
+                if is_success:
+                    self._save_came(came_path, is_print=False)
+                video_name = set_video_name()
+                self.warning_info(info, type='info')
+            except Exception as e:
+                self.warning_info(e.args[0])
+
+            Setting_panal.VIDEO_SAVE = False
+            Setting_panal.IMG_COUNT = 0
+            
+            if not Setting_panal.PAUSE:
+                self.change_pause_status()
             return video_name
 
         while True:
@@ -777,7 +799,7 @@ class Setting_panal(GUI_BASE):
                 self.update_data(data, initialized)
                 time.sleep(0.02)
                 try:
-                    self.set_camera(index, Setting_panal.POV)
+                    self.set_camera(index, index-1, Setting_panal.POV)
                 except Exception as e:
                     print(e)
 
@@ -795,15 +817,17 @@ class Setting_panal(GUI_BASE):
                     if Setting_panal.CLICKED:
                         rule = (index != self._get_slider_value() or Setting_panal.FREEZE)
                         if rule:
-                            index = self._get_slider_value()
-                            data = self.fetch_data(index)
+                            new_index = self._get_slider_value()
+                            data = self.fetch_data(new_index)
                             self.update_data(data)
                             time.sleep(0.01)
+                        else: 
+                            new_index = index
                         try:
-                            self.set_camera(index, Setting_panal.POV)
+                            self.set_camera(new_index, index-1, Setting_panal.POV)
                         except Exception as e:
                             print(e)
-                            
+                        index = new_index
                         self._clicked()
 
                     if Setting_panal.VIDEO_SAVE:
@@ -814,19 +838,20 @@ class Setting_panal(GUI_BASE):
                     
                 self._set_slider_value(index+1)
 
-            video_name = save_video(image_dir, video_name, delete=True)
+            if Setting_panal.RENDER:
+                video_name = save_video(image_dir, video_name, delete=True)
 
             self._on_slider(0)
 
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
-        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.jpg')
+        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.png')
         self._click_camera_saving(f'VIDEO_{Setting_panal.IMG_COUNT:05d}', is_print=False)
         Setting_panal.IMG_COUNT += 1
         self.export_image(img_path, 1280, 720)
 
-    def set_camera(self, ind, pov):
+    def set_camera(self, new_ind, ind, pov):
         pass
 
     def get_tracking_data(self, index):

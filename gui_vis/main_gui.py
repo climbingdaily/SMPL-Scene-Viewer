@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 sys.path.append('.')
 
 from gui_vis import HUMAN_DATA, Setting_panal as setting, Menu, creat_chessboard, add_box, mat_set, add_btn, vertices_to_joints
-from util import load_scene as load_pts, read_json_file
+from util import load_scene as load_pts, read_json_file, cam_to_extrinsic, extrinsic_to_cam
 
 sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'smpl', 'sample.ply')
 data_format = read_json_file(os.path.join(os.path.dirname(__file__), 'smpl_key.json'))
@@ -162,7 +162,7 @@ class o3dvis(setting, Menu):
                 traj = o3d.geometry.PointCloud()
                 traj.points = o3d.utility.Vector3dVector(humans[key]['trans'])
                 traj.paint_uniform_color(POSE_COLOR[key])
-                self.update_geometry(traj, f'traj_{key}')
+                # self.update_geometry(traj, f'traj_{key}')
                 data[f'seg_traj_{key}'] = traj
 
                 smpl = o3d.io.read_triangle_mesh(sample_path)
@@ -294,7 +294,7 @@ class o3dvis(setting, Menu):
 
         return self.fetched_data
 
-    def set_camera(self, ind, pov):
+    def set_camera(self, new_id, ind, pov):
         """
         It sets the camera to the given index and point of view.
         
@@ -303,16 +303,34 @@ class o3dvis(setting, Menu):
           pov: the camera's point of view
         """
         posistions, extrinsics = self.Human_data.get_extrinsic(pov)
-        if ind > 0 and o3dvis.FREE_VIEW:
-            extrinsic = self.get_camera()
-            relative_trans = self.COOR_INIT[:3, :3] @ (posistions[ind] - posistions[ind-1])
-            # relative_trans = -extrinsics[ind][:3, :3].T @ extrinsics[ind][:3, 3] + extrinsics[ind-1][:3, :3].T @ extrinsics[ind-1][:3, 3]
-            # relative_trans = self.COOR_INIT[:3, :3] @ relative_trans
-            camera_positon = -(extrinsic[:3, :3].T @ extrinsic[:3, 3])
-            extrinsic[:3, 3] = -(extrinsic[:3, :3] @ (camera_positon + relative_trans))
-            self.init_camera(extrinsic)
-        else:
-            self.init_camera(extrinsics[ind] @ self.COOR_INIT)  
+        new_ex = extrinsics[new_id] @ self.COOR_INIT
+
+        if self.btn_freeview.checked:
+            # rot和trans都可以自由拖动
+            # 自由视角
+            ex = extrinsics[ind] @ self.COOR_INIT
+            new_cam = extrinsic_to_cam(new_ex)
+            cam = extrinsic_to_cam(ex)
+            cur_cam = self._scene.scene.camera.get_model_matrix()
+
+            pos_to_cam = cur_cam[:3, 3] - self.COOR_INIT[:3, :3] @ posistions[ind]
+            rela_rot = new_cam[:3, :3] @ cam[:3, :3].T
+            rela_trans = self.COOR_INIT[:3, :3] @ (posistions[new_id] - posistions[ind])
+            rel_pos = rela_rot @ pos_to_cam - pos_to_cam + rela_trans
+            new_rot = rela_rot @ cur_cam[:3, :3]
+
+            if new_id > 0 and self.btn_rela_trans.checked:
+                # trans是相对trans
+                cur_cam[:3, -1] = cur_cam[:3, -1] + rela_trans # new camera position
+                new_ex = cam_to_extrinsic(cur_cam)
+
+            elif new_id > 0:
+                # trans是相对trans
+                cur_cam[:3, -1] = cur_cam[:3, -1] + rel_pos # new camera position
+                cur_cam[:3, :3] = new_rot # new camera position
+                new_ex = cam_to_extrinsic(cur_cam)
+
+        self.init_camera(new_ex)
 
     def add_geometry(self, 
                     geometry, 
@@ -416,17 +434,29 @@ class o3dvis(setting, Menu):
         ex = self.get_camera()
         return -ex[:3, :3].T @ ex[:3, 3]
 
-    def camera_fix(self, axsis = 'roll', extrinsic=None):
+    def camera_fix(self, axsis = 'roll', extrinsic=None, setup=True):
         if extrinsic is None:
             extrinsic = self.get_camera()
-        cam = np.eye(4)
-        cam[:3, :3] = extrinsic[:3, :3].T @ np.array([[1,0,0],[0,-1,0],[0,0,-1]])
-        cam[:3, 3] =  -extrinsic[:3, :3].T @ extrinsic[:3, 3]
+        cam = extrinsic_to_cam(extrinsic)
         cam_pos = cam[:3, 3]
         if axsis == 'roll':
-            z_direction = cam[:3, 2]    # cam's Z direction in world coordinates
-            world = cam_pos - 4 * z_direction
+            world = cam_pos - 4 * cam[:3, 2] # cam's Z direction in world coordinates
             up = self.COOR_INIT[:3, :3] @ np.array([0,0,1])
+        elif axsis == 'down':
+            world = cam_pos - self.COOR_INIT[:3, :3] @ np.array([0,0,1]) * 4
+            up = cam[:3, 1]
+            up[1] = 0    # Y-axis is the Up direction in world coordinate # 
+            if sum(abs(up)) < 1e-6:
+              up = -cam[:3, 2]
+            up = up / np.linalg.norm(up)
+        elif axsis == 'forward':
+            up = self.COOR_INIT[:3, :3] @ np.array([0,0,1])
+            forward = cam[:3, 2]
+            forward[1] = 0
+            if sum(abs(forward)) < 1e-6:
+              forward = -cam[:3, 1]
+            world = cam_pos - forward * 4
+
         self._scene.look_at(world, cam_pos, up)
 
     def init_camera(self, extrinsic_matrix=None, intrinsic_factor=None): 
@@ -463,10 +493,12 @@ class o3dvis(setting, Menu):
             extrinsic_matrix = self.get_camera()
 
         extrinsic_matrix[:3, 3] *= o3dvis.SCALE 
-        self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
         if self._fix_roll.is_on:
-            self.camera_fix('roll')
+            self.camera_fix('roll', extrinsic_matrix)
+            extrinsic_matrix = self.get_camera()
+
+        self._scene.setup_camera(self.intrinsic, extrinsic_matrix, x, y, bounds)
 
 
     def make_material(self, geometry, name, gtype, is_archive=False, point_size=2, color=[0.9, 0.9, 0.9, 1.0]):

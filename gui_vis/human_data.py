@@ -162,7 +162,6 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
 
 class HUMAN_DATA:
     FOV = 'first'
-    FREE_VIEW = False
 
     def __init__(self, is_remote=False, data_format=None):
         self.is_remote = is_remote

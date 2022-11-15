@@ -33,6 +33,27 @@ def read_json_file(file_name):
             data = None
     return data
 
+def extrinsic_to_cam(extrinsic):
+    cam = np.eye(4)
+    cam[:3, :3] = extrinsic[:3, :3].T @ np.array([[1,0,0],[0,-1,0],[0,0,-1]])
+    cam[:3, 3] = -(extrinsic[:3, :3].T @ extrinsic[:3, 3])
+    return cam
+
+def cam_to_extrinsic(cam):
+    """
+    It takes a camera matrix and returns the extrinsic matrix
+    
+    Args:
+      cam: the camera matrix
+    
+    Returns:
+      The extrinsic matrix
+    """
+    extrinsic = np.eye(4)
+    extrinsic[:3, :3] = np.array([[1,0,0],[0,-1,0],[0,0,-1]]) @ cam[:3, :3].T
+    extrinsic[:3, 3] = -(extrinsic[:3, :3] @ cam[:3, 3])
+    return extrinsic
+
 def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     if filename is None:
         filename = os.path.basename(img_dir) + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
@@ -41,7 +62,7 @@ def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     # video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
     os.makedirs(os.path.join(os.path.dirname(img_dir), 'vis_data'), exist_ok=True)
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
-    command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.jpg\" -b:v 6M -c:v h264 -r 30  \"{video_path}\""
+    command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.png\" -b:v 10M -c:v h264 -r 30  \"{video_path}\""
     if os.path.exists(video_path) or os.path.exists(video_path):
         return False, f"'{video_path}' existed."
     elif not os.path.exists(img_dir):

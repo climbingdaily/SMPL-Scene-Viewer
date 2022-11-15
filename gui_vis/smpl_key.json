@@ -145,5 +145,11 @@
             "head_rots": "No",
             "abbr": "(p2)"
         }
+    },
+    "video":
+    {
+        "width": 1280,
+        "height": 720,
+        "resolution": 9
     }
 }

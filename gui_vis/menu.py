@@ -338,16 +338,20 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
-    def dlg_yes_or_no(self, info, type='Info'):
+    def dlg_yes_or_no(self, info, func, type='Info'):
         em = self.window.theme.font_size
         dlg = gui.Dialog(f'[{type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
+        if info == None:
+            info = f"Are you sure you want to delete '{self._selected_geo}' ? "
         dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
         yes = gui.Button("Yes")
         no = gui.Button("No")
-        yes.set_on_clicked(self._on_about_ok)
+
+        yes.set_on_clicked(func)
         no.set_on_clicked(self._on_about_ok)
-        h = gui.Horiz()
+
+        h = gui.Horiz(0.25 * em)
         h.add_stretch()
         h.add_child(yes)
         h.add_child(no)
@@ -391,16 +395,7 @@ class Menu(GUI_BASE):
         # self._point_size.double_value = settings.material.point_size
 
     def _on_material_setting(self, name):
-        # name_list = []
-        # for name, item in self._geo_list.items():
-        #     if not item['freeze'] and not item['archive']:
-        #         name_list.append(name)
-
-        # name = name_list[self.geo_check_boxes.selected_item-1]
-        # if name not in self._geo_list:
-        #     self.warning_info(f'No such geometry: {name} ')
-        #     return 
-
+        self._selected_geo = name
         if 'mat' not in self._geo_list[name]:
             self._geo_list[name]['mat'] = Settings()
 
