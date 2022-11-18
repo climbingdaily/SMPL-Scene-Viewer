@@ -333,7 +333,9 @@ class load_data_remote(object):
             # pointcloud.textures[0] = [o3d.io.read_image(file_name.replace('.obj', '.jpg'))]
             # pointcloud.compute_vertex_normals()
             # pointcloud = o3d.t.geometry.TriangleMesh.from_legacy(pointcloud)
-
+        elif file_name.endswith('.bin'):
+            pc = np.fromfile('1329073157315402.bin', dtype=np.float32).reshape(-1, 4)
+            pointcloud.points = o3d.utility.Vector3dVector(pc[:, :3])
         else:
             pass
         return pointcloud

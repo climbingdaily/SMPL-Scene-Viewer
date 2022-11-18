@@ -422,9 +422,16 @@ class Setting_panal(GUI_BASE):
             if pcd_path.endswith('.pcd'):
                 self.tracking_list.append(pcd_path)
 
+        for pcd_path in pcd_paths:
+            if pcd_path.endswith('.bin'):
+                self.tracking_list.append(pcd_path)
+
         if len(self.tracking_list) > 0:
-            self.tracking_list = sorted(self.tracking_list, key=lambda x: float(
-                x.split('.')[0].replace('_', '.')))
+            try:
+                self.tracking_list = sorted(self.tracking_list, key=lambda x: float(
+                    x.split('.')[0].replace('_', '.')))
+            except Exception as e:
+                self.tracking_list = sorted(self.tracking_list)
 
             if not Setting_panal.PAUSE:
                 self.change_pause_status()
