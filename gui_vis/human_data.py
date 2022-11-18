@@ -221,11 +221,12 @@ class HUMAN_DATA:
                 except Exception as e:
                     print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
             elif 'trans' in camera:
+                # lidar trajectory setting
                 try:
                     position = self.humans[camera['person']][camera['trans']][:, 1:4]
                     head_rots = R.from_quat(self.humans[camera['person']][camera['direction']][:, 4:8]).as_matrix()
                     rotation = head_rots @ head_rots[0].T
-                    self.cameras[name] = generate_views(position, rotation, dist=offset_center)
+                    self.cameras[name] = generate_views(position, rotation, dist=0, rad=0)
                 except Exception as e:
                     print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
             

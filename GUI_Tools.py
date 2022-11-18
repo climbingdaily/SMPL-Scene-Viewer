@@ -148,7 +148,7 @@ class ImagWindow(base_gui):
             # point.paint_uniform_color(plt.get_cmap("hsv")(ratio)[:3])
 
             # if name not in self._geo_list:
-            #     self.make_material(point, name, 'point', is_archive=False, point_size=9)
+            #     self.make_material(point, name, 'PointCloud', is_archive=False, point_size=9)
             # self.update_geometry(
             #     point, name, reset_bounding_box=False, freeze=True)
 

@@ -54,9 +54,9 @@ class AppWindow:
 
     DEFAULT_IBL = "default"
 
-    MATERIAL_NAMES = ["Lit", "Unlit", "Normals", "Depth", "Transparency", "LitSSR"]
+    MATERIAL_NAMES = ["Lit", "Unlit", "Normals", "Depth", "Line", "Transparency", "LitSSR"]
     MATERIAL_SHADERS = [
-        Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH, Settings.Transparency, Settings.LitSSR
+        Settings.LIT, Settings.UNLIT, Settings.NORMALS, Settings.DEPTH, Settings.LINE, Settings.Transparency, Settings.LitSSR
     ]
 
     def __init__(self, width, height, name='Open3D'):
@@ -364,13 +364,13 @@ class AppWindow:
             # update material for point cloud
             if self.point_box.checked:
                 for name in self._geo_list:
-                    if 'point' == self._geo_list[name]['type']:
+                    if 'PointCloud' == self._geo_list[name]['type']:
                         scene.modify_geometry_material(name, self.settings.material)
 
             # update material for mesh
             if self.mesh_box.checked:
                 for name in self._geo_list:
-                    if 'mesh' == self._geo_list[name]['type']:
+                    if 'TriangleMesh' == self._geo_list[name]['type']:
                         scene.modify_geometry_material(name, self.settings.material)
 
             self.settings.apply_material = False
@@ -536,7 +536,7 @@ class AppWindow:
                 if len(mesh.vertex_colors) == 0:
                     mesh.paint_uniform_color([1, 1, 1])
                 geometry = mesh
-                self._geo_list[name] = {'geometry': geometry, 'type': 'mesh'}
+                self._geo_list[name] = {'geometry': geometry, 'type': 'TriangleMesh'}
             # Make sure the mesh has texture coordinates
             if not mesh.has_triangle_uvs():
                 uv = np.array([[0.0, 0.0]] * (3 * len(mesh.triangles)))
@@ -556,7 +556,7 @@ class AppWindow:
                     cloud.estimate_normals()
                 cloud.normalize_normals()
                 geometry = cloud
-                self._geo_list[name] = {'geometry': geometry, 'type': 'point'}
+                self._geo_list[name] = {'geometry': geometry, 'type': 'PointCloud'}
             else:
                 print("[WARNING] Failed to read points", path)
 

@@ -111,6 +111,36 @@
                 0,
                 0
             ]
+        },
+        "VIBE_our(S)": {
+            "pose": "vibe_pose_ours",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "VIBE_orig(S)": {
+            "pose": "vibe_pose_orig",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        "VIBE_our_pre(S)": {
+            "pose": "vibe_pose_pre_ours",
+            "trans": "opt_trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
         }
     },
     "color_order": 
@@ -124,7 +154,10 @@
         "Pred(S)":[],
         "Ours_opt(F)":[],
         "GLAMR(S)":[],
-        "GLAMR_our_trans(S)": [],
+        "GLAMR_our_trans(S)": [255,167,243],
+        "VIBE_our(S)": [],
+        "VIBE_orig(S)": [],
+        "VIBE_our_pre(S)": [],
         "points":[0, 187, 255],
         "points_2":[119, 230, 191]
     },

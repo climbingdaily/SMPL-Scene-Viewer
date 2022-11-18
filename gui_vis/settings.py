@@ -337,7 +337,7 @@ class Setting_panal(GUI_BASE):
             try:
                 with open(path, 'r') as fb:
                     self._camera_list.update(json.load(fb))
-                self.update_tracked_cameras()
+                # self.update_tracked_cameras()
             except Exception as e:
                 print(e.args[0])
 
@@ -772,9 +772,9 @@ class Setting_panal(GUI_BASE):
             try:
                 is_success, info = images_to_video(image_dir, video_name, delete=delete, inpu_fps=20)
                 came_path = os.path.join((os.path.dirname(image_dir)), 'vis_data', video_name+'.json')
+                video_name = set_video_name()
                 if is_success:
                     self._save_came(came_path, is_print=False)
-                video_name = set_video_name()
                 self.warning_info(info, type='info')
             except Exception as e:
                 self.warning_info(e.args[0])
@@ -807,7 +807,7 @@ class Setting_panal(GUI_BASE):
 
                 if Setting_panal.RENDER and not Setting_panal.PAUSE:
                     gui.Application.instance.post_to_main_thread(self.window, lambda: self.save_imgs(image_dir))
-                    time.sleep(0.02)
+                    time.sleep(0.05)
 
                 if Setting_panal.VIDEO_SAVE:
                     video_name = save_video(image_dir, video_name)
@@ -846,7 +846,7 @@ class Setting_panal(GUI_BASE):
     def save_imgs(self, img_dir):
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
-        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.png')
+        img_path = os.path.join(img_dir, f'{Setting_panal.IMG_COUNT:05d}.jpg')
         self._click_camera_saving(f'VIDEO_{Setting_panal.IMG_COUNT:05d}', is_print=False)
         Setting_panal.IMG_COUNT += 1
         self.export_image(img_path, 1920, 1080)
@@ -863,7 +863,7 @@ class Setting_panal(GUI_BASE):
         name = 'Tracking frame'
         geometry = self.get_tracking_data(index)
         if len(geometry.points) > 0 and name not in self._geo_list:
-            self.make_material(geometry, name, 'point', is_archive=False)
+            self.make_material(geometry, name, 'PointCloud', is_archive=False)
             self._geo_list[name]['mat'].material.point_size = 8
         return {name: geometry}
 

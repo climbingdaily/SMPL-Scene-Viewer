@@ -32,6 +32,7 @@ class Settings:
     LIT = "defaultLit"
     NORMALS = "normals"
     DEPTH = "depth"
+    LINE = 'unlitLine'
     Transparency = 'defaultLitTransparency'
     LitSSR = 'defaultLitSSR'
 
@@ -177,6 +178,7 @@ class Settings:
             Settings.UNLIT: rendering.MaterialRecord(),
             Settings.NORMALS: rendering.MaterialRecord(),
             Settings.DEPTH: rendering.MaterialRecord(),
+            Settings.LINE: rendering.MaterialRecord(),
             Settings.Transparency: rendering.MaterialRecord(),
             Settings.LitSSR: rendering.MaterialRecord()
         }
@@ -184,6 +186,9 @@ class Settings:
         self._materials[Settings.LIT].shader = Settings.LIT
         self._materials[Settings.UNLIT].base_color = [0.9, 0.9, 0.9, 1.0]
         self._materials[Settings.UNLIT].shader = Settings.UNLIT
+        self._materials[Settings.LINE].base_color = [0.9, 0.9, 0.9, 1.0]
+        self._materials[Settings.LINE].shader = Settings.LINE
+        self._materials[Settings.LINE].line_width = 3
         self._materials[Settings.Transparency].base_color = [0.467, 0.467, 0.467, 0.2]
         self._materials[Settings.Transparency].shader = Settings.Transparency
         self._materials[Settings.Transparency].thickness = 1.0

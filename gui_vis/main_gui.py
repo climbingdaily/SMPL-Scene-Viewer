@@ -18,6 +18,7 @@ import sys
 import threading
 import os
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 sys.path.append('.')
 
@@ -32,8 +33,25 @@ for i, key in enumerate(data_format['color_order']):
     if len(data_format['color_order'][key]) > 0:
         POSE_COLOR[key] = np.array(data_format['color_order'][key])/255
     else:
-        POSE_COLOR[key] = plt.get_cmap(data_format['color_map'])(i*2 + 1)[:3]
+        POSE_COLOR[key] = plt.get_cmap(data_format['color_map'])((i*2 + 1) % 20)[:3]
 
+        
+def make_camera(d=0.5, fov=70, vfov=45):
+    w = d * np.tan(np.deg2rad(fov/2))
+    h = d * np.tan(np.deg2rad(vfov/2))
+    origin = [0,0,0]
+    a = [w, h, -d]
+    b = [w, -h, -d]
+    c = [-w, -h, -d]
+    d = [-w, h, -d]
+    line_set = [[4, 1],[1,2],[2,3],[3, 4],[0, 1],[0,2],[0,3], [0,4]]
+    camera_model = o3d.geometry.LineSet()
+    camera_model.points = o3d.utility.Vector3dVector([origin, a, b, c, d])
+    camera_model.lines = o3d.utility.Vector2iVector(line_set)
+    return camera_model
+
+camera_model = make_camera()
+        
 def points_to_sphere(geometry):
     """
     > It takes a point cloud and returns a mesh of spheres, each sphere centered at a point in the point
@@ -133,7 +151,7 @@ class o3dvis(setting, Menu):
         self.frame_slider_bar.enabled = True
         self.frame_edit.enabled = True
         self.play_btn.enabled = True
-        
+
         # data setting
         if self.Human_data:
             self.tracking_setting.visible = True
@@ -169,6 +187,9 @@ class o3dvis(setting, Menu):
                 smpl.vertex_colors = o3d.utility.Vector3dVector()
                 data[key] = smpl
 
+            if 'Lidar View' in cams:
+                data['camera']  = deepcopy(camera_model)
+
             self.fetched_data = dict(
                 sorted(data.items(), key=lambda x: x[0]))
 
@@ -178,7 +199,7 @@ class o3dvis(setting, Menu):
                     self.tracking_list = self.tracking_list[start:end+1]
                 except Exception as e:
                     print(e)
-
+            
 
             self.update_data = self.update_smpl
             self.fetch_data = self.fetch_smpl
@@ -279,7 +300,11 @@ class o3dvis(setting, Menu):
                     traj.points = o3d.utility.Vector3dVector(xyz)
                     traj.normals = o3d.utility.Vector3dVector()
                     traj.paint_uniform_color(POSE_COLOR[key])
-                    
+                elif key == 'camera':
+                    lidarview = self.Human_data.get_extrinsic('Lidar View')[1]
+                    geometry.points = camera_model.points
+                    geometry.transform(extrinsic_to_cam(lidarview[iid]))
+
         except Exception as e:
             print(e)
 
@@ -356,13 +381,15 @@ class o3dvis(setting, Menu):
             name = self.scene_name
 
         try: 
-            if geometry.has_points():
-                if not geometry.has_normals():
-                    geometry.estimate_normals()
-                geometry.normalize_normals()
-                gtype = 'point'
-        except:
-            try:
+            gtype = geometry.get_geometry_type().name
+        except Exception as e:
+            self.remove_geometry(name)
+            return
+        try: 
+            if gtype == 'PointCloud' and not geometry.has_normals():
+                geometry.estimate_normals()
+                # geometry.normalize_normals()
+            elif gtype == 'TriangleMesh':
                 if not geometry.has_triangle_normals():
                     geometry.compute_vertex_normals()
                 if len(geometry.vertex_colors) == 0:
@@ -371,14 +398,16 @@ class o3dvis(setting, Menu):
                 if not geometry.has_triangle_uvs():
                     uv = np.array([[0.0, 0.0]] * (3 * len(geometry.triangles)))
                     geometry.triangle_uvs = o3d.utility.Vector2dVector(uv)
-                gtype = 'mesh'
                 # self_intersecting = geometry.is_self_intersecting()
                 # watertight = geometry.is_watertight()
-            except Exception as e:
-                self.remove_geometry(name)
-                # print(e)
-                # print("[Info]", "not pointcloud or mesh.")
-                return 
+            elif gtype == 'LineSet':
+                pass
+            else:
+                pass
+                # print(f'{gtype} is not supported yet!')
+        except Exception as e:
+            pass
+            # print(f'{e.args[0]}')
 
         if name not in self._geo_list:
             self.make_material(geometry, name, gtype, archive, point_size=2)
@@ -518,6 +547,9 @@ class o3dvis(setting, Menu):
             shader = settings.UNLIT
             point_size = 4
             color[-1] = 0.8
+        elif name == 'camera':
+            shader = settings.LINE
+            color = [25/255, 1, 25/255, 1]
         else:
             shader = settings.LIT
 

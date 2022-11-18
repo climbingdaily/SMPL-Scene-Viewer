@@ -62,7 +62,7 @@ def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     # video_path2 = os.path.join(os.path.dirname(img_dir), 'vis_data', f'{filename}.avi')
     os.makedirs(os.path.join(os.path.dirname(img_dir), 'vis_data'), exist_ok=True)
     # command = f"ffmpeg -f image2 -i {path}\\{filename}_%4d.jpg -b:v 10M -c:v h264 -r 20  {video_path}"
-    command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.png\" -b:v 10M -c:v h264 -r 30  \"{video_path}\""
+    command = f"ffmpeg -f image2 -threads 8 -r {inpu_fps} -start_number 1 -i \"{img_dir}\\%5d.jpg\" -b:v 10M -c:v h264 -r 20  \"{video_path}\""
     if os.path.exists(video_path) or os.path.exists(video_path):
         return False, f"'{video_path}' existed."
     elif not os.path.exists(img_dir):
