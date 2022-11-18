@@ -155,9 +155,9 @@
         "Ours_opt(F)":[],
         "GLAMR(S)":[],
         "GLAMR_our_trans(S)": [255,167,243],
-        "VIBE_our(S)": [],
         "VIBE_orig(S)": [],
-        "VIBE_our_pre(S)": [],
+        "VIBE_our(S)": [],
+        "VIBE_our_pre(S)": [176,100,244],
         "points":[0, 187, 255],
         "points_2":[119, 230, 191]
     },
