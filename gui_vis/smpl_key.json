@@ -94,7 +94,7 @@
         },
         "GLAMR(S)": {
             "pose": "glamr_pose",
-            "trans": "glamr_trans",
+            "trans": "glamr_tran",
             "trans_bak": "trans",
             "color": [
                 0,
@@ -106,6 +106,7 @@
             "pose": "glamr_pose",
             "trans": "opt_trans",
             "trans_bak": "trans",
+            "rot": "opt_pose",
             "color": [
                 0,
                 0,

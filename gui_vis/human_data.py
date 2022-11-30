@@ -53,9 +53,14 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=12, move_back = 1, move_up =
     _, extrinsics = generate_views(cam_pos, rots, dist=0, rad=np.deg2rad(0), filter=filter)
     return positions, extrinsics
 
-def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, info='First'):
+def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, rot=None, info='First'):
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
+        if rot is not None:
+            if human_data[rot].shape[1] == 72:
+                pose[:, :3] = human_data[rot][:, :3].copy()
+            elif human_data[rot].shape[1] == 24:
+                pose[:, :1] = human_data[rot][:, :1].copy()
         
         if 'beta' not in human_data:
             beta = [0] * 10
@@ -108,6 +113,7 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
             for info, values in data_format[person].items():
                 
                 if values['pose'] == 'pred_pose' and 'pred_pose' in humans[person]:
+                    # load predicted pose
                     pose = humans[person]['pred_pose'].copy()
                     if 'opt_trans' in humans[person]:
                         trans = humans[person]['opt_trans'].copy()
@@ -125,8 +131,9 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                     print(f'[SMPL MODEL] Predicted person loaded')
 
                 elif values['trans'] == 'lidar_traj' and 'lidar_traj' in humans[person]:
+                    # load lidar_traj
                     f_vert = vis_data['humans']['Baseline1(F)']['verts']
-                    pose = vis_data['humans']['Baseline1(F)']['psoe']
+                    pose = vis_data['humans']['Baseline1(F)']['pose']
                     trans = vis_data['humans']['Baseline1(F)']['trans']
                     lidar_traj = humans[person]['lidar_traj'][:, 1:4]
                     head = vertices_to_joints(f_vert, 15)
@@ -143,10 +150,11 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                     lidar_trans = lidar_traj[start: end] + lidar_to_head + head_to_root + smpl_offset
                     lidar_trans = np.expand_dims(trans.astype(np.float32), 1)
 
-                    vis_data['humans'][info] = {'verts': f_vert-trans+lidar_trans, 
+                    vis_data['humans'][info] = {'verts': f_vert-trans[:, None, :]+lidar_trans, 
                                                 'trans': lidar_trans.squeeze(),
                                                 'pose': pose}
                 else:
+                    rot = values['rot'] if 'rot' in values else None
                     load_human_mesh(vis_data['humans'], 
                                     humans[person], 
                                     start, 
@@ -154,6 +162,7 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                                     values['pose'],
                                     values['trans'], 
                                     values['trans_bak'], 
+                                    rot,
                                     info=info)
 
     print(f'[SMPL LOADED] ==============')

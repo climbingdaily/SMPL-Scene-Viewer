@@ -1,53 +1,50 @@
-# vis_lidar_human_scene
+Global SMPL and Scene Visualization Tool (GSVT)
+===========================
 
-A **user-friendly** and **CPU-only** supported visualization toolkit based on Open3D.
+[![Ubuntu CI](https://github.com/isl-org/Open3D/workflows/Ubuntu%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22Ubuntu+CI%22)
+[![macOS CI](https://github.com/isl-org/Open3D/workflows/macOS%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22macOS+CI%22)
+[![Windows CI](https://github.com/isl-org/Open3D/workflows/Windows%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22Windows+CI%22)
 
-### 
-
-
+This is a simple and fast GUI tool to quantitatively visualize and compare the SMPL results in real-time. It is developed based on [Open3D](http://www.open3d.org/) and can be run on a CPU-only computer. If you want better rendering results, you should turn to Blender, Unity, etc. 
 ![](imgs/gui.jpg)
-- Load and visualize the 3D mesh model, PCD list, SMPL pkl
-- Edit every geometry's material
-- Manually pick and record the points in a frame
-- Render the view and save the video automatically.
-   
-### The sample SMPL file (.pkl) is in `imgs` folder
-  ```bash
-  # At least contains the 'pose' and 'mocap_trans'  
-  smpl_sample.pkl/
-  ├──'first_person'
-  |  ├── 'pose' # (N, 72) or (N, 24, 3, 3)
-  |  ├── 'mocap_trans' # (N, 3)
-  |  ├── 'lidar_traj' (optional_1) # (N, a), a ≥ 4 and coordinate xyz in [:, 1:4]
-  |  ├── 'opt_pose' (optional_2) # (N, 72) or (N, 24, 3, 3)
-  |  └── 'opt_trans' (optional_2) # (N, 3)
-  ├──'second_person'
-  |  ├── 'pose' (optional_3) # (N, 72) or (N, 24, 3, 3)
-  |  ├── 'mocap_trans' (optional_3) # (N, 3)
-  |  ├── 'opt_pose' (optional_4) # (N, 72) or (N, 24, 3, 3)
-  |  ├── 'opt_trans' (optional_4) # (N, 3)
-  |  ├── 'point_frame' (optional_5) # (n, ) n ≤ N, 'point_frame' ∈ 'frame_num'
-  |  └── 'point_clouds' (optional_5) # (n, 3) n ≤ N
-  └──'frame_num'(optional_5) # (N, )
-  ```
+
+
+
+### Requirements
+1. Download the SMPL model `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl`, `basicModel_f_lbs_10_207_0_v1.0.0.pkl`, `basicModel_m_lbs_10_207_0_v1.0.0.pkl` and `J_regressor_extra.npy` from http://smpl.is.tue.mpg.de and put them in `smpl` directory.
+2. (Optional) `ffmpeg` for video processing
+
+### Installation  
+```
+conda create --name GSVT python==3.9 -y
+conda activate GSVT
+pip install numpy open3d matplotlib scipy opencv-python torch torchvision torchaudio paramiko chumpy lzf 
+```
   
-<!-- ![](imgs/sample.png) -->
 ### Run
 ```
 python main_gui.py
 ```
-<!-- - *Set `remote` to `False` in `config.py` if your data is on local machine* -->
-  
-### Requirements
-1. Download the required body model `basicModel_neutral_lbs_10_207_0_v1.0.0.pkl` and `J_regressor_extra.npy` from http://smpl.is.tue.mpg.de and put it in `smpl` directory.
-2. `open3d`(>0.15.0) 
-3. `torch torchvision torchaudio` (CPU) 
-4. `ffmpeg` for video processing
+A demo file is in [imgs/smpl_sample.pkl](imgs/smpl_sample.pkl)
+
+### Some usage examples
+| # | Function | Button |
+|---|---|----
+| 1 |`.pcd` `.ply` `.obj` `.xyz` `.xyzn` visualization | ![](imgs/vis_3d_file.jpg)
+| 2 |`.pcd` sequence visualization | ![](imgs/vis_pcd_list.jpg)
+| 3 | SMPL sequence (`.pkl`) visualization <br> The data structure is detailed at [readme](gui_vis/readme.md) | ![](imgs/open_smpl.jpg)
+| 4 | Geometry's material editing | ![](imgs/edit_mat_0.jpg) ![](imgs/edit_mat.jpg)
+| 5 | Camera load/save | ![](imgs/camera_load.jpg) 
+| 5 | Rendering and generating the video (with camera automatically saved). <br> - **Start**: Toggle on the `Render img` <br> - **End**: Click the `Save video` <br> - The video will automatically be saved when the play bar meets the end.  | ![](imgs/save_video.jpg) 
+   
 
 ## Todos
 
 - [x] Save the video with GUI
 - [x] Add shade, HDR map ...
 - [x] Load video
+- [x] Generate / save camera trajectetory
 - [ ] Save the video with headless mode
-- [ ] Generate / save camera trajectetory
+
+### License
+The codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. 
