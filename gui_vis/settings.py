@@ -212,18 +212,20 @@ class Setting_panal(GUI_BASE):
     def tracking_tool_setting(self):
         em = self.window.theme.font_size
         separation_height = int(round(0.5 * em))
-        tracking_tool = gui.CollapsableVert("Tracking tool", 0.33 * em,
+        tracking_tool = gui.CollapsableVert("Points picking tool", 0.33 * em,
                                         gui.Margins(em, 0, 0, 0))
         # tracking_tool = gui.Vert(0.15 * em)
-        tracking_tool.add_child(gui.Label("Ctrl-click to pick / Double click to delete"))
-        tracking_tool.add_child(gui.Label("The camera will look at the point"))
+        tracking_tool.add_child(gui.Label("Ctrl-click to pick (ID: X, Y, Z (Time))"))
+        # tracking_tool.add_child(gui.Label("The camera will look at the point"))
         save_traj_btn = creat_btn('Save tracked traj', self._save_traj)
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
         text_step.text_value = str(Setting_panal.TRACKING_STEP)
         horiz = gui.Horiz(0.15 * em)
-        horiz.add_child(gui.Label('Auto Jump Step'))
+        horiz.add_child(gui.Label('Tracking Step'))
         horiz.add_child(text_step)
+        horiz.add_child(creat_btn('Fit curve', self._fit_curve_with_3dlabel))
+        
         # horiz.add_child(gui.Label('frames'))
         # horiz.add_child(text_frames)
         # horiz.add_child(save_traj_btn)
@@ -238,7 +240,7 @@ class Setting_panal(GUI_BASE):
 
         # collapse.add_child(remote_layout)
         tracked_info = gui.Horiz(0.25 * em)
-        tracked_info.add_child(gui.Label('Tracked label'))
+        tracked_info.add_child(gui.Label('Double click to delete.'))
         tracked_info.add_child(creat_btn('Clear', self._clear_3dlabel))
         tracking_tool.add_child(tracked_info)
         tracking_tool.add_child(self.trackpoints_list)
@@ -609,6 +611,81 @@ class Setting_panal(GUI_BASE):
             self._scene.remove_3d_label(self.tracked_frame[frame][1])
         self.tracked_frame.clear()
         self.update_tracked_points()
+        
+    def _fit_curve_with_3dlabel(self):
+        from scipy.optimize import curve_fit
+        def fit_quadratic(x, y, a=-4.916):
+            """
+            拟合一元二次方程 y = a * (x - t)**2 + h，其中 a 默认为 -1/2g, g=9.88。
+
+            参数：
+            x: 一个一维的numpy数组，表示自变量的取值。
+            y: 一个一维的numpy数组，表示因变量的取值。
+            a: 二次项系数，默认为 -1/2。
+
+            返回值：
+            一个元组，包含两个元素：(t, h)。其中 t 表示顶点的横坐标，h 表示顶点的纵坐标。
+            """
+            def quadratic(x, t, h):
+                return a * (x - t)**2 + h
+            popt, _ = curve_fit(quadratic, x, y)
+            t, h = popt[0], popt[1]
+            return t, h
+        
+        # 画出散点图、拟合曲线和对称轴
+        def plot_fitting(x, y, t, h, a=-4.916):
+            import matplotlib.pyplot as plt
+            # 生成一些随机数据
+            x_fit = np.linspace(x.min()-0.1, x.max()+0.1, 100)
+
+            # 拟合一元二次方程
+            y_fit = a * (x_fit - t)**2 + h
+
+            # 计算交叉点的坐标
+            x_intersect = t
+            y_intersect = h
+            fig, ax = plt.subplots()
+            ax.scatter(x, y, label='data')
+            ax.plot(x_fit, y_fit, color='r', label='Parabolic path')
+            ax.axvline(x=t, color='gray', linestyle='--')
+            ax.axhline(y=h, color='gray', linestyle='--')
+            ax.annotate(f'({x_intersect:.3f}, {y_intersect:.3f})', (x_intersect, y_intersect),
+                        xytext=(x_intersect+0.02, y_intersect-0.07), fontsize=12,
+                        arrowprops=dict(facecolor='black', arrowstyle='->'))
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Height (m)')
+            ax.legend()
+            return fig
+        
+        keys = sorted(list(self.tracked_frame.keys()))
+        try:
+            times = [float(self.tracking_list[k].split('.')[0].replace('_', '.')) for k in keys]
+        except Exception as e:
+            self.warning_info(f'No time information for the picked points')
+            return 
+        try:
+            heights = [(self.COOR_INIT[:3, :3].T @ self.tracked_frame[k][1].position)[2] for k in keys]
+        except Exception as e:
+            self.warning_info(f'No height data')
+            return 
+        try:
+            times = np.array(times)
+            heights = np.array(heights)
+            start = int(times[0])
+            t, h = fit_quadratic((times - start), heights)
+            fig = plot_fitting(times - start, heights, t, h)
+            # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", type='Results')
+        except Exception as e:
+            self.warning_info('Fitting error', type='Error')
+            return 
+        
+        try:
+            fig.savefig('.temp_fitting_curve.png')
+            self.show_ImageWidget(f"Time: {t+start:.3f}\n Height: {h:.2f}", 
+                                  image_path='.temp_fitting_curve.png')
+        except Exception as e:
+            self.warning_info('GUI error', type='Error')
+            return 
         
     def _freeze_frame(self):
         Setting_panal.FREEZE = True

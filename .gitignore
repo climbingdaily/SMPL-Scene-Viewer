@@ -139,3 +139,4 @@ vis_data/
 *.tgz
 interactive.ipynb
 *_test.*
+.*.png

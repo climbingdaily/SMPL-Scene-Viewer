@@ -148,9 +148,8 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                     smpl_offset = trans[0] - root[0]
 
                     lidar_trans = lidar_traj[start: end] + lidar_to_head + head_to_root + smpl_offset
-                    lidar_trans = np.expand_dims(trans.astype(np.float32), 1)
 
-                    vis_data['humans'][info] = {'verts': f_vert-trans[:, None, :]+lidar_trans, 
+                    vis_data['humans'][info] = {'verts': f_vert-trans[:, None, :]+lidar_trans[:, None, :], 
                                                 'trans': lidar_trans.squeeze(),
                                                 'pose': pose}
                 else:

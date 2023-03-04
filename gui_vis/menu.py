@@ -319,6 +319,23 @@ class Menu(GUI_BASE):
         self.window.show_dialog(dlg)
 
     def pop_up_text(self, info, func, type='Info'):
+        """
+        It creates a dialog box with a text box and an OK button. 
+        The text box is used to enter a value. 
+        The OK button is used to close the dialog box. 
+        The function takes three arguments: 
+        
+        1. info: This is the text that appears in the dialog box. 
+        2. func: This is the function that is called when the OK button is clicked. 
+        3. type: This is the type of dialog box. 
+        
+        The function returns nothing. 
+        
+        Args:
+          info: The text that will be displayed in the pop-up window.
+          func: the function to be called when the text is changed
+          type: The type of message you want to display. Defaults to Info
+        """
         em = self.window.theme.font_size
         dlg = gui.Dialog(f'[{type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
@@ -372,6 +389,28 @@ class Menu(GUI_BASE):
         h.add_stretch()
         h.add_child(ok)
         h.add_stretch()
+        # for gui in guis:
+        #     dlg_layout.add_child(gui)
+        dlg_layout.add_child(h)
+
+        dlg.add_child(dlg_layout)
+        self.window.show_dialog(dlg)
+
+    def show_ImageWidget(self, info, image_path):
+        em = self.window.theme.font_size
+        dlg = gui.Dialog(f'Image')
+        dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
+        dlg_layout.add_child(gui.Label(f'{info}'))
+        ok = gui.Button("OK")
+        ok.set_on_clicked(self._on_about_ok)
+        h = gui.Horiz()
+        h.add_stretch()
+        h.add_child(ok)
+        h.add_stretch()
+        try:
+            dlg_layout.add_child(gui.ImageWidget(image_path))
+        except:
+            dlg_layout.add_child(gui.Lable('False image path!'))
         dlg_layout.add_child(h)
 
         dlg.add_child(dlg_layout)
