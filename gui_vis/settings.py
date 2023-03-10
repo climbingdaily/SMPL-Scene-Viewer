@@ -481,15 +481,17 @@ class Setting_panal(GUI_BASE):
         self.geo_check_boxes = gui.TreeView()
         data_list.add_child(self.geo_check_boxes)
         self.geo_check_boxes.set_on_selection_changed(self._on_tree)
-        try:
-            # self.freeze_box = add_box(check_boxes, 'frozen data', self._on_show_freeze_geometry, True)
-            for box in checkboxes:
-                hh = gui.Horiz()
-                hh.add_child(box)
-                add_btn(hh, 'Set', self._on_material_setting, True)
-                self.geo_check_boxes.add_item(self.geo_check_boxes.get_root_item(), hh)
-        except:
-            pass
+
+        if checkboxes is not None:
+            try:
+                # self.freeze_box = add_box(check_boxes, 'frozen data', self._on_show_freeze_geometry, True)
+                for box in checkboxes:
+                    hh = gui.Horiz()
+                    hh.add_child(box)
+                    add_btn(hh, 'Set', self._on_material_setting, True)
+                    self.geo_check_boxes.add_item(self.geo_check_boxes.get_root_item(), hh)
+            except:
+                pass
 
         cameras = create_combobox(self._on_select_camera)
         self._fix_roll = gui.ToggleSwitch('Camera Stabilization')
@@ -673,7 +675,7 @@ class Setting_panal(GUI_BASE):
             heights = np.array(heights)
             start = int(times[0])
             t, h = fit_quadratic((times - start), heights)
-            fig = plot_fitting(times - start, heights, t, h)
+            fig = plot_fitting(times, heights, t+start, h)
             # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", type='Results')
         except Exception as e:
             self.warning_info('Fitting error', type='Error')

@@ -11,20 +11,34 @@
 # HISTORY:                                                                     #
 ################################################################################
 
-import numpy as np
-import open3d.visualization.gui as gui
 import sys
 import threading
 import os
-import matplotlib.pyplot as plt
+
+import open3d.visualization.gui as gui
 import open3d as o3d
+import matplotlib.pyplot as plt
+import numpy as np
 
 sys.path.append('.')
-
 from gui_vis.main_gui import o3dvis as base_gui
 
 class ImagWindow(base_gui):
-
+    """
+    The class `ImagWindow` is a subclass of `base_gui` and is used to track objects in a video. 
+     
+    The class `ImagWindow` has the following functions: 
+     
+     - `__init__`: The constructor of the class. 
+     - `_loading_imgs`: Loads the images from the given path. 
+     - `update_img`: Updates the image in the scene. 
+     - `fetch_img`: Fetches the image from the given index. 
+     - `_on_mouse_widget3d`: Takes the mouse click event, and then uses the depth image to get the 3D
+     coordinates of the point clicked. 
+     - `update_label`: Updates the label in the scene. 
+     - `_load_tracked_traj`: Loads the tracked trajectory from the given path. 
+     - `_save_tra
+    """
     def __init__(self, width=1280, height=768, is_remote=False, name='MyWindow'):
         super(ImagWindow, self).__init__(width, height, is_remote, name)
         self.tracked_frame = {}
@@ -206,15 +220,14 @@ class ImagWindow(base_gui):
             traj = np.hstack((np.array(positions) @ self.COOR_INIT[:3, :3], 
                             np.array(keys)[:, None], 
                             np.array(times)[:, None]))
-            savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'
-            
+            savepath = os.path.dirname(self.tracking_foler) + '/tracking_traj.txt'            
 
             self.data_loader.write_txt(savepath, traj)
             self.warning_info(f'File saved in {savepath}', 'INFO')
         except Exception as e:
             try:
                 temp_path = os.path.abspath('./temp_traj.txt')
-                np.savetxt(temp_path, traj)
+                np.savetxt(temp_path, traj) # type: ignore
                 print(f'[Write txt] Temp file saved in {temp_path}')
                 self.warning_info(f'Temp file saved in {temp_path}\nRemote faied: {e.args[0]}')
             except Exception as e:
