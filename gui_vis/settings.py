@@ -12,6 +12,7 @@
 ################################################################################
 
 from copy import deepcopy
+from json import tool
 import open3d.visualization.gui as gui
 import sys
 import os
@@ -33,28 +34,31 @@ def create_combobox(func, names=None):
     combobox.set_on_selection_changed(func)
     return combobox
 
-def add_btn(layout, name, func, color=None):
+def add_btn(layout, name, func, color=None, tooltip=''):
     btn = gui.Button(name)
     btn.horizontal_padding_em = 0.2
     btn.vertical_padding_em = 0
     if color is not None:
         btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
     btn.set_on_clicked(func)
+    btn.tooltip = tooltip
     layout.add_child(btn)
     return btn
 
 
-def add_Switch(layout, name, func, checked=False):
+def add_Switch(layout, name, func, checked=False, tooltip=''):
     switch = gui.ToggleSwitch(name)
     switch.set_on_clicked(func)
     switch.is_on = checked
+    switch.tooltip = tooltip
     layout.add_child(switch)
     return switch
 
-def add_box(layout, name, func, checked=False):
+def add_box(layout, name, func, checked=False, tooltip=''):
     box = gui.Checkbox(name)
     box.set_on_checked(func)
     box.checked = checked
+    box.tooltip = tooltip
     layout.add_child(box)
     return box
 
@@ -185,19 +189,63 @@ class Setting_panal(GUI_BASE):
         horiz_layout.add_child(play_btn)
         horiz_layout.add_child(frame_slider)
         
-        h2 = gui.Horiz(1 * em)
+        h2 = gui.Horiz(10 * em)
+        h3 = gui.Horiz(2 * em)
+
+        h21 = gui.Horiz(0.5 * em)
         # add_btn(h2, 'Follow camera', self._on_camera_view, True)
         # self.btn_rela_trans =  add_Switch(h2, 'Rela trans', self._on_free_view, False)
-        self.archive_box = add_box(h2, 'Chess Board', self._on_show_geometry, True)
-        h2.add_child(self._show_skybox)
-        h2.add_child(self._show_axes)
-        h2.add_child(self._show_ground_plane)
-        add_Switch(h2, 'Render Img', self._change_render_states)
-        self.btn_video_save = add_btn(h2, 'Save Video', self._click_video_saving)
-        add_btn(h2, 'Freeze current frame', self._freeze_frame)
+        h21.add_child((gui.Label("Show: ")))
+        self.archive_box = add_box(h21, 'Chess Board', self._on_show_geometry, True)
+        h21.add_child(self._show_skybox)
+        h21.add_child(self._show_ground_plane)
+        h21.add_child(self._show_axes)
+        
+        h22 = gui.Horiz(0.25 * em)  # row 1
+        # h21.add_stretch()
+        h22.add_child((gui.Label("View controls: ")))
+        self._arcball_button.tooltip = "Left click to rotate view. \
+                             \nRight click to translate the view. \
+                             \nMiddle Mouse Button to rotate the sunlight. \
+                             \nMouse Wheel to move far/near. \
+                             \nShift + Ctrl to move far/near more precisely.\
+                             \nShift + Mouse Wheel to ajust the camera intrinsics."
+        h22.add_child(self._arcball_button)
+        self._fly_button.tooltip = "Use keyboard to contrl the viewer. \
+                                    \nW/A/S/D to move, up/down/left/right arrows to rotate."
+        h22.add_child(self._fly_button)
+        h22.add_child(self._sun_button)
+        # h22.add_stretch()
+
+        h23 = gui.Horiz(0.5 * em)  # row 1
+        h23.add_child((gui.Label("Animation: ")))
+        add_Switch(h23, 
+                   'Imgs Exporting', 
+                   self._change_render_states,
+                   tooltip="Automatically export images while playing the data.")
+        self.btn_video_save = add_btn(h23, 'Save Video', self._click_video_saving)
+        self.btn_video_save.tooltip = "Export a MP4 video with renderered imagea. \
+                                       \nAll images will be deleted after the video is saved."
+        add_btn(h23, 'Freeze objects', self._freeze_frame, tooltip="Freeze all objects in the current frame.")
+        add_btn(h23, 'Export current img', self._on_menu_export)
+
+        h24 = gui.Horiz(0.5 * em)  # row 1
+        h24.add_child((gui.Label("Camera option: ")))
+        self._fix_roll = gui.ToggleSwitch('Stabilization')
+        self._fix_roll.tooltip = "Remove the roll of the camera."
+        h24.add_child(self._fix_roll)
+        add_Switch(h24, 'Camera Follow', self._on_camera_view, True, tooltip= "Make the camera follow the selected SMPL model in 'Camera-->POV'")
+        self.btn_freeview = add_box(h24, 'Free View', self._on_free_view, False, tooltip = "Make the free view contrl when Camera Follow is enabled")
+        self.btn_rela_trans =  add_box(h24, 'Lock rotation', lambda check: check, False, tooltip = "Make the camera follow the translation only")
 
         vert_layout.add_child(horiz_layout)
+        h2.add_child(h23)
+        h2.add_child(h22)
+        h3.add_child(h21)
+        h3.add_child(h24)
         vert_layout.add_child(h2)
+        vert_layout.add_child(h3)
+
         # vert_layout.add_child(play_btn)
 
 
@@ -218,13 +266,15 @@ class Setting_panal(GUI_BASE):
         tracking_tool.add_child(gui.Label("Ctrl-click to pick (ID: X, Y, Z (Time))"))
         # tracking_tool.add_child(gui.Label("The camera will look at the point"))
         save_traj_btn = creat_btn('Save tracked traj', self._save_traj)
+        save_traj_btn.tooltip = "Save the tracked points in the data folder. \nEvery point is stored as: # X Y Z ID Timestamp"
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(self._set_tracking_step)
         text_step.text_value = str(Setting_panal.TRACKING_STEP)
+        text_step.tooltip = "Auto jump to next [n] frame with the input step after select a point in a frame."
         horiz = gui.Horiz(0.15 * em)
         horiz.add_child(gui.Label('Tracking Step'))
         horiz.add_child(text_step)
-        horiz.add_child(creat_btn('Fit curve', self._fit_curve_with_3dlabel))
+        horiz.add_child(creat_btn('Fit curve', self._fit_curve_with_3dlabel, tooltip="Fit a parabola curve with the all selected points's height(Z). \nThis function requires all points has different timestamps. \nSelect and detele to fit a perferct curve."))
         
         # horiz.add_child(gui.Label('frames'))
         # horiz.add_child(text_frames)
@@ -494,7 +544,7 @@ class Setting_panal(GUI_BASE):
                 pass
 
         cameras = create_combobox(self._on_select_camera)
-        self._fix_roll = gui.ToggleSwitch('Camera Stabilization')
+        # self._fix_roll = gui.ToggleSwitch('Camera Stabilization')
         cam_grid = gui.VGrid(2, 0.25 * em)
         cam_grid.add_child(gui.Label('POV'))
         cam_grid.add_child(cameras)
@@ -536,11 +586,11 @@ class Setting_panal(GUI_BASE):
         tab2.add_child(creat_btn('Export cameras', self._save_camera_list))
         tab2.add_child(creat_btn('Load cameras', self._load_camera_list))
 
-        tab2.add_fixed(separation_height)
-        tab2.add_child(self._fix_roll)
-        add_Switch(tab2, 'Camera Following the POV', self._on_camera_view, True)
-        self.btn_freeview = add_box(tab2, 'Enable Free Viewpoint', self._on_free_view, False)
-        self.btn_rela_trans =  add_box(tab2, 'Lock rotation', lambda check: check, False)
+        # tab2.add_fixed(separation_height)
+        # tab2.add_child(self._fix_roll)
+        # add_Switch(tab2, 'Camera Following the POV', self._on_camera_view, True)
+        # self.btn_freeview = add_box(tab2, 'Enable Free Viewpoint', self._on_free_view, False)
+        # self.btn_rela_trans =  add_box(tab2, 'Lock rotation', lambda check: check, False)
 
         # tab2.add_child(horz)
 
@@ -682,9 +732,9 @@ class Setting_panal(GUI_BASE):
             return 
         
         try:
-            fig.savefig('.temp_fitting_curve.png')
+            fig.savefig('temp_fitting_curve.png')
             self.show_ImageWidget(f"Time: {t+start:.3f}\n Height: {h:.2f}", 
-                                  image_path='.temp_fitting_curve.png')
+                                  image_path='temp_fitting_curve.png')
         except Exception as e:
             self.warning_info('GUI error', type='Error')
             return 

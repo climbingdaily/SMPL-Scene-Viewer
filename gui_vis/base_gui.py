@@ -39,12 +39,13 @@ from .gui_material import Settings
 
 isMacOS = (platform.system() == "Darwin")
 
-def creat_btn(name, func, color=None):
+def creat_btn(name, func, color=None, tooltip=''):
     btn = gui.Button(name)
     btn.horizontal_padding_em = 0.2
     btn.vertical_padding_em = 0
     if color is not None:
         btn.background_color = gui.Color(r=color[0], b=color[1], g=color[2])
+    btn.tooltip = tooltip
     btn.set_on_clicked(func)
     return btn
 
@@ -133,19 +134,19 @@ class AppWindow:
         self._ibl_button.horizontal_padding_em = 0.5
         self._ibl_button.vertical_padding_em = 0
         self._ibl_button.set_on_clicked(self._set_mouse_mode_ibl)
-        view_ctrls.add_child(gui.Label("Mouse controls"))
+        # view_ctrls.add_child(gui.Label("Mouse controls"))
         # We want two rows of buttons, so make two horizontal layouts. We also
         # want the buttons centered, which we can do be putting a stretch item
         # as the first and last item. Stretch items take up as much space as
         # possible, and since there are two, they will each take half the extra
         # space, thus centering the buttons.
-        h = gui.Horiz(0.25 * em)  # row 1
-        h.add_stretch()
-        h.add_child(self._arcball_button)
-        h.add_child(self._fly_button)
-        h.add_child(self._sun_button)
-        h.add_stretch()
-        view_ctrls.add_child(h)
+        # h = gui.Horiz(0.25 * em)  # row 1
+        # h.add_stretch()
+        # h.add_child(self._arcball_button)
+        # h.add_child(self._fly_button)
+        # h.add_child(self._sun_button)
+        # h.add_stretch()
+        # view_ctrls.add_child(h)
         # h = gui.Horiz(0.25 * em)  # row 2
         # h.add_stretch()
         # h.add_child(self._model_button)

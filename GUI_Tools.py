@@ -44,6 +44,7 @@ class ImagWindow(base_gui):
         self.tracked_frame = {}
         self.remote = is_remote
         self._scene.set_on_mouse(self._on_mouse_widget3d)
+        self._scene.set_on_key(self._on_key_widget3d)
         self.tracking_setting.visible = True
         self.window.set_needs_layout()
 
@@ -96,6 +97,17 @@ class ImagWindow(base_gui):
         image = self.data_loader.load_imgs(self.tracking_foler + '/' + self.tracking_list[index])
         return {'imgs': image}
 
+    def _on_key_widget3d(self, event):
+
+        if event.type == gui.KeyEvent.Type.DOWN:
+            if event.key == 32:
+                self.change_pause_status()
+                return gui.Widget.EventCallbackResult.HANDLED
+            else:
+                return gui.Widget.EventCallbackResult.IGNORED
+            
+        return gui.Widget.EventCallbackResult.IGNORED
+    
     def _on_mouse_widget3d(self, event):
         """
         It takes the mouse click event, and then uses the depth image to get the 3D coordinates of the point

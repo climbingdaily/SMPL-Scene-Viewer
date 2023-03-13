@@ -360,7 +360,7 @@ class Menu(GUI_BASE):
         dlg = gui.Dialog(f'[{type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
         if info == None:
-            info = f"Are you sure you want to delete '{self._selected_geo}' ? "
+            info = f"Are you sure to delete '{self._selected_geo}' ? "
         dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
         yes = gui.Button("Yes")
         no = gui.Button("No")

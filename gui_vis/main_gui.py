@@ -87,7 +87,7 @@ class o3dvis(setting, Menu):
         self.fetched_data = {}
         for i, plane in enumerate(creat_chessboard()):
             self.add_geometry(plane, name=f'ground_{i}', archive=True, reset_bounding_box=True)
-        self.load_scene(sample_path, [0,0,0.16])
+        self.load_scene(sample_path, [0,0,0.16], reset_bounding_box=False)
         self.window.set_needs_layout()
 
     def load_scene(self, path, translate=[0,0,0], load_data_class=None, reset_bounding_box = False):
@@ -550,6 +550,8 @@ class o3dvis(setting, Menu):
         elif name == 'camera':
             shader = settings.LINE
             color = [25/255, 1, 25/255, 1]
+        elif 'sample' in name.lower():
+            shader = settings.NORMALS
         else:
             shader = settings.LIT
 
