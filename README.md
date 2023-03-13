@@ -85,3 +85,25 @@ We would like to thank the following individuals for their contributions to this
 - The creators of SMPL for their groundbreaking work in creating a widely-used and versatile body model.
 
 We are also grateful to the broader open-source community for creating and sharing tools and knowledge that make projects like this possible.
+
+## Citation
+This project is driven by the need for LiDAR-based Human and scene motion capture. If you find this tool useful for your own work, please consider citing the corresponding paper that inspired this project:
+``` bash
+@InProceedings{Dai_2022_CVPR,
+    author    = {Dai, Yudi and Lin, Yitai and Wen, Chenglu and Shen, Siqi and Xu, Lan and Yu, Jingyi and Ma, Yuexin and Wang, Cheng},
+    title     = {HSC4D: Human-Centered 4D Scene Capture in Large-Scale Indoor-Outdoor Space Using Wearable IMUs and LiDAR},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    month     = {June},
+    year      = {2022},
+    pages     = {6792-6802}
+
+@inproceedings{dai2023sloper4d,
+    title     = {SLOPER4D: A Scene-Aware Dataset for Global 4D Human Pose Estimation in Urban Environments},
+    author    = {Dai, Yudi and Lin, YiTai and Lin, XiPing and Wen, Chenglu and Xu, Lan and Yi, Hongwei and Shen, Siqi and Ma, Yuexin and Wang, Cheng},
+    booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+    month     = {June},
+    year      = {2023}
+}
+}
+
+```
