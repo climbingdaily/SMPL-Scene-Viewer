@@ -734,7 +734,9 @@ class Setting_panal(GUI_BASE):
         try:
             fig.savefig('temp_fitting_curve.png')
             self.show_ImageWidget(f"Time: {t+start:.3f}\n Height: {h:.2f}", 
-                                  image_path='temp_fitting_curve.png')
+                                  'temp_fitting_curve.png',
+                                  self.data_loader, self.tracking_foler)
+            
         except Exception as e:
             self.warning_info('GUI error', type='Error')
             return 

@@ -351,6 +351,16 @@ class load_data_remote(object):
 
         return img
 
+    def write_image_to_server(self, image_path, remote_path):
+        if self.remote:
+            with self.sftp_client.open(remote_path, "wb") as remote_file:
+                # Read image data from file
+                img = cv2.imread(image_path)
+                # Encode image data and upload via SFTP
+                _, im_buf_arr = cv2.imencode(".jpg", img)
+                im_byte_arr = im_buf_arr.tobytes()
+                remote_file.write(im_byte_arr)
+
     def load_pkl(self, filepath):
         """
         If the remote flag is set to True, then the function will open the filepath using the sftp_client

@@ -396,16 +396,22 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
-    def show_ImageWidget(self, info, image_path):
+    def show_ImageWidget(self, info, image_path, data_loader=None, data_folder=None):
         em = self.window.theme.font_size
         dlg = gui.Dialog(f'Image')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
         dlg_layout.add_child(gui.Label(f'{info}'))
         ok = gui.Button("OK")
         ok.set_on_clicked(self._on_about_ok)
-        h = gui.Horiz()
+            
+        save = gui.Button("Save img")
+        time = float(info.split(' ')[1].strip())
+        remote_path = os.path.dirname(data_folder) + f'/{time:.3f}.jpg'
+        save.set_on_clicked(lambda: data_loader.write_image_to_server(image_path, remote_path))
+        h = gui.Horiz(0.2 * em)
         h.add_stretch()
         h.add_child(ok)
+        h.add_child(save)
         h.add_stretch()
         try:
             dlg_layout.add_child(gui.ImageWidget(image_path))
