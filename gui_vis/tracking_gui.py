@@ -142,8 +142,8 @@ class trackingVis(base_gui):
         trackingVis.CLICKED = True
         self._on_slider(self._get_slider_value() + trackingVis.TRACKING_STEP)
 
-    def _load_tracked_traj(self, path, translate=[0,0,0], load_data_class=None):
-        trajs = super(trackingVis, self)._load_tracked_traj(path, translate, load_data_class)
+    def _load_tracked_traj(self, path, translate=[0,0,0], data_loader=None):
+        trajs = super(trackingVis, self)._load_tracked_traj(path, translate, data_loader)
         if trajs is not None:
             for p in trajs:
                 self._set_slider_value(int(p[3]))

@@ -15,7 +15,7 @@ import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
 
-from util import load_data_remote, generate_views, get_head_global_rots
+from util import Data_loader, generate_views, get_head_global_rots
 from util.tool_func import read_json_file
 from smpl import SMPL, poses_to_vertices
 from util.viewpoint import extrinsic_to_view
@@ -178,9 +178,9 @@ class HUMAN_DATA:
         self.data_format = data_format
 
     def load(self, filename):
-        load_data_class = load_data_remote(self.is_remote)
+        data_loader = Data_loader(self.is_remote)
         try:
-            self.humans = load_data_class.load_pkl(filename)
+            self.humans = data_loader.load_pkl(filename)
         except Exception as e:
             print(e)
             """
@@ -199,7 +199,7 @@ class HUMAN_DATA:
         # self.set_cameras()
 
     def load_hdf5(self, filename):
-        load_data_class = load_data_remote(self.is_remote)
+        data_loader = Data_loader(self.is_remote)
 
         self.vis_data_list = load_vis_data(self.humans)
 

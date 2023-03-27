@@ -18,7 +18,7 @@ import shutil
 import argparse
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
-from util import o3dvis, list_dir_remote, load_data_remote
+from util import o3dvis, list_dir_remote, Data_loader
 
 def select_pcds_by_id(folder, ids):
     pcds = os.listdir(folder)
@@ -59,7 +59,7 @@ class filter_tracking_by_interactive():
         self.reID = {}
         self.tracking_folder = tracking_folder
         self.remote = remote
-        self.load_data = load_data_remote(remote)
+        self.load_data = Data_loader(remote)
         self.join = '/' if remote else '\\'
         self._raw_select = self.tracking_folder + '_raw_select'
         self._select = self.tracking_folder + '_select'

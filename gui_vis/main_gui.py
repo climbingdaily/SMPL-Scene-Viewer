@@ -90,7 +90,7 @@ class o3dvis(setting, Menu):
         self.load_scene(sample_path, [0,0,0.16], reset_bounding_box=False)
         self.window.set_needs_layout()
 
-    def load_scene(self, path, translate=[0,0,0], load_data_class=None, reset_bounding_box = False):
+    def load_scene(self, path, translate=[0,0,0], data_loader=None, reset_bounding_box = False):
         self.window.close_dialog()
         if not os.path.isfile(path):
             self.warning_info(f'{path} is not a valid file')
@@ -98,13 +98,13 @@ class o3dvis(setting, Menu):
         name = os.path.basename(path).split('.')[0]
         self.scene_name = name
         # self._on_load_dialog_done(scene_path)
-        geometry = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+        geometry = load_pts(None, pcd_path=path, data_loader=data_loader)
         geometry.translate(translate)
         self.add_geometry(geometry, name=name, reset_bounding_box=reset_bounding_box)
 
-    def load_traj(self, path, translate=[0,0,0], load_data_class=None):
+    def load_traj(self, path, translate=[0,0,0], data_loader=None):
         """
-        `traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)`
+        `traj = load_pts(None, pcd_path=path, data_loader=data_loader)`
         
         The `load_pts` function is defined in `open3d/open3d/io/point_cloud.py` and it's a function that
         takes in a `pcd_path` and returns a `PointCloud` object
@@ -112,7 +112,7 @@ class o3dvis(setting, Menu):
         Args:
           path: the path to the file you want to load
           translate: [0,0,0]
-          load_data_class: the class of the data to be loaded, which is used to determine the data format.
+          data_loader: the class of the data to be loaded, which is used to determine the data format.
         """
         self.window.close_dialog()
         if not os.path.isfile(path):
@@ -121,7 +121,7 @@ class o3dvis(setting, Menu):
         name = os.path.basename(path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
         try:
-            traj = load_pts(None, pcd_path=path, load_data_class=load_data_class)
+            traj = load_pts(None, pcd_path=path, data_loader=data_loader)
             traj.translate(translate)
             # traj = points_to_sphere(traj)
             self.add_geometry(traj, name=name)

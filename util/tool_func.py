@@ -30,7 +30,7 @@ def read_json_file(file_name):
         try:
             data = json.load(f)
         except:
-            data = None
+            data = {}
     return data
 
 def extrinsic_to_cam(extrinsic):
