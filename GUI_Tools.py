@@ -103,6 +103,7 @@ class ImagWindow(base_gui):
     def _read_2d_json_format(path):
         # @wzj：这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
         # self.KPTS_2D = 
+        pass
 
     def _on_key_widget3d(self, event):
 
