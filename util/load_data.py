@@ -133,7 +133,7 @@ def read_pcd(pc_pcd):
     
     return pc, fields
       
-def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
+def load_scene(vis, pcd_path=None, scene = None, data_loader=None):
     """
     It loads a point cloud from a file and displays it in the viewer
     
@@ -141,20 +141,20 @@ def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
       vis: the visualization object
       pcd_path: the path to the point cloud file
       scene: the scene to be rendered.
-      load_data_class: the class that loads the data.
+      data_loader: the class that loads the data.
     
     Returns:
       The scene is being returned.
     """
     from time import time
     
-    if load_data_class is None:
-        load_data_class = load_data_remote(remote=False)
+    if data_loader is None:
+        data_loader = Data_loader(remote=False)
 
     if scene is None and pcd_path is not None:
         t1 = time()
         print(f'Loading scene from {pcd_path}')
-        scene = load_data_class.load_point_cloud(pcd_path)
+        scene = data_loader.load_point_cloud(pcd_path)
         t2 = time()
         print(f'====> Scene loading comsumed {t2-t1:.1f} s.')
     else:
@@ -171,18 +171,18 @@ def load_scene(vis, pcd_path=None, scene = None, load_data_class=None):
     return scene
 
 
-class load_data_remote(object):
+class Data_loader(object):
     client = None
     sftp_client = None
     def __init__(self, remote, username=None, hostname=None, port=None, password=None):
         self.remote = remote
         if remote:
-            load_data_remote.make_client_server(username, hostname, port, password)
+            Data_loader.make_client_server(username, hostname, port, password)
 
     @staticmethod
     def make_client_server(username=None, hostname=None, port=None, password=None):
-        load_data_remote.client = client_server(username, hostname, port, password)
-        load_data_remote.sftp_client = load_data_remote.client.open_sftp()
+        Data_loader.client = client_server(username, hostname, port, password)
+        Data_loader.sftp_client = Data_loader.client.open_sftp()
 
     def isdir(self, path):
         if self.remote:

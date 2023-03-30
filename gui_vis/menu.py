@@ -289,7 +289,7 @@ class Menu(GUI_BASE):
         generate_mesh(path, depth=13, radius=0.1)
         self.window.close_dialog()
 
-    def _load_tracked_traj(self, path, translate=[0,0,0], load_data_class=None):
+    def _load_tracked_traj(self, path, translate=[0,0,0], data_loader=None):
         import numpy as np
 
         self.window.close_dialog()

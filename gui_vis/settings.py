@@ -24,7 +24,7 @@ from scipy.spatial.transform import Rotation as R
 sys.path.append('.')
 sys.path.append('..')
 from .base_gui import AppWindow as GUI_BASE, creat_btn
-from util import load_data_remote, images_to_video, plot_kpt_on_img
+from util import Data_loader, images_to_video, plot_kpt_on_img
 
 def create_combobox(func, names=None):
     combobox = gui.Combobox()
@@ -440,7 +440,7 @@ class Setting_panal(GUI_BASE):
         
         files = []
         try:
-            self.data_loader = load_data_remote(False)
+            self.data_loader = Data_loader(False)
             files = self.data_loader.list_dir(path)
         except:
             try:
@@ -448,7 +448,7 @@ class Setting_panal(GUI_BASE):
                 username = self.remote_info['username'].strip()
                 hostname = self.remote_info['hostname'].strip()
                 port = self.remote_info['port'].strip()
-                self.data_loader = load_data_remote(True, username, hostname, int(port), password)
+                self.data_loader = Data_loader(True, username, hostname, int(port), password)
                 files = self.data_loader.list_dir(path)
             except Exception as e:
                 print(e)
