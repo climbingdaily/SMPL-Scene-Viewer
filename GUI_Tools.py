@@ -100,7 +100,7 @@ class ImagWindow(base_gui):
         # todo: @wzj
         pass
 
-    def _read_2d_json_format(path):
+    def _read_2d_json_format(self, path):
         # @wzj：这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
         # self.KPTS_2D = 
         pass
@@ -272,9 +272,9 @@ if __name__ == "__main__":
     
     import argparse
     parser = argparse.ArgumentParser(description='Run Vis Tools')
-    parser.add_argument('--width', type=int, default=1280)  # predicted by IPNet
-    parser.add_argument('--height', type=int, default=720)  # predicted by IPNet
-    parser.add_argument('--name', type=str, default='MyWindow')  # predicted by IPNet
+    parser.add_argument('--width', type=int, default=1280) 
+    parser.add_argument('--height', type=int, default=720) 
+    parser.add_argument('--name', type=str, default='MyWindow')
     args = parser.parse_args()
     
     gui.Application.instance.initialize()
