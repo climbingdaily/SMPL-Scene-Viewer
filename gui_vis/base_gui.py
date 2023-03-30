@@ -606,24 +606,12 @@ class AppWindow:
 
 
     def _make_remote_gui(self):
-        # folder = gui.TextEdit()
-        # username = gui.TextEdit()
-        # hostname = gui.TextEdit()
-        # port = gui.TextEdit()
-        # pwd = gui.TextEdit()
-
-        folder = '/hdd/dyd/lidarhumanscene/data/0417003/lidar_data/lidar_frames_rot'
-        username = 'dyd'
-        hostname = '10.24.80.241'
-        port = '911'
-        pwd = ''
-        
         self.remote_info = {}
-        self.remote_info['username'] = username
-        self.remote_info['hostname'] = hostname
-        self.remote_info['port'] = port
-        self.remote_info['folder'] = folder
-        self.remote_info['pwd'] = pwd
+        self.remote_info['username'] = 'dyd'
+        self.remote_info['hostname'] = '10.24.80.241'
+        self.remote_info['port']     = '911'
+        self.remote_info['folder']   = ''
+        self.remote_info['pwd']      = ''
 
 def main():
     # We need to initalize the application, which finds the necessary shaders

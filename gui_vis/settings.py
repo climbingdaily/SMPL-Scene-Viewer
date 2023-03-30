@@ -938,7 +938,8 @@ class Setting_panal(GUI_BASE):
                 try:
                     self.set_camera(index, index-1, Setting_panal.POV)
                 except Exception as e:
-                    print(e)
+                    # print(e)
+                    pass
 
                 initialized = True
 
@@ -963,7 +964,8 @@ class Setting_panal(GUI_BASE):
                         try:
                             self.set_camera(new_index, index-1, Setting_panal.POV)
                         except Exception as e:
-                            print(e)
+                            # print(e)
+                            pass
                         index = new_index
                         self._clicked()
 

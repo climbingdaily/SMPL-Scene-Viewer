@@ -214,8 +214,8 @@ class ImagWindow(base_gui):
             self.tracked_frame[frame][1].position = world
             create_sphere(world)
         else:
-            point_info = f'{frame}: {text}'
-            label_3d = self._scene.add_3d_label(world, f'{frame}')
+            point_info     = f'{frame}: {text}'
+            label_3d       = self._scene.add_3d_label(world, f'{frame}')
             label_3d.color = gui.Color(r=0, b=1, g=0.9)
             create_sphere(world)
 
