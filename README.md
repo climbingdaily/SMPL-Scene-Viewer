@@ -7,13 +7,13 @@ SMPL Sequences and Scene Visualization Tool
 [![macOS CI](https://github.com/isl-org/Open3D/workflows/macOS%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22macOS+CI%22)
 [![Windows CI](https://github.com/isl-org/Open3D/workflows/Windows%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22Windows+CI%22)
 
-This is a powerful open-source GUI tool designed to quickly and accurately visualize and **compare SMPL sequences** in large scenes in real-time. Based on Open3D, this tool can be easily run cross platforms and on CPU-only computers. However, if you require more advanced rendering capabilities, we recommend using Blender, Unity, or similar software for optimal results.
+This is a powerful open-source GUI tool designed to quickly and accurately visualize and **compare SMPL sequences** in large scenes in real-time. Based on Open3D, this tool can be easily run across platforms and on CPU-only computers. However, if you require more advanced rendering capabilities, we recommend using Blender, Unity, or similar software for optimal results.
 
 ## Features
 - Fast and accurate visualization of SMPL sequences in real-time **using only SMPL parameters**
 - Comparison of SMPL results across different sequences and scenes
 - Visualizing complex scenes and large datasets
-- Open-source and customizabl
+- Open-source and customizable
 - CPU-only compatible
 - Cross-platform compatible
 
@@ -62,9 +62,9 @@ python GUI_Tool.py
 ## Todos
 
 - [x] Save the video with GUI
-- [x] Add shade, HDR map ...
+- [x] Add shade and HDR map ...
 - [x] Load video
-- [x] Generate / save camera trajectetory
+- [x] Generate/save camera trajectory
 - [ ] Save the video with headless mode
 
 ## Contributing

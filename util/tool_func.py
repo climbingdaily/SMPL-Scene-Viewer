@@ -54,6 +54,14 @@ def cam_to_extrinsic(cam):
     extrinsic[:3, 3] = -(extrinsic[:3, :3] @ cam[:3, 3])
     return extrinsic
 
+def plot_kpt_on_img(img, kpts):
+    # @wzj
+    if kpts is not None:
+        # @wzj
+        return 
+    else:
+        return img
+
 def images_to_video(img_dir, filename=None, delete=False, inpu_fps=20):
     if filename is None:
         filename = os.path.basename(img_dir) + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())

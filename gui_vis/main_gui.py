@@ -201,7 +201,7 @@ class o3dvis(setting, Menu):
                     print(e)
             
 
-            self.update_data = self.update_smpl
+            # self.update_data = self.update_smpl
             self.fetch_data = self.fetch_smpl
             self.add_thread(threading.Thread(target=self.thread))
 

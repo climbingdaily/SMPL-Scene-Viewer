@@ -39,6 +39,9 @@ class ImagWindow(base_gui):
      - `_load_tracked_traj`: Loads the tracked trajectory from the given path. 
      - `_save_tra
     """
+
+    KPTS_2D = None
+
     def __init__(self, width=1280, height=768, is_remote=False, name='MyWindow'):
         super(ImagWindow, self).__init__(width, height, is_remote, name)
         self.tracked_frame = {}
@@ -67,7 +70,11 @@ class ImagWindow(base_gui):
                 self.tracking_list.append(img_path)
 
         if len(self.tracking_list) > 0:
-            self.tracking_list = sorted(self.tracking_list, key=lambda x: float(x[:-4]))
+            try:
+                self.tracking_list = sorted(self.tracking_list, 
+                                            key=lambda x: float(x[:-4].replace('_', '.')))
+            except:
+                print('Could not sort the images by name')
             if not ImagWindow.PAUSE:
                 self.change_pause_status()
             self.warning_info(f"Images loaded from '{path}'", type='info')
@@ -78,32 +85,44 @@ class ImagWindow(base_gui):
             self.total_frames = len(self.tracking_list)
 
             # A thread that will be called when the frameid changes
-            self.update_data = self.update_img
             self.fetch_data = self.fetch_img
             self.add_thread(threading.Thread(target=self.thread))
 
-    def update_img(self, data, initialized=True):
-        def func():
-            for name in data:
-                self._scene.scene.set_background([1, 1, 1, 1], data[name])
-                pass
-            self._unfreeze()
-        gui.Application.instance.post_to_main_thread(self.window, func)
-        # time.sleep(0.01)
-        if not initialized:
-            self.change_pause_status()
-
     def fetch_img(self, index):
         image = self.data_loader.load_imgs(self.tracking_foler + '/' + self.tracking_list[index])
+        # read 2d keypoints here
+        if self.KPTS_2D is not None:
+            kp2d = self.get_2d_keypoints(self.KPTS_2D, index)
+            return {'imgs': image, 'kp2d': kp2d}
         return {'imgs': image}
+
+    def get_2d_keypoints(self, keypoints, index):
+        # todo: @wzj
+        pass
+
+    def _read_2d_json_format(path):
+        # @wzj：这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
+        # self.KPTS_2D = 
 
     def _on_key_widget3d(self, event):
 
         if event.type == gui.KeyEvent.Type.DOWN:
+            # space key
             if event.key == 32:
                 self.change_pause_status()
                 return gui.Widget.EventCallbackResult.HANDLED
+            # ',' 
+            elif event.key == 44:
+                # previous frame
+                self._on_slider(self._get_slider_value() - 1)
+                return gui.Widget.EventCallbackResult.HANDLED
+            # '.' 
+            elif event.key == 46:
+                # next frame
+                self._on_slider(self._get_slider_value() + 1)
+                return gui.Widget.EventCallbackResult.HANDLED
             else:
+                # print(f'Pressed key: {event.key}')
                 return gui.Widget.EventCallbackResult.IGNORED
             
         return gui.Widget.EventCallbackResult.IGNORED
@@ -143,6 +162,9 @@ class ImagWindow(base_gui):
                 depth = np.asarray(depth_image)[y, x]
 
                 if depth == 1.0:  # clicked on nothing (i.e. the far plane)
+                    # todo: @wzj
+                    # 这里的 XY跟实际像素，好像还得做个转化
+                    # 点击像素的操作可以实现在这里
                     text = ""
                 else:
                     world = self._scene.scene.camera.unproject(

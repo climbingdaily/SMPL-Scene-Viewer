@@ -45,6 +45,8 @@ class Menu(GUI_BASE):
     MENU_TOOLS_2 = 42
     MENU_TOOLS_3 = 43
     MENU_TOOLS_4 = 44
+    MENU_TOOLS_5 = 45
+    MENU_TOOLS_6 = 46
 
     MENU_ABOUT = 51
 
@@ -96,6 +98,8 @@ class Menu(GUI_BASE):
             tools_menu = gui.Menu()
             tools_menu.add_item("Load remote pcds for tracking", Menu.MENU_TOOLS_1)
             tools_menu.add_item("Load remote images(.png .jpg)", Menu.MENU_TOOLS_2)
+            tools_menu.add_item("Load local images(.png .jpg)", Menu.MENU_TOOLS_5)
+            tools_menu.add_item("Load 2D keypoints(.json)", Menu.MENU_TOOLS_6)
             tools_menu.add_item("Load tracking_traj", Menu.MENU_TOOLS_3)
             tools_menu.add_item("Mesh generating", Menu.MENU_TOOLS_4)
 
@@ -146,6 +150,8 @@ class Menu(GUI_BASE):
         # menu for tools functions
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_1, self._on_remote_pcd_folder)
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_2, self._on_remote_imgs)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_5, self._on_load_imgs)
+        w.set_on_menu_item_activated(Menu.MENU_TOOLS_6, self._on_load_kpt2d)
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_3, self._on_menu_trackingtraj)
         w.set_on_menu_item_activated(Menu.MENU_TOOLS_4, self._on_mesh_generating)
 
@@ -215,24 +221,46 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
+    def _on_load_kpt2d(self):
+        filedlg = gui.FileDialog(gui.FileDialog.OPEN, "Select file",
+                                 self.window.theme)
+        filedlg.add_filter(".json", "Json files (.json)")
+        filedlg.add_filter("", "All files")
+        filedlg.set_on_cancel(self._on_file_dialog_cancel)
+        filedlg.set_on_done(lambda x: self._on_filedlg_done(x, self._read_2d_json_format))
+        self.window.show_dialog(filedlg)  
+
+    def _on_load_imgs(self):
+        filedlg = gui.FileDialog(gui.FileDialog.OPEN_DIR, "Select file",
+                                 self.window.theme)
+        filedlg.add_filter(".png .jpg", "Image files (.png, .jpg)")
+        filedlg.add_filter("", "All files")
+        filedlg.set_on_cancel(self._on_file_dialog_cancel)
+        filedlg.set_on_done(lambda x: self._on_filedlg_done(x, self._loading_imgs))
+        self.window.show_dialog(filedlg)  
+
     def _on_pcd_folder(self):
         filedlg = gui.FileDialog(gui.FileDialog.OPEN_DIR, "Select file",
                                  self.window.theme)
         filedlg.add_filter(".pcd .ply", "Triangle mesh (.pcd, .ply)")
         filedlg.add_filter("", "All files")
         filedlg.set_on_cancel(self._on_file_dialog_cancel)
-        filedlg.set_on_done(self._on_filedlg_done)
+        filedlg.set_on_done(lambda x: self._on_filedlg_done(x, self._loading_pcds))
         self.window.show_dialog(filedlg)
         
-    def _on_filedlg_done(self, path):
+    def _on_filedlg_done(self, path, load_func=None):
         # self.remote_info['folder'].text_value = path
         self.window.close_dialog()
-        self._loading_pcds(path)
+        if load_func is not None:
+            load_func(path)
 
     def _loading_pcds(path):
         pass
 
     def _loading_imgs(path):
+        pass
+
+    def _read_2d_json_format(path):
         pass
 
     def _on_menu_trackingtraj(self):

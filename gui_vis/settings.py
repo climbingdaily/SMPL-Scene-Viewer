@@ -24,7 +24,7 @@ from scipy.spatial.transform import Rotation as R
 sys.path.append('.')
 sys.path.append('..')
 from .base_gui import AppWindow as GUI_BASE, creat_btn
-from util import load_data_remote, images_to_video
+from util import load_data_remote, images_to_video, plot_kpt_on_img
 
 def create_combobox(func, names=None):
     combobox = gui.Combobox()
@@ -162,10 +162,9 @@ class Setting_panal(GUI_BASE):
         vert_layout = gui.Vert(0.15 * em)
         # collapse = gui.CollapsableVert("Data stream", 0.33 * em,
         #                                 gui.Margins(em, 0, 0, 0))
+        play_btn    = creat_btn('  >>|| (Play / Stop)  ', self.change_pause_status, color = [0, 0, 0.5])
 
-        play_btn     = creat_btn('  >>|| (Play / Stop)  ', self.change_pause_status, color = [0, 0, 0.5])
-
-        frame_edit = gui.NumberEdit(gui.NumberEdit.INT)
+        frame_edit  = gui.NumberEdit(gui.NumberEdit.INT)
         frame_edit.int_value = 0
         frame_edit.set_limits(0, 100)  # value coerced to 1
         frame_edit.set_on_value_changed(self._on_slider)
@@ -1009,14 +1008,19 @@ class Setting_panal(GUI_BASE):
         def func():
             # your function here
             for name in data:
-                self.update_geometry(data[name], name, reset_bounding_box=False, freeze=Setting_panal.FREEZE)
+                if name == 'imgs':
+                    self._scene.scene.set_background([1, 1, 1, 1], data[name])
+                    if "kp2d" in data:
+                        figure = plot_kpt_on_img(data[name], data["kp2d"])
+                        self._scene.scene.set_background([1, 1, 1, 1], figure)
+                else:
+                    self.update_geometry(data[name], name, reset_bounding_box=False, freeze=Setting_panal.FREEZE)
             self.window.set_needs_layout()
             self._unfreeze()
         gui.Application.instance.post_to_main_thread(self.window, func)
 
         if not initialized:
             # your function here
-
             self.change_pause_status()
 
 def _async_raise(tid, exctype):
