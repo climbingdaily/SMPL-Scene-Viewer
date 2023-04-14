@@ -348,7 +348,7 @@ class Menu(GUI_BASE):
         dlg.set_on_done(self._on_load_smpl_done)
         self.window.show_dialog(dlg)
 
-    def pop_up_text(self, info, func, type='Info'):
+    def pop_up_text(self, info, func, info_type='Info'):
         """
         It creates a dialog box with a text box and an OK button. 
         The text box is used to enter a value. 
@@ -364,12 +364,12 @@ class Menu(GUI_BASE):
         Args:
           info: The text that will be displayed in the pop-up window.
           func: the function to be called when the text is changed
-          type: The type of message you want to display. Defaults to Info
+          info_type: The type of message you want to display. Defaults to Info
         """
         em = self.window.theme.font_size
-        dlg = gui.Dialog(f'[{type}]')
+        dlg = gui.Dialog(f'[{info_type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
+        dlg_layout.add_child(gui.Label(f'[{info_type}] \n {info}'))
         text_step = gui.TextEdit()
         text_step.set_on_value_changed(func)
         
@@ -385,13 +385,13 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
-    def dlg_yes_or_no(self, info, func, type='Info'):
+    def dlg_yes_or_no(self, info, func, info_type='Info'):
         em = self.window.theme.font_size
-        dlg = gui.Dialog(f'[{type}]')
+        dlg = gui.Dialog(f'[{info_type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        if info == None:
+        if info is None:
             info = f"Are you sure to delete '{self._selected_geo}' ? "
-        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
+        dlg_layout.add_child(gui.Label(f'[{info_type}] \n {info}'))
         yes = gui.Button("Yes")
         no = gui.Button("No")
 
@@ -408,11 +408,11 @@ class Menu(GUI_BASE):
         dlg.add_child(dlg_layout)
         self.window.show_dialog(dlg)
 
-    def warning_info(self, info, type='Warning'):
+    def warning_info(self, info, info_type='Warning'):
         em = self.window.theme.font_size
-        dlg = gui.Dialog(f'[{type}]')
+        dlg = gui.Dialog(f'[{info_type}]')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
-        dlg_layout.add_child(gui.Label(f'[{type}] \n {info}'))
+        dlg_layout.add_child(gui.Label(f'[{info_type}] \n {info}'))
         ok = gui.Button("OK")
         ok.set_on_clicked(self._on_about_ok)
         h = gui.Horiz()
@@ -428,7 +428,7 @@ class Menu(GUI_BASE):
 
     def show_ImageWidget(self, info, image_path, data_loader=None, data_folder=None):
         em = self.window.theme.font_size
-        dlg = gui.Dialog(f'Image')
+        dlg = gui.Dialog('Image')
         dlg_layout = gui.Vert(em, gui.Margins(em, em, em, em))
         dlg_layout.add_child(gui.Label(f'{info}'))
         ok = gui.Button("OK")

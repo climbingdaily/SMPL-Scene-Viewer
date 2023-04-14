@@ -24,20 +24,19 @@
 # IN THE SOFTWARE.
 # ----------------------------------------------------------------------------
 
+import os
+import sys
 import glob
+import platform
 import numpy as np
 import open3d as o3d
 import open3d.visualization.gui as gui
 import open3d.visualization.rendering as rendering
-import os
-import platform
-import sys
 import cv2
-import time
 
 from .gui_material import Settings
 
-isMacOS = (platform.system() == "Darwin")
+isMacOS = platform.system() == "Darwin"
 
 def creat_btn(name, func, color=None, tooltip=''):
     btn = gui.Button(name)
@@ -583,9 +582,9 @@ class AppWindow:
         def on_image(image):
             # img = image
             img = cv2.resize(np.asarray(image), (width, height))
-            quality = 9  # png
-            if path.endswith(".jpg"):
-                quality = 100
+            # quality = 9  # png
+            # if path.endswith(".jpg"):
+            #     quality = 100
             # o3d.io.write_image(path, img, quality)
             cv2.imwrite(path, img[..., [2,1,0]])
             # time.sleep(0.005)

@@ -11,20 +11,18 @@
 # HISTORY:                                                                     #
 ################################################################################
 
-from copy import deepcopy
-from json import tool
-import open3d.visualization.gui as gui
 import sys
 import os
 import time
-import cv2
 import numpy as np
+import open3d.visualization.gui as gui
 from scipy.spatial.transform import Rotation as R
 
 sys.path.append('.')
 sys.path.append('..')
-from .base_gui import AppWindow as GUI_BASE, creat_btn
+
 from util import Data_loader, images_to_video, plot_kpt_on_img
+from .base_gui import AppWindow as GUI_BASE, creat_btn
 
 def create_combobox(func, names=None):
     combobox = gui.Combobox()
@@ -63,31 +61,31 @@ def add_box(layout, name, func, checked=False, tooltip=''):
     return box
 
 class Setting_panal(GUI_BASE):
-    TRACKING_STEP = 1
-    FREEZE = False
-    FIX_CAMERA = False
-    PAUSE = False
-    POV = 'first'
-    RENDER = False
-    VIDEO_SAVE = False
-    CLICKED = False
+    TRACKING_STEP    = 1
+    FREEZE           = False
+    FIX_CAMERA       = False
+    PAUSE            = False
+    POV              = 'first'
+    RENDER           = False
+    VIDEO_SAVE       = False
+    CLICKED          = False
     INTRINSIC_FACTOR = 1
-    SCALE = 1
-    MYTHREAD = None
-    IMG_COUNT = 0
+    SCALE            = 1
+    MYTHREAD         = None
+    IMG_COUNT        = 0
     _START_FRAME_NUM = 0
 
     def __init__(self, width=1280, height=720, name='Settings'):
         super(Setting_panal, self).__init__(width, height, name)
-        self.total_frames = 1
-        self.tracking_list = []
-        self.tracked_frame = {}
-        self._selected_geo = 'sample'
-        em = self.window.theme.font_size
-
-        self.stream_setting = self.create_stream_settings()
+        self.total_frames             = 1
+        self.tracking_list            = []
+        self.tracked_frame            = {}        
+        self.tracking_foler           = None
+        self._selected_geo            = 'sample'
+        self.data_loader              = None
+        self.stream_setting           = self.create_stream_settings()
         human_setting, camera_setting = self.create_humandata_settings()
-        self.tracking_setting = self.tracking_tool_setting()
+        self.tracking_setting         = self.tracking_tool_setting()
 
         # tabs = gui.TabControl()
         tabs = gui.Vert()
@@ -121,10 +119,10 @@ class Setting_panal(GUI_BASE):
         play_btn_height = min(r.height, pref.height)
 
         setting_width = 17 * layout_context.theme.font_size
-        setting_height = min(
-            r.height - play_btn_height,
-            self._settings_panel.calc_preferred_size(
-                layout_context, gui.Widget.Constraints()).height)
+        # setting_height = min(
+        #     r.height - play_btn_height,
+        #     self._settings_panel.calc_preferred_size(
+        #         layout_context, gui.Widget.Constraints()).height)
         # self._settings_panel.frame = gui.Rect(r.get_right() - width, r.y, width, height)
 
         bar_width = pref.width if r.width / 2 < pref.width else r.width/2
@@ -157,7 +155,7 @@ class Setting_panal(GUI_BASE):
 
     def create_stream_settings(self):
         em = self.window.theme.font_size
-        separation_height = int(round(0.5 * em))
+        # separation_height = int(round(0.5 * em))
 
         vert_layout = gui.Vert(0.15 * em)
         # collapse = gui.CollapsableVert("Data stream", 0.33 * em,
@@ -258,7 +256,7 @@ class Setting_panal(GUI_BASE):
 
     def tracking_tool_setting(self):
         em = self.window.theme.font_size
-        separation_height = int(round(0.5 * em))
+        # separation_height = int(round(0.5 * em))
         tracking_tool = gui.CollapsableVert("Points picking tool", 0.33 * em,
                                         gui.Margins(em, 0, 0, 0))
         # tracking_tool = gui.Vert(0.15 * em)
@@ -406,8 +404,8 @@ class Setting_panal(GUI_BASE):
     def _save_came(self, path, is_print=True):
         import json
         try:
-            for cam in self._camera_list:
-                self._camera_list[cam]['extrinsic'] = np.array(self._camera_list[cam]['extrinsic']).tolist()
+            for _, params in self._camera_list.items():
+                params['extrinsic'] = np.array(params['extrinsic']).tolist()
             with open(path, 'w') as fp:
                 json.dump(self._camera_list, fp, indent=4)
             if is_print:
@@ -429,8 +427,8 @@ class Setting_panal(GUI_BASE):
     
     def update_frozen_points(self):
         frozen_list = []
-        for name in self._geo_list:
-            if self._geo_list[name]['freeze']:
+        for name, geo_value in self._geo_list.items():
+            if geo_value['freeze']:
                 frozen_list.append(name)
         self.frozen_list.set_items(frozen_list)
         self.window.set_needs_layout()
@@ -481,7 +479,7 @@ class Setting_panal(GUI_BASE):
             try:
                 self.tracking_list = sorted(self.tracking_list, key=lambda x: float(
                     x.split('.')[0].replace('_', '.')))
-            except Exception as e:
+            except:
                 self.tracking_list = sorted(self.tracking_list)
 
             if not Setting_panal.PAUSE:
@@ -647,7 +645,7 @@ class Setting_panal(GUI_BASE):
         Setting_panal.CLICKED = True
 
     def _clear_freeze(self):
-        nlist = [k for k in self._geo_list]
+        nlist = list(self._geo_list.keys())
         for name in nlist:
             if self._geo_list[name]['freeze']:
                 self.remove_geometry(name)
@@ -658,8 +656,8 @@ class Setting_panal(GUI_BASE):
 
         
     def _clear_3dlabel(self):
-        for frame in self.tracked_frame:
-            self._scene.remove_3d_label(self.tracked_frame[frame][1])
+        for _, frame_data in self.tracked_frame.items():
+            self._scene.remove_3d_label(frame_data[1])
         self.tracked_frame.clear()
         self.update_tracked_points()
         
@@ -679,7 +677,8 @@ class Setting_panal(GUI_BASE):
             """
             def quadratic(x, t, h):
                 return a * (x - t)**2 + h
-            popt, _ = curve_fit(quadratic, x, y)
+            results = curve_fit(quadratic, x, y)
+            popt = results[0]
             t, h = popt[0], popt[1]
             return t, h
         
@@ -711,13 +710,13 @@ class Setting_panal(GUI_BASE):
         keys = sorted(list(self.tracked_frame.keys()))
         try:
             times = [float(self.tracking_list[k].split('.')[0].replace('_', '.')) for k in keys]
-        except Exception as e:
-            self.warning_info(f'No time information for the picked points')
+        except:
+            self.warning_info('No time information for the picked points')
             return 
         try:
             heights = [(self.COOR_INIT[:3, :3].T @ self.tracked_frame[k][1].position)[2] for k in keys]
-        except Exception as e:
-            self.warning_info(f'No height data')
+        except:
+            self.warning_info('No height data')
             return 
         try:
             times = np.array(times)
@@ -726,7 +725,7 @@ class Setting_panal(GUI_BASE):
             t, h = fit_quadratic((times - start), heights)
             fig = plot_fitting(times, heights, t+start, h)
             # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", type='Results')
-        except Exception as e:
+        except:
             self.warning_info('Fitting error', type='Error')
             return 
         
@@ -736,7 +735,7 @@ class Setting_panal(GUI_BASE):
                                   'temp_fitting_curve.png',
                                   self.data_loader, self.tracking_foler)
             
-        except Exception as e:
+        except:
             self.warning_info('GUI error', type='Error')
             return 
         
@@ -747,7 +746,7 @@ class Setting_panal(GUI_BASE):
     def _unfreeze(self):
         Setting_panal.FREEZE = False
 
-    def _remove_geo_list(self, name=''):
+    def _remove_geo_list(self):
         self.geo_check_boxes.remove_item(self.geo_check_boxes.selected_item)
         if self._selected_geo in self._geo_list:
             self._geo_list.pop(self._selected_geo)
@@ -759,7 +758,7 @@ class Setting_panal(GUI_BASE):
         self._selected_geo = name
         for geo_name, geo_data in self._geo_list.items():
             if name in geo_name:
-                if geo_data['freeze'] == True:
+                if geo_data['freeze'] is True:
                     self._scene.scene.show_geometry(geo_name, geo_data['box'].checked and show)
                     self._scene_traj.scene.show_geometry(geo_name, geo_data['box'].checked and show)
                 else:
@@ -770,7 +769,7 @@ class Setting_panal(GUI_BASE):
         for name, data in self._geo_list.items():
             self._scene.scene.show_geometry(name, data['box'].checked)
             self._scene_traj.scene.show_geometry(name, data['box'].checked)
-            if data['freeze'] == True and data['box'].checked:
+            if data['freeze'] is True and data['box'].checked:
                 origin_name = name.split('_freeze_')[-1]
                 box = self._geo_list[origin_name]['box']
                 self._scene.scene.show_geometry(name, box.checked)
@@ -828,9 +827,9 @@ class Setting_panal(GUI_BASE):
     def _get_max_slider_value(self):
         return self.frame_slider_bar.get_maximum_value
         
-    def _set_slider_limit(self, min, max):
-        self.frame_slider_bar.set_limits(min, max)
-        self.frame_edit.set_limits(min, max)
+    def _set_slider_limit(self, min_val, max_val):
+        self.frame_slider_bar.set_limits(min_val, max_val)
+        self.frame_edit.set_limits(min_val, max_val)
 
     def _on_FPV(self, show):
         Setting_panal.POV = 'first' if show else 'second'
@@ -855,7 +854,7 @@ class Setting_panal(GUI_BASE):
         # Setting_panal.CLICKED = True
         self.init_camera()
     
-    def init_camera(self):
+    def init_camera(self, extrinsic_matrix=None, intrinsic_factor=None):
         pass
 
     def _add_text(self, visible=False):
@@ -901,7 +900,7 @@ class Setting_panal(GUI_BASE):
         def set_video_name():
             try:
                 video_name = self.scene_name + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
-            except Exception as e:
+            except:
                 video_name = 'test' + time.strftime("-%Y-%m-%d_%H-%M", time.localtime())
             return video_name
 
@@ -937,8 +936,7 @@ class Setting_panal(GUI_BASE):
                 time.sleep(0.02)
                 try:
                     self.set_camera(index, index-1, Setting_panal.POV)
-                except Exception as e:
-                    # print(e)
+                except:
                     pass
 
                 initialized = True
@@ -963,8 +961,7 @@ class Setting_panal(GUI_BASE):
                             new_index = index
                         try:
                             self.set_camera(new_index, index-1, Setting_panal.POV)
-                        except Exception as e:
-                            # print(e)
+                        except:
                             pass
                         index = new_index
                         self._clicked()
@@ -1049,7 +1046,7 @@ def stop_thread(thread):
 def main():
     gui.Application.instance.initialize()
 
-    w = Setting_panal(1080, 720)
+    Setting_panal(1080, 720)
 
     gui.Application.instance.run()
 

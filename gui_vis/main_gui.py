@@ -90,19 +90,19 @@ class o3dvis(setting, Menu):
         self.load_scene(sample_path, [0,0,0.16], reset_bounding_box=False)
         self.window.set_needs_layout()
 
-    def load_scene(self, path, translate=[0,0,0], data_loader=None, reset_bounding_box = False):
+    def load_scene(self, scene_path, translate=None, data_loader=None, reset_bounding_box = False):
         self.window.close_dialog()
-        if not os.path.isfile(path):
-            self.warning_info(f'{path} is not a valid file')
+        if not os.path.isfile(scene_path):
+            self.warning_info(f'{scene_path} is not a valid file')
             return
-        name = os.path.basename(path).split('.')[0]
+        name = os.path.basename(scene_path).split('.')[0]
         self.scene_name = name
         # self._on_load_dialog_done(scene_path)
-        geometry = load_pts(None, pcd_path=path, data_loader=data_loader)
-        geometry.translate(translate)
+        geometry = load_pts(None, pcd_path=scene_path, data_loader=data_loader)
+        geometry.translate(translate if translate else [0,0,0])
         self.add_geometry(geometry, name=name, reset_bounding_box=reset_bounding_box)
 
-    def load_traj(self, path, translate=[0,0,0], data_loader=None):
+    def load_traj(self, traj_path, translate=None, data_loader=None):
         """
         `traj = load_pts(None, pcd_path=path, data_loader=data_loader)`
         
@@ -115,17 +115,17 @@ class o3dvis(setting, Menu):
           data_loader: the class of the data to be loaded, which is used to determine the data format.
         """
         self.window.close_dialog()
-        if not os.path.isfile(path):
-            self.warning_info(f'{path} is not a valid file')
+        if not os.path.isfile(traj_path):
+            self.warning_info(f'{traj_path} is not a valid file')
             return
-        name = os.path.basename(path).split('.')[0]
+        name = os.path.basename(traj_path).split('.')[0]
         # self._on_load_dialog_done(scene_path)
         try:
-            traj = load_pts(None, pcd_path=path, data_loader=data_loader)
-            traj.translate(translate)
+            traj = load_pts(None, pcd_path=traj_path, data_loader=data_loader)
+            traj.translate(translate if translate else [0,0,0])
             # traj = points_to_sphere(traj)
             self.add_geometry(traj, name=name)
-        except Exception as e:
+        except:
             self.warning_info("xyz = [1,2,3] if traj.shape[0] == 9 else [0,1,2]")
 
     def _on_load_smpl_done(self, filename):
@@ -205,8 +205,8 @@ class o3dvis(setting, Menu):
             self.fetch_data = self.fetch_smpl
             self.add_thread(threading.Thread(target=self.thread))
 
-    def _loading_pcds(self, path):
-        super(o3dvis, self)._loading_pcds(path)
+    def _loading_pcds(self, path=None):
+        super()._loading_pcds(path)
         if len(self.tracking_list) > 0:
             try:
                 start, end = self.Human_data.humans['frame_num'][0], self.Human_data.humans['frame_num'][-1]
@@ -319,7 +319,7 @@ class o3dvis(setting, Menu):
 
         return self.fetched_data
 
-    def set_camera(self, new_id, ind, pov):
+    def set_camera(self, new_ind, ind, pov):
         """
         It sets the camera to the given index and point of view.
         
@@ -328,28 +328,28 @@ class o3dvis(setting, Menu):
           pov: the camera's point of view
         """
         posistions, extrinsics = self.Human_data.get_extrinsic(pov)
-        new_ex = extrinsics[new_id] @ self.COOR_INIT
+        new_ex = extrinsics[new_ind] @ self.COOR_INIT
 
         if self.btn_freeview.checked:
             # rot和trans都可以自由拖动
             # 自由视角
-            ex = extrinsics[ind] @ self.COOR_INIT
+            ex      = extrinsics[ind] @ self.COOR_INIT
             new_cam = extrinsic_to_cam(new_ex)
-            cam = extrinsic_to_cam(ex)
+            cam     = extrinsic_to_cam(ex)
             cur_cam = self._scene.scene.camera.get_model_matrix()
 
             pos_to_cam = cur_cam[:3, 3] - self.COOR_INIT[:3, :3] @ posistions[ind]
-            rela_rot = new_cam[:3, :3] @ cam[:3, :3].T
-            rela_trans = self.COOR_INIT[:3, :3] @ (posistions[new_id] - posistions[ind])
-            rel_pos = rela_rot @ pos_to_cam - pos_to_cam + rela_trans
-            new_rot = rela_rot @ cur_cam[:3, :3]
+            rela_rot   = new_cam[:3, :3] @ cam[:3, :3].T
+            rela_trans = self.COOR_INIT[:3, :3] @ (posistions[new_ind] - posistions[ind])
+            rel_pos    = rela_rot @ pos_to_cam - pos_to_cam + rela_trans
+            new_rot    = rela_rot @ cur_cam[:3, :3]
 
-            if new_id > 0 and self.btn_rela_trans.checked:
+            if new_ind > 0 and self.btn_rela_trans.checked:
                 # trans是相对trans
                 cur_cam[:3, -1] = cur_cam[:3, -1] + rela_trans # new camera position
                 new_ex = cam_to_extrinsic(cur_cam)
 
-            elif new_id > 0:
+            elif new_ind > 0:
                 # trans是相对trans
                 cur_cam[:3, -1] = cur_cam[:3, -1] + rel_pos # new camera position
                 cur_cam[:3, :3] = new_rot # new camera position
