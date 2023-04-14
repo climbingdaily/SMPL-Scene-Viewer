@@ -97,8 +97,8 @@ class ImagWindow(base_gui):
         return {'imgs': image}
 
     def get_2d_keypoints(self, keypoints, index):
-        # todo: @wzj
-        pass
+        # todo: @wzj 
+        return keypoints[index]
 
     def _read_2d_json_format(self, path):
         # @wzj：这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
@@ -164,9 +164,9 @@ class ImagWindow(base_gui):
 
                 if depth == 1.0:  # clicked on nothing (i.e. the far plane)
                     # todo: @wzj
-                    # 这里的 XY跟实际像素，好像还得做个转化
-                    # 点击像素的操作可以实现在这里
-                    text = ""
+                    # 点击像素的操作可以实现在这里, x 和 y是像素的位置
+                    text = f"{x} {y}"
+                    print(f'{text}')
                 else:
                     world = self._scene.scene.camera.unproject(
                         x, y, depth, self._scene.frame.width,
@@ -189,7 +189,7 @@ class ImagWindow(base_gui):
             text = f'{text} T: {time}'
         except:
             pass
-        def create_sphere(world):
+        def create_sphere():
             ratio = min(frame / self._get_max_slider_value(), 1)
             # name = f'{frame}_trkpts'
             # point = o3d.geometry.PointCloud()
@@ -212,12 +212,12 @@ class ImagWindow(base_gui):
         if frame in self.tracked_frame:
             self.tracked_frame[frame][0] = f'{frame}: {text}'
             self.tracked_frame[frame][1].position = world
-            create_sphere(world)
+            create_sphere()
         else:
             point_info     = f'{frame}: {text}'
             label_3d       = self._scene.add_3d_label(world, f'{frame}')
             label_3d.color = gui.Color(r=0, b=1, g=0.9)
-            create_sphere(world)
+            create_sphere()
 
             self.tracked_frame[frame] = []
             self.tracked_frame[frame].append(point_info)
@@ -234,8 +234,10 @@ class ImagWindow(base_gui):
         base_gui.CLICKED = True
         self._on_slider(self._get_slider_value() + base_gui.TRACKING_STEP)
 
-    def _load_tracked_traj(self, path, translate=[0,0,0], data_loader=None):
-        trajs = super(base_gui, self)._load_tracked_traj(path, translate, data_loader)
+    def _load_tracked_traj(self, path, translate=None):
+        if translate is None:
+            translate = [0 ,0, 0]
+        trajs = super(base_gui, self)._load_tracked_traj(path, translate)
         if trajs is not None:
             for p in trajs:
                 self._set_slider_value(int(p[3]) - self._START_FRAME_NUM)
@@ -250,7 +252,7 @@ class ImagWindow(base_gui):
             positions = [self.tracked_frame[frame][1].position for frame in keys]
             try:
                 times = [float(self.tracking_list[frame].split('.')[0].replace('_', '.')) for frame in keys]
-            except Exception as e:
+            except:
                 times = [0] * len(keys)
             traj = np.hstack((np.array(positions) @ self.COOR_INIT[:3, :3], 
                             np.array(keys)[:, None], 
@@ -265,8 +267,8 @@ class ImagWindow(base_gui):
                 np.savetxt(temp_path, traj) # type: ignore
                 print(f'[Write txt] Temp file saved in {temp_path}')
                 self.warning_info(f'Temp file saved in {temp_path}\nRemote faied: {e.args[0]}')
-            except Exception as e:
-                self.warning_info(f'Remote faied: {e.args[0]}')
+            except Exception as e2:
+                self.warning_info(f'Remote faied: {e2.args[0]}')
 
 if __name__ == "__main__":
     

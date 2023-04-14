@@ -254,13 +254,13 @@ class Menu(GUI_BASE):
         if load_func is not None:
             load_func(path)
 
-    def _loading_pcds(path):
+    def _loading_pcds(self, path):
         pass
 
-    def _loading_imgs(path):
+    def _loading_imgs(self, path):
         pass
 
-    def _read_2d_json_format(path):
+    def _read_2d_json_format(self, path):
         pass
 
     def _on_menu_trackingtraj(self):
@@ -289,7 +289,9 @@ class Menu(GUI_BASE):
         generate_mesh(path, depth=13, radius=0.1)
         self.window.close_dialog()
 
-    def _load_tracked_traj(self, path, translate=[0,0,0], data_loader=None):
+    def _load_tracked_traj(self, path, translate=None):
+        if translate is None:
+            translate = [0 ,0, 0]
         import numpy as np
 
         self.window.close_dialog()
@@ -298,7 +300,7 @@ class Menu(GUI_BASE):
             return 
         try:
             trajs = np.loadtxt(path)
-        except Exception as e:
+        except:
             self.warning_info('Load traj failed.')
             return 
 
