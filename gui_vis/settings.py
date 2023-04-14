@@ -485,7 +485,7 @@ class Setting_panal(GUI_BASE):
             if not Setting_panal.PAUSE:
                 self.change_pause_status()
 
-            self.warning_info(f"Pcd loaded from '{path}'", type='info')
+            self.warning_info(f"Pcd loaded from '{path}'", info_type='info')
         
     
     def _set_tracking_step(self, value):
@@ -576,8 +576,9 @@ class Setting_panal(GUI_BASE):
         tab2.add_child(cam_grid_tool)
         tab2.add_child(gui.Label('Camera lists') )
         tab2.add_child(self.camera_list_view)
-        _click_camera = lambda: self.pop_up_text('Input a name', lambda name: self._click_camera_saving(name, True))
-        tab2.add_child(creat_btn('Add camera', _click_camera))
+        def _add_camera():
+            self.pop_up_text('Input a name', lambda name: self._click_camera_saving(name, True))
+        tab2.add_child(creat_btn('Add camera', _add_camera))
 
         tab2.add_fixed(separation_height)
         tab2.add_child(creat_btn('Export cameras', self._save_camera_list))
@@ -724,9 +725,9 @@ class Setting_panal(GUI_BASE):
             start = int(times[0])
             t, h = fit_quadratic((times - start), heights)
             fig = plot_fitting(times, heights, t+start, h)
-            # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", type='Results')
+            # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", info_type='Results')
         except:
-            self.warning_info('Fitting error', type='Error')
+            self.warning_info('Fitting error', info_type='Error')
             return 
         
         try:
@@ -736,7 +737,7 @@ class Setting_panal(GUI_BASE):
                                   self.data_loader, self.tracking_foler)
             
         except:
-            self.warning_info('GUI error', type='Error')
+            self.warning_info('GUI error', info_type='Error')
             return 
         
     def _freeze_frame(self):
@@ -802,7 +803,7 @@ class Setting_panal(GUI_BASE):
         if is_print:
             quat = R.from_matrix(cam_pose[:3, :3]).as_quat()
             print(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}')
-            self.warning_info(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}', type='Extrinsic')
+            self.warning_info(f'quat: {quat}\n Trans: {cam_pose[:3, 3]}', info_type='Extrinsic')
         frame = self._get_slider_value()
         if cam_name is None:
             cam_name = f'cam_{frame}'
@@ -911,7 +912,7 @@ class Setting_panal(GUI_BASE):
                 video_name = set_video_name()
                 if is_success:
                     self._save_came(came_path, is_print=False)
-                self.warning_info(info, type='info')
+                self.warning_info(info, info_type='info')
             except Exception as e:
                 self.warning_info(e.args[0])
 

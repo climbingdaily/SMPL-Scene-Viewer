@@ -54,6 +54,11 @@ def cam_to_extrinsic(cam):
     extrinsic[:3, 3] = -(extrinsic[:3, :3] @ cam[:3, 3])
     return extrinsic
 
+
+def get_2d_keypoints(keypoints, index):
+    # todo: @wzj 
+    return keypoints[index]
+
 def plot_kpt_on_img(img, kpts):
     # @wzj
     if kpts is not None:

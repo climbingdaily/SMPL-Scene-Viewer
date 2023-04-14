@@ -22,6 +22,7 @@ import numpy as np
 
 sys.path.append('.')
 from gui_vis.main_gui import o3dvis as base_gui
+from util import get_2d_keypoints
 
 class ImagWindow(base_gui):
     """
@@ -77,7 +78,7 @@ class ImagWindow(base_gui):
                 print('Could not sort the images by name')
             if not ImagWindow.PAUSE:
                 self.change_pause_status()
-            self.warning_info(f"Images loaded from '{path}'", type='info')
+            self.warning_info(f"Images loaded from '{path}'", info_type='info')
             
             self.frame_slider_bar.enabled = True
             self.frame_edit.enabled = True
@@ -92,13 +93,9 @@ class ImagWindow(base_gui):
         image = self.data_loader.load_imgs(self.tracking_foler + '/' + self.tracking_list[index])
         # read 2d keypoints here
         if self.KPTS_2D is not None:
-            kp2d = self.get_2d_keypoints(self.KPTS_2D, index)
+            kp2d = get_2d_keypoints(self.KPTS_2D, index)
             return {'imgs': image, 'kp2d': kp2d}
         return {'imgs': image}
-
-    def get_2d_keypoints(self, keypoints, index):
-        # todo: @wzj 
-        return keypoints[index]
 
     def _read_2d_json_format(self, path):
         # todo: @wzj 
