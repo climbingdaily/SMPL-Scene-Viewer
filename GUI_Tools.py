@@ -101,30 +101,28 @@ class ImagWindow(base_gui):
         return keypoints[index]
 
     def _read_2d_json_format(self, path):
-        # @wzj：这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
+        # todo: @wzj 
+        # 这里实现读取json文件的代码，把2d keypoints存在self.KPTS_2D
         # self.KPTS_2D = 
         pass
 
     def _on_key_widget3d(self, event):
 
         if event.type == gui.KeyEvent.Type.DOWN:
-            # space key
+
             if event.key == 32:
+                # space key, pause/play
                 self.change_pause_status()
                 return gui.Widget.EventCallbackResult.HANDLED
-            # ',' 
-            elif event.key == 44:
-                # previous frame
+            
+            if event.key == 44:
+                # ',' previous frame
                 self._on_slider(self._get_slider_value() - 1)
                 return gui.Widget.EventCallbackResult.HANDLED
-            # '.' 
-            elif event.key == 46:
-                # next frame
+            if event.key == 46:
+                # '.' next frame
                 self._on_slider(self._get_slider_value() + 1)
                 return gui.Widget.EventCallbackResult.HANDLED
-            else:
-                # print(f'Pressed key: {event.key}')
-                return gui.Widget.EventCallbackResult.IGNORED
             
         return gui.Widget.EventCallbackResult.IGNORED
     
@@ -182,8 +180,7 @@ class ImagWindow(base_gui):
     def update_label(self, world, frame):
         # position 
         position = self.COOR_INIT[:3, :3].T @ world
-        text = "{:.3f}, {:.3f}, {:.3f}".format(
-            position[0], position[1], position[2])
+        text = f"{position[0]:.3f}, {position[1]:.3f}, {position[2]:.3f}"
         try:
             time = self.tracking_list[frame - ImagWindow._START_FRAME_NUM].split('.')[0].replace('_', '.')
             text = f'{text} T: {time}'
