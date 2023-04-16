@@ -54,7 +54,7 @@
         },
         "Baseline2(S)": {
             "pose": "pose",
-            "trans": "trans",
+            "trans": "opt_trans",
             "trans_bak": "trans",
             "color": [
                 0,

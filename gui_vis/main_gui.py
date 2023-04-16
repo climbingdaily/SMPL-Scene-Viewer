@@ -138,7 +138,7 @@ class o3dvis(setting, Menu):
         """
         self.window.close_dialog()
         self.Human_data.load(filename) 
-
+        self.window.title = os.path.basename(filename)
         # camera settings
         cams = self.Human_data.set_cameras(offset_center = -0.2)
         for cam in cams:

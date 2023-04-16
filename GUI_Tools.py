@@ -233,6 +233,7 @@ class ImagWindow(base_gui):
             translate = [0 ,0, 0]
         trajs = super(base_gui, self)._load_tracked_traj(path, translate)
         if trajs is not None:
+            trajs = trajs[::len(trajs)//500 + 1]
             for p in trajs:
                 self._set_slider_value(int(p[3]) - self._START_FRAME_NUM)
                 self.update_label(self.COOR_INIT[:3, :3] @ p[:3], int(p[3]))
