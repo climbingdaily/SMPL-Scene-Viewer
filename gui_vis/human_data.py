@@ -54,6 +54,8 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=12, move_back = 1, move_up =
     return positions, extrinsics
 
 def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, rot=None, info='First'):
+    if pose_str not in human_data:
+        pose_str = 'pose'
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
         if rot is not None:
