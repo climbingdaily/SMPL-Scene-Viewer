@@ -1,11 +1,6 @@
 
 SMPL Sequences and Scene Visualization Tool
-![](imgs/gui.jpg)
 ===========================
-![visitors](https://visitor-badge.glitch.me/badge?page_id=climbingdaily/SMPL-Scene-Viewer)
-[![Ubuntu CI](https://github.com/isl-org/Open3D/workflows/Ubuntu%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22Ubuntu+CI%22)
-[![macOS CI](https://github.com/isl-org/Open3D/workflows/macOS%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22macOS+CI%22)
-[![Windows CI](https://github.com/isl-org/Open3D/workflows/Windows%20CI/badge.svg)](https://github.com/isl-org/Open3D/actions?query=workflow%3A%22Windows+CI%22)
 
 This is a powerful open-source GUI tool designed to quickly and accurately visualize and **compare SMPL sequences** in large scenes in real-time. Based on Open3D, this tool can be easily run across platforms and on CPU-only computers. However, if you require more advanced rendering capabilities, we recommend using Blender, Unity, or similar software for optimal results.
 
@@ -14,11 +9,17 @@ This is a powerful open-source GUI tool designed to quickly and accurately visua
 - Comparison of SMPL results across different sequences and scenes
 - Visualizing complex scenes and large datasets
 - Open-source and customizable
+- Save/load the camera path
 - CPU-only compatible
 - Cross-platform compatible
 
 
-
+<div align="center">
+  <img src="./imgs/1_data_intro_2_202332215837.gif" alt="Logo" width="100%">
+</div>
+<div align="center">
+Some examples
+</div> 
 
 
 ## Requirements
@@ -43,7 +44,7 @@ python GUI_Tool.py
 ```
 
 ## Usage
-
+![](imgs/gui.jpg)
  - Launch the tool.
  - Select the SMPL sequences ([Demo](imgs/smpl_sample.pkl)) you wish to visualize and compare.
  - Use the GUI controls to adjust the view, lighting, and other rendering parameters.
@@ -57,7 +58,6 @@ python GUI_Tool.py
 | 4 | Geometry's material editing | ![](imgs/edit_mat_0.jpg) ![](imgs/edit_mat.jpg)
 | 5 | Camera load/save | ![](imgs/camera_load.jpg) 
 <!-- | 6 | Rendering and generating the video (with camera automatically saved). <br> - **Start**: Toggle on the `Render img` <br> - **End**: Click the `Save video` <br> - The video will automatically be saved when the play bar meets the end.  | ![](imgs/save_video.jpg)  -->
-   
 
 ## Todos
 
@@ -74,7 +74,7 @@ Contributions are welcome and encouraged! If you find a bug or have an idea for 
 The codebase is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 3.0 License. You must attribute the work in the manner specified by the authors, you may not use this work for commercial purposes and if you alter, transform, or build upon this work, you may distribute the resulting work only under the same license. 
 
 ## Contact
-If you have any questions or comments about the project, please contact me at yudidai@stu.xmu.edu.com.
+If you have any questions or comments about the project, please create an issue. 
 
 ## Acknowledgments
 We would like to thank the following individuals for their contributions to this project:
@@ -82,7 +82,7 @@ We would like to thank the following individuals for their contributions to this
 - Lin Xiping, Lin Yitai and Yan Ming for providing valuable feedback and suggestions during development
 - The [Open3D](http://www.open3d.org/) development team for their excellent library that powers this tool.
 - ChatGPT for providing assistance with refining the project description and other suggestions, including this readme file.
-- The creators of SMPL for their groundbreaking work in creating a widely-used and versatile body model.
+- The creators of [SMPL](http://smpl.is.tue.mpg.de/) for their groundbreaking work in creating a widely-used and versatile body model.
 
 We are also grateful to the broader open-source community for creating and sharing tools and knowledge that make projects like this possible.
 
