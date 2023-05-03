@@ -52,7 +52,7 @@ def plot_coco_annotation(img: np.ndarray,
                          line_width: int = 2,
                          alpha: float = 0.7,
                          text: str='',
-                         _KEYPOINT_THRESHOLD: Optional[float] = [0.05]*17,
+                         _KEYPOINT_THRESHOLD: Optional[float] = [0.4]*17,
                          save_path: Optional[str] = None,
                          plot_bone=True) -> np.ndarray:
     
@@ -167,6 +167,7 @@ class correct_keypoints():
         cv2.putText(self.img, "'ESC'     Abandon changes", (30, int(h/2+60)), DEFAULT_FONT, 0.5, BLACK, 2)
         cv2.putText(self.img, "'ENTER'   Accept changes", (30, int(h/2+90)), DEFAULT_FONT, 0.5, BLACK, 2)
         cv2.putText(self.img, "' i '     Input frame number in the terminal", (30, int(h/2+120)), DEFAULT_FONT, 0.5, BLACK, 2)
+        cv2.putText(self.img, "' d '     Delete current frame keypoints", (30, int(h/2+150)), DEFAULT_FONT, 0.5, BLACK, 2)
 
         self.img_new   = np.copy(self.img)
         plot_coco_annotation(self.img_new, [self.keypoints.copy(), ])
@@ -191,6 +192,12 @@ class correct_keypoints():
 
         elif key == ord('q'):    # press q  quit
             self.frame_index = -1
+            self.set_data()
+
+        elif key == ord('d'):    # press d  detele current keypoints
+            self.keypoints = []
+            self.kpt_new = []
+            self.sequence.updata_pkl(self.img_name, keypoints=[], bbox=[])
             self.set_data()
 
         elif key == 13:          # if press Enter, accept the changes, go to next frame
