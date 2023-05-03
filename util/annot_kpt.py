@@ -192,7 +192,7 @@ class correct_keypoints():
 
         elif key == ord('q'):    # press q  quit
             self.frame_index = -1
-            self.set_data()
+            # self.set_data()
 
         elif key == ord('d'):    # press d  detele current keypoints
             self.keypoints = []
@@ -243,10 +243,10 @@ class correct_keypoints():
                     plot_bbox(self.img_new, bbox, JOINTS[i], clicked=i==self.kpt_select)
                 if self.kpt_select >= 0:
                     self.kpt_new[:, 2] = 0.01
-                    self.kpt_new[self.kpt_select, 2] = 0.8
+                    self.kpt_new[self.kpt_select, 2] = 0.6
             else:
                 self.kpt_new[:, 2] = 0.01
-                self.kpt_new[self.kpt_select] = [x, y, 0.8]
+                self.kpt_new[self.kpt_select] = [x, y, 0.6]
                 for i, bbox in enumerate(self.bboxes):
                     plot_bbox(self.img_new, bbox, JOINTS[i], clicked=i==self.kpt_select)
 
@@ -302,5 +302,6 @@ if __name__ == '__main__':
     pipeline = correct_keypoints(args.pkl_file, args.img_folder)
     try:
         pipeline.run()
-    except KeyboardInterrupt:
+    except Exception as e:
         pipeline.save_pkl()
+        print(f"Error {e.args[0]}")
