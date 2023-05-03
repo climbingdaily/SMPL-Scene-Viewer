@@ -159,8 +159,7 @@ class correct_keypoints():
         self.kpt_select= -1 
         self.keypoints = np.array(sample['skel_2d']).reshape(-1, 3)
         self.kpt_new   = self.keypoints.copy()
-        # self.img     = cv2.imread(os.path.join(self.img_folder, self.img_name))
-        self.img       = cv2.imread(os.path.join(self.img_folder, "10.860850.jpg"))
+        self.img       = cv2.imread(os.path.join(self.img_folder, self.img_name))
         h, _, _ = self.img.shape
         cv2.putText(self.img, f"{self.frame_index:06d} - {self.img_name}", (30, 60), DEFAULT_FONT, 1, BLACK, 2)
         cv2.putText(self.img, "'<-'/'->'   Previous/next frame", (30, int(h/2)), DEFAULT_FONT, 0.5, BLACK, 2)
@@ -266,6 +265,10 @@ class correct_keypoints():
                         cv2.FONT_HERSHEY_PLAIN,
                         1.0, (0, 0, 255), thickness=1)
             cv2.imshow('Zoom', area)
+            cv2.setWindowProperty("zoom", cv2.WND_PROP_TOPMOST, 1)
+
+    def save_pkl(self, ):
+        self.sequence.save_pkl()
 
     def run(self, ):
         self.set_data()
@@ -279,16 +282,18 @@ class correct_keypoints():
             self.display_image()
         cv2.destroyAllWindows() 
 
-        self.sequence.save_pkl()
+        self.save_pkl()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SLOPER4D dataset')
     parser.add_argument('--pkl_file', type=str, required=True, default='', 
                         help='Path to the pkl file')
     parser.add_argument('--img_folder', type=str, required=True, default='', 
-                        help='Path to the pkl file')
+                        help='Path to the image folder')
     args = parser.parse_args()
     
     pipeline = correct_keypoints(args.pkl_file, args.img_folder)
-    
-    pipeline.run()
+    try:
+        pipeline.run()
+    except KeyboardInterrupt:
+        pipeline.save_pkl()
