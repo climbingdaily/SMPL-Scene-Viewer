@@ -53,9 +53,10 @@ def make_3rd_view(positions, rots, rotz=0, lookdown=12, move_back = 1, move_up =
     _, extrinsics = generate_views(cam_pos, rots, dist=0, rad=np.deg2rad(0), filter=filter)
     return positions, extrinsics
 
-def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_str='trans', trans_str2=None, rot=None, info='First'):
+def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', pose_bak='', trans_str='trans', trans_bak='', rot=None, info='First'):
     if pose_str not in human_data:
-        pose_str = 'pose'
+        pose_str = pose_bak
+
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
         if rot is not None:
@@ -70,14 +71,14 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', tran_st
             beta = human_data['beta'].copy()
 
         if 'gender' not in human_data:
-            gender = 'male'
+            gender = 'neutral'
         else:
             gender = human_data['gender']
 
-        if tran_str in human_data:
-            trans = human_data[tran_str].copy()
-        elif trans_str2 is not None and trans_str2 in human_data:
-            trans = human_data[trans_str2].copy()
+        if trans_str in human_data:
+            trans = human_data[trans_str].copy()
+        elif trans_bak in human_data:
+            trans = human_data[trans_bak].copy()
         else:
             return
         vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
@@ -155,16 +156,16 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                                                 'trans': lidar_trans.squeeze(),
                                                 'pose': pose}
                 else:
-                    rot = values['rot'] if 'rot' in values else None
                     load_human_mesh(vis_data['humans'], 
                                     humans[person], 
                                     start, 
                                     end, 
-                                    values['pose'],
-                                    values['trans'], 
-                                    values['trans_bak'], 
-                                    rot,
-                                    info=info)
+                                    pose_str  = values['pose'],
+                                    pose_bak  = values['pose_bak'] if 'pose_bak' in values else '',
+                                    trans_str = values['trans'], 
+                                    trans_bak = values['trans_bak'] if 'trans_bak' in values else '', 
+                                    rot       = values['rot'] if 'rot' in values else None,
+                                    info      = info)
 
     print(f'[SMPL LOADED] ==============')
 

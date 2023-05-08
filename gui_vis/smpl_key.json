@@ -12,6 +12,7 @@
         },
         "Baseline2(F)": {
             "pose": "manual_pose",
+            "pose_bak": "pose",
             "trans": "lidar_traj",
             "trans_bak": "trans",
             "color": [
@@ -54,6 +55,7 @@
         },
         "Baseline2(S)": {
             "pose": "manual_pose",
+            "pose_bak": "pose",
             "trans": "trans",
             "trans_bak": "trans",
             "color": [
