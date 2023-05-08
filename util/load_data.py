@@ -275,7 +275,7 @@ class Data_loader(object):
             dirs = os.listdir(folder)
         return dirs
 
-    def load_point_cloud(self, file_name, pointcloud = None, position = None):
+    def load_point_cloud(self, file_name, pointcloud = None, position = None, cmap='plasma'):
         """
         > Load point cloud from local or remote server
         
@@ -313,7 +313,7 @@ class Data_loader(object):
                 else:
                     intensity = pcd[:, fields['intensity']].squeeze()
                 scale = 1 if intensity.max() < 1.1 else 255
-                colors = plt.get_cmap('gray')(intensity/scale)[:, :3]
+                colors = plt.get_cmap(cmap)(intensity/scale)[:, :3]
                 pointcloud.colors = o3d.utility.Vector3dVector(colors)
 
             if position is not None:

@@ -16,9 +16,7 @@ import torch
 from scipy.spatial.transform import Rotation as R
 
 from util import Data_loader, generate_views, get_head_global_rots
-from util.tool_func import read_json_file
 from smpl import SMPL, poses_to_vertices
-from util.viewpoint import extrinsic_to_view
 
 def vertices_to_joints(vertices, index = 15):
     # default index is head index
