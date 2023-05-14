@@ -139,7 +139,6 @@ def color_point_cloud(img_path, pcd_path, T, K, dist):
     pixel_points  = camera_to_pixel(camera_points[rule_a], K)
     pixel_points  = np.round(pixel_points).astype(np.int32)
 
-
     rule1 = pixel_points[:, 0] >= 0
     rule2 = pixel_points[:, 0] < img.shape[1]
     rule3 = pixel_points[:, 1] >= 0
@@ -216,7 +215,7 @@ def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=No
 
     for d, color, (x, y) in zip(depth, colors, pixel_points):
         if d > 0.5:
-            cv2.circle(img, (x, y), 1, color=color, thickness=-1)
+            cv2.circle(img, (x, y), 3, color=color, thickness=-1)
 
     save_img_path = f"{os.path.splitext(img_path)[0]}_proj.jpg"
     cv2.imwrite(save_img_path, img)
@@ -384,6 +383,21 @@ def cali_ex(cam_info_path):
 
     return extrinsic, intrinsic, dist
 
+def waymo_cam_to_extrinsic(cam):
+    """
+    It takes a camera matrix and returns the extrinsic matrix
+    
+    Args:
+      cam: the camera matrix
+    
+    Returns:
+      The extrinsic matrix
+    """
+    extrinsic = np.eye(4)
+    extrinsic[:3, :3] = np.array([[0,-1,0],[0,0,-1],[1,0,0]]) @ cam[:3, :3].T
+    extrinsic[:3, 3] = -(extrinsic[:3, :3] @ cam[:3, 3])
+    return extrinsic
+
 if __name__ == '__main__':  
     import configargparse
     parser = configargparse.ArgumentParser()
@@ -391,16 +405,27 @@ if __name__ == '__main__':
     parser.add_argument("--cam_info", "-C", type=str, default=None)
     parser.add_argument("--img_path", "-I", type=str, default=None)
     parser.add_argument("--pc_path",  "-P", type=str, default=None)
+    parser.add_argument("--waymo", action='store_true')
 
     args = parser.parse_args()
     
     if args.img_path is not None and args.cam_info is not None and args.pc_path is not None:
         _, _, extrinsic, intrinsic, dist, _ = load_cam_info(args.cam_info)
         cam_info = read_json_file(args.cam_info)
-        _, points = load_pcd(args.pc_path)
+        if args.pc_path.endswith('.txt'):
+            points = np.loadtxt(args.pc_path)
+        elif args.pc_path.endswith('.pcd'):
+            _, points = load_pcd(args.pc_path)
+        else:
+            raise NotImplementedError
+        
+        if args.waymo:
+            extrinsic = waymo_cam_to_extrinsic(extrinsic)
+            dist = [0,0,0,0,0]
+
         plot_points_on_img(args.img_path, 
                            points, extrinsic, intrinsic, dist)
-        
+ 
         color_point_cloud(args.img_path, 
                           args.pc_path, extrinsic, intrinsic, dist)
 
