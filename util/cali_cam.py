@@ -130,6 +130,7 @@ def color_point_cloud(img_path, pcd_path, T, K, dist):
     points and one with colors assigned only to the visible points in the image.
     """
     img  = cv2.imread(img_path)
+    img  = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     pcd  = o3d.io.read_point_cloud(pcd_path)
     h, w = img.shape[:2]
 
@@ -266,7 +267,15 @@ def plot_pixel_when_click(img_path,
     print("Image size:", w, h, c)
 
     # origin  = img.copy()
-    list_xy = []
+    if '2d_points' not in cam_info:
+        cam_info['2d_points'] = []
+
+    list_xy = cam_info['2d_points']
+    for index, (a, b) in enumerate(list_xy):
+        cv2.circle(img, (a, b), 2, (255, 0, 0), thickness=-1)
+        cv2.putText(img, f'{index}: {a:.0f} {b:.0f}', (a, b), 
+                    cv2.FONT_HERSHEY_PLAIN,
+                    2.0, (0, 255, 0), thickness=1)
 
     def on_EVENT_LBUTTONDOWN(event, x, y, flags, param):
 
@@ -277,10 +286,10 @@ def plot_pixel_when_click(img_path,
             print(f'Clicked pixel coordinates: {x:.1f} {y:.1f}')
 
             a, b = x, y
-            cv2.circle(img, (a, b), 1, (255, 0, 0), thickness=-1)
-            cv2.putText(img, f'{a:.1f} {b:.1f}', (a, b), 
+            cv2.circle(img, (a, b), 2, (255, 0, 0), thickness=-1)
+            cv2.putText(img, f'{len(list_xy)-1}: {a:.0f} {b:.0f}', (a, b), 
                         cv2.FONT_HERSHEY_PLAIN,
-                        1.0, (0, 0, 0), thickness=1)
+                        2.0, (0, 255, 0), thickness=1)
             cv2.imshow('image', img)
 
         elif event == cv2.EVENT_MOUSEMOVE:
@@ -296,7 +305,7 @@ def plot_pixel_when_click(img_path,
                             interpolation=cv2.INTER_LINEAR)
             cv2.circle(area, ((x-xmin) * scale, (y-ymin) * scale), 
                        3, (255, 0, 0), thickness=-1)
-            cv2.putText(area, f'{x:.1f} {y:.1f}', 
+            cv2.putText(area, f'{x:.0f} {y:.0f}', 
                         ((x-xmin) * scale, (y-ymin) * scale), 
                         cv2.FONT_HERSHEY_PLAIN,
                         1.0, (0, 0, 255), thickness=1)
@@ -319,40 +328,40 @@ def plot_pixel_when_click(img_path,
 
     cv2.imwrite(os.path.join(imgdir, 'picked.jpg'), img)
 
+DEFAULT_INTRINSIC = [[599.628, 0.000, 971.613], 
+                     [0.000, 599.466, 540.258], 
+                     [0.000, 0.000, 1.000]]
+DEFAULT_DIST = [0.003, -0.003, -0.001, 0.004, 0.000]
 
-def load_json(filename):
+def load_cam_info(filename):
     with open(filename, 'r') as f:
         cam_info  = json.load(f)
         # assert '2d_points' in cam_info and '3d_points' in cam_info,  f"2D pixels or 3D points not exist in {filename}"
         
-        points2d  = cam_info['2d_points']  if '2d_points' in cam_info else None
-        points3d  = cam_info['3d_points']  if '3d_points' in cam_info else None
+        points2d  = np.array(cam_info['2d_points'], dtype=np.float32)  if '2d_points' in cam_info else None
+        points3d  = np.array(cam_info['3d_points'], dtype=np.float32)  if '3d_points' in cam_info else None
+
         extrinsic = cam_info['extrinsics'] if 'extrinsics' in cam_info else None
-        intrinsic = cam_info['intrinsics'] if 'intrinsics' in cam_info else None
-        dist      = cam_info['dist'] if 'dist' in cam_info else None
+        intrinsic = cam_info['intrinsics'] if 'intrinsics' in cam_info else DEFAULT_INTRINSIC
+        dist      = cam_info['dist'] if 'dist' in cam_info else DEFAULT_DIST
+
         img_path  = cam_info['ex_img'] if 'ex_img' in cam_info else None
 
-    intrinsic = np.array(([[599.628, 0.000, 971.613], 
-                         [0.000, 599.466, 540.258], 
-                         [0.000, 0.000, 1.000]]), 
-                         dtype=np.float32).reshape(3,3)
+        extrinsic = np.array(extrinsic, dtype=np.float32)
+        intrinsic = np.array(intrinsic, dtype=np.float32)
+        dist      = np.array(dist, dtype=np.float32)
+        # dist      = np.array([0,0,0,0,0], dtype=np.float32)
     
-    dist      = np.array(([0.003, -0.003, -0.001, 0.004, 0.000]),
-                         dtype=np.float32)
-
     return points2d, points3d, extrinsic, intrinsic, dist, img_path
 
-def cali_ex(cam_info):
-    points2d, points3d, _, intrinsic, dist, img_path = load_json(cam_info)
+def cali_ex(cam_info_path):
+    points2d, points3d, _, intrinsic, dist, img_path = load_cam_info(cam_info_path)
 
     extrinsic, proj_err = calibration(points2d, points3d, 
                                 intrinsic.reshape(3,3), dist)
 
     camera_position  = - extrinsic[:3, :3].T @ extrinsic[:3, 3]
     camera_direction = extrinsic[:3, :3].T @ np.array([[1,0,0],[0,-1,0],[0,0,-1]])
-
-    if img_path is not None:
-        plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist)
 
     print('========================')
     print(f'camera intrinsic:    \n {intrinsic.reshape(3,3)}')
@@ -362,6 +371,16 @@ def cali_ex(cam_info):
     print(f'camera position:     \n {camera_position}')
     print(f'camera orientation:  \n {camera_direction}')
     print('========================')
+    
+    with open(cam_info_path, 'r') as f:
+        cam_info  = json.load(f)
+    cam_info['extrinsics'] = extrinsic.tolist()
+    cam_info['intrinsics'] = intrinsic.tolist()
+    cam_info['dist'] = dist.tolist()
+    save_json_file(cam_info_path, cam_info)
+
+    if img_path is not None:
+        plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist)
 
     return extrinsic, intrinsic, dist
 
@@ -376,19 +395,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if args.img_path is not None and args.cam_info is not None and args.pc_path is not None:
+        _, _, extrinsic, intrinsic, dist, _ = load_cam_info(args.cam_info)
         cam_info = read_json_file(args.cam_info)
         _, points = load_pcd(args.pc_path)
         plot_points_on_img(args.img_path, 
-                           points, 
-                           np.array(cam_info['lidar2cam']), 
-                           np.array(cam_info['intrinsics']), 
-                           np.array(cam_info['dist']))
+                           points, extrinsic, intrinsic, dist)
         
         color_point_cloud(args.img_path, 
-                          args.pc_path, 
-                          np.array(cam_info['lidar2cam']), 
-                          np.array(cam_info['intrinsics']), 
-                          np.array(cam_info['dist']))
+                          args.pc_path, extrinsic, intrinsic, dist)
 
     elif args.img_path is not None:
         # only image_path
