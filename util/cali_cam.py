@@ -242,7 +242,7 @@ def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=No
 
     for d, color, (x, y) in zip(depth, colors, pixel_points):
         if d > 0.5:
-            cv2.circle(img, (x, y), 3, color=color, thickness=-1)
+            cv2.circle(img, (x, y), 2, color=color, thickness=-1)
 
     save_img_path = f"{os.path.splitext(img_path)[0]}_proj.jpg"
     cv2.imwrite(save_img_path, img)
@@ -259,7 +259,6 @@ def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=No
 
 
 def plot_pixel_when_click(img_path, 
-
                           scale=5, 
                           size=50, 
                           cam_info_path=None):
@@ -458,7 +457,7 @@ if __name__ == '__main__':
 
     elif args.img_path is not None:
         # only image_path
-        plot_pixel_when_click(args.img_path)
+        plot_pixel_when_click(args.img_path, cam_info_path=args.cam_info)
         
     elif args.cam_info is not None:
         # only cam_info
