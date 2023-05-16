@@ -293,9 +293,9 @@ class correct_keypoints():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SLOPER4D dataset')
-    parser.add_argument('--pkl_file', type=str, required=True, default='', 
+    parser.add_argument('--pkl_file', '-P', type=str, default=None,
                         help='Path to the pkl file')
-    parser.add_argument('--img_folder', type=str, required=True, default='', 
+    parser.add_argument('--img_folder', '-I', type=str, default=None,
                         help='Path to the image folder')
     args = parser.parse_args()
     
