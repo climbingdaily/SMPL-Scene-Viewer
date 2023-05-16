@@ -134,8 +134,8 @@ class correct_keypoints():
         self.type = ''
 
         self.sequence  = SLOPER4D_Dataset(pkl_file)
-        self.keypoints = None
-        self.kpt_new   = None
+        self.keypoints = []
+        self.kpt_new   = []
         self.img       = None
         self.img_new   = None
         self.img_name  = ''
@@ -150,15 +150,15 @@ class correct_keypoints():
                 bboxes += [[50+(box_w+gap) * i, 120 + box_h*j + gap*j, box_w, box_h]]
         self.bboxes = bboxes[:17]
 
-    def set_data(self, ):
+    def set_data(self, input_kpt=None, reset_select=True):
         """
         This function sets data for an image and displays it with annotations and instructions.
         """
         sample    = self.sequence[self.frame_index]
         self.img_name  = sample['file_basename']
-        self.kpt_select= -1 
+        self.kpt_select= -1 if reset_select else self.kpt_select
         self.keypoints = np.array(sample['skel_2d']).reshape(-1, 3)
-        self.kpt_new   = self.keypoints.copy()
+        self.kpt_new   = self.keypoints.copy() if input_kpt is None else input_kpt.copy()
         self.img       = cv2.imread(os.path.join(self.img_folder, self.img_name))
         h, _, _ = self.img.shape
         cv2.putText(self.img, f"{self.frame_index:06d} - {self.img_name}", (30, 60), DEFAULT_FONT, 1, BLACK, 2)
@@ -170,7 +170,7 @@ class correct_keypoints():
         cv2.putText(self.img, "' d '     Delete current frame keypoints", (30, int(h/2+150)), DEFAULT_FONT, 0.5, BLACK, 2)
 
         self.img_new   = np.copy(self.img)
-        plot_coco_annotation(self.img_new, [self.keypoints.copy(), ])
+        plot_coco_annotation(self.img_new, [self.kpt_new.copy(), ])
         for i, bbox in enumerate(self.bboxes):
             plot_bbox(self.img_new, bbox, JOINTS[i])
 
@@ -195,18 +195,24 @@ class correct_keypoints():
             # self.set_data()
 
         elif key == ord('d'):    # press d  detele current keypoints
-            self.keypoints = []
-            self.kpt_new = []
-            self.sequence.updata_pkl(self.img_name, keypoints=[], bbox=[])
-            self.set_data()
+            self.kpt_new = self.keypoints.copy()
+            if self.kpt_select >= 0:
+                self.kpt_new[self.kpt_select, -1] = 0
+            else:
+                self.kpt_new[:, -1] = 0
+            self.set_data(self.kpt_new, reset_select=False)
 
         elif key == 13:          # if press Enter, accept the changes, go to next frame
-            if self.kpt_select >= 0:
+            if self.kpt_select >= 0 and np.any((self.kpt_new[:, -1]) > 0):
                 self.keypoints[self.kpt_select] = self.kpt_new[self.kpt_select]
                 self.kpt_new = self.keypoints.copy()
                 print(f"======> {self.kpt_select}: {JOINTS[self.kpt_select]} is annotated." + 
                       f"{self.kpt_new[self.kpt_select]}")
-            self.sequence.updata_pkl(self.img_name, keypoints=self.keypoints)
+                
+            if np.any((self.kpt_new[:, -1]) > 0):
+                self.sequence.updata_pkl(self.img_name, keypoints=self.keypoints)
+            else:
+                self.sequence.updata_pkl(self.img_name, keypoints=[], bbox=[])
             # self.frame_index += 1
             self.set_data()
 
@@ -272,7 +278,7 @@ class correct_keypoints():
                         cv2.FONT_HERSHEY_PLAIN,
                         1.0, (0, 0, 255), thickness=1)
             cv2.imshow('Zoom', area)
-            cv2.setWindowProperty("zoom", cv2.WND_PROP_TOPMOST, 1)
+            # cv2.setWindowProperty("zoom", cv2.WND_PROP_TOPMOST, 1)
 
     def save_pkl(self, ):
         self.sequence.save_pkl()
