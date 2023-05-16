@@ -14,6 +14,7 @@
 import sys
 import os
 import time
+from itsdangerous import TimedSerializer
 import numpy as np
 import open3d.visualization.gui as gui
 from scipy.spatial.transform import Rotation as R
@@ -664,24 +665,22 @@ class Setting_panal(GUI_BASE):
         
     def _fit_curve_with_3dlabel(self):
         from scipy.optimize import curve_fit
-        def fit_quadratic(x, y, a=-4.916):
-            """
-            拟合一元二次方程 y = a * (x - t)**2 + h，其中 a 默认为 -1/2g, g=9.88。
-
-            参数：
-            x: 一个一维的numpy数组，表示自变量的取值。
-            y: 一个一维的numpy数组，表示因变量的取值。
-            a: 二次项系数，默认为 -1/2。
-
-            返回值：
-            一个元组，包含两个元素：(t, h)。其中 t 表示顶点的横坐标，h 表示顶点的纵坐标。
-            """
-            def quadratic(x, t, h):
-                return a * (x - t)**2 + h
-            results = curve_fit(quadratic, x, y)
-            popt = results[0]
-            t, h = popt[0], popt[1]
-            return t, h
+        def fit_quadratic(x, y, gravity=True):
+            def quadratic(x, aa, t, h):
+                return aa * (x - t)**2 + h
+            def quadratic_g(x, t, h):
+                return -4.916 * (x - t)**2 + h
+            
+            min_h = y.min()
+            if gravity:
+                params, params_covariance = curve_fit(quadratic_g, x, y-min_h)
+                t, h = params
+                aa = -4.916
+            else:
+                params, params_covariance = curve_fit(quadratic, x, y-min_h)
+                aa, t, h = params
+                
+            return aa, t, h+min_h
         
         # 画出散点图、拟合曲线和对称轴
         def plot_fitting(x, y, t, h, a=-4.916):
@@ -690,6 +689,7 @@ class Setting_panal(GUI_BASE):
             x_fit = np.linspace(x.min()-0.1, x.max()+0.1, 100)
 
             # 拟合一元二次方程
+            
             y_fit = a * (x_fit - t)**2 + h
 
             # 计算交叉点的坐标
@@ -722,9 +722,14 @@ class Setting_panal(GUI_BASE):
         try:
             times = np.array(times)
             heights = np.array(heights)
+            is_gravity = True
+            if not np.all(times[1:] - times[:-1] > 0):
+                times = np.array(keys) / 20
+                is_gravity = False
+
             start = int(times[0])
-            t, h = fit_quadratic((times - start), heights)
-            fig = plot_fitting(times, heights, t+start, h)
+            aa, t, h = fit_quadratic((times - start), heights, gravity=is_gravity)
+            fig = plot_fitting(times, heights, t+start, h, aa)
             # self.warning_info(f"Time: {t+start:.3f}\n Height: {h:.2f}", info_type='Results')
         except:
             self.warning_info('Fitting error', info_type='Error')
@@ -732,7 +737,7 @@ class Setting_panal(GUI_BASE):
         
         try:
             fig.savefig('temp_fitting_curve.png')
-            self.show_ImageWidget(f"Time: {t+start:.3f}\n Height: {h:.2f}", 
+            self.show_ImageWidget(f"Time: {t+start:.3f}\n Height: {h:.2f}\n gravity: {-2*aa:.3f} m/s2", 
                                   'temp_fitting_curve.png',
                                   self.data_loader, self.tracking_foler)
             

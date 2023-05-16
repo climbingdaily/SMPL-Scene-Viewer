@@ -162,6 +162,9 @@ class ImagWindow(base_gui):
                     # 点击像素的操作可以实现在这里, x 和 y是像素的位置
                     text = f"{x} {y}"
                     print(f'{text}')
+                    frame = self._get_slider_value() +  ImagWindow._START_FRAME_NUM
+                    gui.Application.instance.post_to_main_thread(
+                        self.window, lambda: self.update_label([x/100, y/100, 1], frame))
                 else:
                     world = self._scene.scene.camera.unproject(
                         x, y, depth, self._scene.frame.width,

@@ -168,6 +168,33 @@ def color_point_cloud(img_path, pcd_path, T, K, dist):
     print(f"Color PCD is save to {save_path}")
     return pcd
 
+def filter_points(points, min_angle_deg=20, min_distance=0.2, max_distance=80):
+    """
+    Filter a 3D point cloud based on the angle between the points and the XY plane of the camera coordinate system,
+    as well as the minimum and maximum distance from the camera.
+
+    Args:
+    - points: a numpy array of shape (N, 3) containing the 3D points in camera coordinates to be filtered
+    - min_angle_deg: the minimum angle between a point and the XY plane of the camera coordinate system, in degrees
+    - min_distance: the minimum distance between a point and the camera origin, in meters
+    - max_distance: the maximum distance between a point and the camera origin, in meters
+
+    Returns:
+    - A filtered 3D point cloud as a numpy array of shape (N', 3)
+    """
+
+    # Calculate the distance and angle between each point and the XY plane
+    points = points[points[:, 2] > 0]
+    distance = np.linalg.norm(points, axis=1)
+    xy_norm = np.linalg.norm(points[:, :2], axis=1)
+    angle = np.arccos(xy_norm / distance) * 180 / np.pi
+
+    # Filter points based on the angle, minimum distance, and maximum distance criteria
+    mask = (angle > min_angle_deg) & (distance > min_distance) & (distance < max_distance)
+    filtered_points = points[mask]
+
+    return filtered_points
+
 def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=None, max_depth=15):
     """
     This function takes in an image, 3D points, camera extrinsic and intrinsic parameters, and projects
@@ -194,7 +221,7 @@ def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=No
     camera_points = world_to_camera(points3d, extrinsic)
     if colors is not None:
         colors = colors[camera_points[:, 2] > 0]
-    camera_points = camera_points[camera_points[:, 2] > 0]
+    camera_points = filter_points(camera_points)
     pixel_points  = camera_to_pixel(camera_points, intrinsic, dist)
     pixel_points  = np.round(pixel_points).astype(np.int32)
 
