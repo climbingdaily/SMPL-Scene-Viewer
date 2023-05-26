@@ -139,6 +139,7 @@ class correct_keypoints():
         self.img       = None
         self.img_new   = None
         self.img_name  = ''
+        self.lenght    = len(self.sequence)
 
         # make bboxes
         box_w  = 100
@@ -154,12 +155,15 @@ class correct_keypoints():
         """
         This function sets data for an image and displays it with annotations and instructions.
         """
-        sample    = self.sequence[self.frame_index]
+        self.frame_index = self.frame_index % self.lenght
+        sample = self.sequence[self.frame_index]
         self.img_name  = sample['file_basename']
+
+        self.img       = cv2.imread(os.path.join(self.img_folder, self.img_name))
+
         self.kpt_select= -1 if reset_select else self.kpt_select
         self.keypoints = np.array(sample['skel_2d']).reshape(-1, 3)
         self.kpt_new   = self.keypoints.copy() if input_kpt is None else input_kpt.copy()
-        self.img       = cv2.imread(os.path.join(self.img_folder, self.img_name))
         h, _, _ = self.img.shape
         cv2.putText(self.img, f"{self.frame_index:06d} - {self.img_name}", (30, 60), DEFAULT_FONT, 1, BLACK, 2)
         cv2.putText(self.img, "'<-'/'->'   Previous/next frame", (30, int(h/2)), DEFAULT_FONT, 0.5, BLACK, 2)
@@ -217,7 +221,7 @@ class correct_keypoints():
             self.set_data()
 
         elif key == ord('s'):  # if press s, save the pkl
-            self.sequence.save_pkl()
+            self.sequence.save_pkl(overwrite=True)
 
         elif key == ord('i'):  # if press i 
             num = input("Please input a frame number: ")
@@ -280,8 +284,8 @@ class correct_keypoints():
             cv2.imshow('Zoom', area)
             # cv2.setWindowProperty("zoom", cv2.WND_PROP_TOPMOST, 1)
 
-    def save_pkl(self, ):
-        self.sequence.save_pkl()
+    def save_pkl(self, overwrite=False):
+        self.sequence.save_pkl(overwrite=overwrite)
 
     def run(self, ):
         self.set_data()
@@ -295,7 +299,7 @@ class correct_keypoints():
             self.display_image()
         cv2.destroyAllWindows() 
 
-        self.save_pkl()
+        self.save_pkl(overwrite=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SLOPER4D dataset')
@@ -309,5 +313,6 @@ if __name__ == '__main__':
     try:
         pipeline.run()
     except Exception as e:
-        pipeline.save_pkl()
-        print(f"Error {e.args[0]}")
+        pipeline.save_pkl(overwrite=False)
+        import traceback
+        traceback.print_exc()
