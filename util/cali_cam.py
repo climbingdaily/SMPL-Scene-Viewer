@@ -242,7 +242,7 @@ def plot_points_on_img(img_path, points3d, extrinsic, intrinsic, dist, colors=No
 
     for d, color, (x, y) in zip(depth, colors, pixel_points):
         if d > 0.5:
-            cv2.circle(img, (x, y), 2, color=color, thickness=-1)
+            cv2.circle(img, (x, y), 1, color=color, thickness=-1)
 
     save_img_path = f"{os.path.splitext(img_path)[0]}_proj.jpg"
     cv2.imwrite(save_img_path, img)

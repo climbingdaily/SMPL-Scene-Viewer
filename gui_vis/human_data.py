@@ -11,6 +11,7 @@
 # HISTORY:                                                                     #
 ################################################################################
 
+import traceback
 import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
@@ -105,6 +106,9 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                 humans[person]['gender'] = 'male'
 
             if 'point_clouds' in humans[person]:
+                if 'point_frame' not in humans[person]:
+                    humans[person]['point_frame'] = list(range(len(humans[person]['point_clouds'])))
+                    
                 global_frame_id = humans[person]['point_frame']
                 global_frame_id = set(global_frame_id).intersection(humans['frame_num'][start: end])
                 valid_idx = [humans['frame_num'].index(l) for l in global_frame_id]
@@ -182,8 +186,17 @@ class HUMAN_DATA:
         data_loader = Data_loader(self.is_remote)
         try:
             self.humans = data_loader.load_pkl(filename)
-        except Exception as e:
-            print(e)
+            data_length = len(self.humans['second_person']['pose'])
+            if 'frame_num' not in self.humans:
+                self.humans['frame_num'] = list(range(data_length))
+            if 'first_person' not in self.humans:
+                self.humans['first_person'] = {'lidar_traj': np.array([[0., 0, 0, 1.7, 0, 0, 0, 1, 0]] * data_length)}
+            if 'lidar_traj' not in self.humans['first_person']:
+                self.humans['first_person']['lidar_traj'] = np.array([[0., 0, 0, 1.7, 0, 0, 0, 1, 0]] * data_length)
+
+        except Exception as e: 
+            traceback.print_exc()
+            exit(0)
             """
             implement your function here
             self.humans = 
@@ -194,8 +207,6 @@ class HUMAN_DATA:
               }
             # second_person is optional
             """
-        # if 'first_person' not in self.humans or 'second_person' not in self.humans:
-            # self.humans = {'first_person': self.humans}
         self.vis_data_list = load_vis_data(self.humans, data_format = self.data_format)
         # self.set_cameras()
 
@@ -229,6 +240,8 @@ class HUMAN_DATA:
                     self.cameras[f'{abbr} 3rd View +Z'] = make_3rd_view(position, rotation, rotz=0, lookdown=90, move_up=6)
                 except Exception as e:
                     print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
+                    traceback.print_exc()
+
             elif 'trans' in camera:
                 # lidar trajectory setting
                 try:
@@ -238,6 +251,8 @@ class HUMAN_DATA:
                     self.cameras[name] = generate_views(position, rotation, filter=False, dist=0, rad=0)
                 except Exception as e:
                     print(f'[WARNING] No {name}. Some error occured in {e.args[0]}')
+                    traceback.print_exc()
+
             
         views = list(self.cameras.keys())
         for view in views:
