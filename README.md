@@ -36,8 +36,10 @@ git clone https://github.com/climbingdaily/SMPL-Viewer.git
 ```
 conda create --name sviewer python==3.9 -y
 conda activate sviewer
-pip install numpy open3d matplotlib scipy opencv-python torch torchvision torchaudio paramiko chumpy lzf 
+pip install numpy open3d matplotlib scipy opencv-python torch paramiko chumpy lzf 
 ```
+- If your `numpy > 1.23.0`, there will be a conflict with Chumpy. You can just comment out the line 11 in `chumpy/__init__.py`, `# from numpy import bool, int, float, complex, object, unicode, str, nan, inf`
+
 3. Run
 ```
 python GUI_Tool.py
