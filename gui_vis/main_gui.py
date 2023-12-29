@@ -11,14 +11,15 @@
 # HISTORY:                                                                     #
 ################################################################################
 
-import numpy as np
-import open3d as o3d
-import open3d.visualization.gui as gui
 import sys
 import threading
 import os
-import matplotlib.pyplot as plt
 from copy import deepcopy
+
+import numpy as np
+import open3d as o3d
+import open3d.visualization.gui as gui
+import matplotlib.pyplot as plt
 
 sys.path.append('.')
 
@@ -179,7 +180,7 @@ class o3dvis(setting, Menu):
                 humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0)
                 traj = o3d.geometry.PointCloud()
                 traj.points = o3d.utility.Vector3dVector(humans[key]['trans'])
-                traj.paint_uniform_color(POSE_COLOR[key])
+                traj.paint_uniform_color(POSE_COLOR.get(key, np.array([1. , 1., 1.])))
                 # self.update_geometry(traj, f'traj_{key}')
                 data[f'seg_traj_{key}'] = traj
 
@@ -262,7 +263,7 @@ class o3dvis(setting, Menu):
                 smpl.triangle_normals = o3d.utility.Vector3dVector()
                 smpl.compute_vertex_normals()
                 if len(smpl.vertex_colors) == 0:
-                    smpl.paint_uniform_color(POSE_COLOR[key])
+                    smpl.paint_uniform_color(POSE_COLOR.get(key, np.array([1. , 1., 1.])))
             else:
                 smpl.vertices = o3d.utility.Vector3dVector(np.zeros((6890, 3)))
 
@@ -299,7 +300,7 @@ class o3dvis(setting, Menu):
                     xyz = vis_data['humans'][key]['trans'][:ind+1]
                     traj.points = o3d.utility.Vector3dVector(xyz)
                     traj.normals = o3d.utility.Vector3dVector()
-                    traj.paint_uniform_color(POSE_COLOR[key])
+                    traj.paint_uniform_color(POSE_COLOR.get(key, np.array([1. , 1., 1.])))
                 elif key == 'camera':
                     lidarview = self.Human_data.get_extrinsic('Lidar View')[1]
                     geometry.points = camera_model.points

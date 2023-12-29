@@ -54,7 +54,7 @@
             ]
         },
         "Baseline2(S)": {
-            "pose": "manual_pose",
+            "pose": "pose",
             "pose_bak": "pose",
             "trans": "trans",
             "trans_bak": "trans",
@@ -64,6 +64,18 @@
                 0
             ]
         },
+        "Manual(S)": {
+            "pose": "manual_pose",
+            "pose_bak": "manual_pose",
+            "trans": "trans",
+            "trans_bak": "trans",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+
         "Ours(S)": {
             "pose": "opt_pose",
             "trans": "opt_trans",

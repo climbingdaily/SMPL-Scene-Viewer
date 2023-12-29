@@ -77,12 +77,13 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', pose_ba
         if trans_str in human_data:
             trans = human_data[trans_str].copy()
         elif trans_bak in human_data:
-            trans = human_data[trans_bak].copy()
+            trans_str = trans_bak
+            trans = human_data[trans_str].copy()
         else:
             return
         vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
         verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end]}
-        print(f'[SMPL MODEL] {info} ({pose_str}) loaded')
+        print(f'[SMPL MODEL] {info} ({pose_str} + {trans_str}) loaded')
 
 def load_vis_data(humans, start=0, end=-1, data_format=None):
     """
