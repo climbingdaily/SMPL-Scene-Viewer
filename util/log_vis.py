@@ -124,7 +124,7 @@ def plot_individual_losses(individuals_data1, individuals_data2=None):
                                                               ["Loss", "Time"])
 
         else:
-            avg_time_loss_values2 = None
+            avg_time_loss_values2, max_iter2 = None, 0
 
         plot_average_time_vs_loss_both_files_dashed(avg_time_loss_values1, 
                                                     avg_time_loss_values2, 
@@ -145,6 +145,7 @@ def plot_individual_losses(individuals_data1, individuals_data2=None):
                                                 color_schemes[idx-1])
 
     plt.show()
+    print("End")
 
 def plot_average_time_vs_loss_both_files_dashed(avg_values1, 
                                                 avg_values2, 
@@ -206,10 +207,10 @@ def compute_average_values(individual_data, loss_types = ['Time', 'Loss']):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse and plot loss data from log file.")
-    parser.add_argument("filename", type=str, 
-                        default="c:\\Users\\Yudi\\Desktop\\temp\\2023-06-08T18_00_30_basket_01_all_term.log",
+    parser.add_argument("--filename", type=str, 
+                        default="d:\\Yudi Dai\\OneDrive\\l_2023_hsc4d_plus\\小修\\运行日志\\2023-06-08T18_00_30_basket_01_all_term.log",
                         help="Path to the log file.")
-    parser.add_argument("filename2", type=str, nargs='?',
+    parser.add_argument("--filename2", type=str, nargs='?',
                         default=None, help="Path to the second log file (optional).")
     args = parser.parse_args()
 
