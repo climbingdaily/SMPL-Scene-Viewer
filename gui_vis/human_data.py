@@ -15,9 +15,10 @@ import traceback
 import numpy as np
 import torch
 from scipy.spatial.transform import Rotation as R
+import time
 
 from util import Data_loader, generate_views, get_head_global_rots
-from smpl import SMPL, poses_to_vertices
+from smpl import SMPL, poses_to_vertices, smplh_to_vertices_torch
 
 def vertices_to_joints(vertices, index = 15):
     # default index is head index
@@ -58,6 +59,10 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', pose_ba
 
     if pose_str in human_data:
         pose = human_data[pose_str].copy()
+        if pose_str == 'pose':
+            hand_pose = human_data.get('hand_pose', None)
+        else:
+            hand_pose = human_data.get('opt_hand_pose', None)
         if rot is not None:
             if human_data[rot].shape[1] == 72:
                 pose[:, :3] = human_data[rot][:, :3].copy()
@@ -81,9 +86,16 @@ def load_human_mesh(verts_list, human_data, start, end, pose_str='pose', pose_ba
             trans = human_data[trans_str].copy()
         else:
             return
-        vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
-        verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end]}
-        print(f'[SMPL MODEL] {info} ({pose_str} + {trans_str}) loaded')
+        time_start = time.time()
+        if hand_pose is not None:
+            betas = torch.tensor(beta).float().unsqueeze(0)
+            vert, joints = smplh_to_vertices_torch(pose, trans, hand_pose, betas=betas, gender=gender)
+            vert = vert.cpu().numpy()
+            joints = joints.cpu().numpy()
+        else:
+            vert = poses_to_vertices(pose, trans, beta=beta, gender=gender)
+        verts_list[f'{info}'] = {'verts': vert[start:end], 'trans': trans[start:end], 'pose': pose[start:end], 'joints': joints[start:end]}
+        print(f'[SMPL MODEL] {info} ({pose_str} + {trans_str}) loaded, comsumed {time.time() - time_start:.2f}s')
 
 def load_vis_data(humans, start=0, end=-1, data_format=None):
     """
@@ -142,8 +154,12 @@ def load_vis_data(humans, start=0, end=-1, data_format=None):
                     pose = vis_data['humans']['Baseline1(F)']['pose']
                     trans = vis_data['humans']['Baseline1(F)']['trans']
                     lidar_traj = humans[person]['lidar_traj'][:, 1:4]
-                    head = vertices_to_joints(f_vert, 15)
-                    root = vertices_to_joints(f_vert, 0)
+                    if 'joints' in vis_data['humans']['Baseline1(F)']:
+                        head = vis_data['humans']['Baseline1(F)']['joints'][:, 15]
+                        root = vis_data['humans']['Baseline1(F)']['joints'][:, 0]
+                    else:
+                        head = vertices_to_joints(f_vert, 15)
+                        root = vertices_to_joints(f_vert, 0)
                     head_rots = get_head_global_rots(pose)
 
                     def lidar2head(i):
@@ -187,7 +203,7 @@ class HUMAN_DATA:
         data_loader = Data_loader(self.is_remote)
         try:
             self.humans = data_loader.load_pkl(filename)
-            data_length = len(self.humans['second_person']['pose'])
+            data_length = len(self.humans['second_person']['pose']) if 'second_person' in self.humans else len(self.humans['first_person']['pose'])
             if 'frame_num' not in self.humans:
                 self.humans['frame_num'] = list(range(data_length))
             if 'first_person' not in self.humans:
@@ -228,7 +244,10 @@ class HUMAN_DATA:
                 try:
                     abbr = camera['abbr']
                     verts = self.vis_data_list['humans'][name]['verts']
-                    position = vertices_to_joints(verts, 0)
+                    if 'joints' in self.vis_data_list['humans'][name]:
+                        position = self.vis_data_list['humans'][name]['joints'][:, 0]
+                    else:
+                        position = vertices_to_joints(verts, 0)
                     head_rotation = get_head_global_rots(self.vis_data_list['humans'][name]['pose'])
                     self.cameras[f'{abbr} View'] = generate_views(position + np.array([0, 0, 0.2]), head_rotation, dist=offset_center)
 

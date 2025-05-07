@@ -479,7 +479,7 @@ class Setting_panal(GUI_BASE):
         if len(self.tracking_list) > 0:
             try:
                 self.tracking_list = sorted(self.tracking_list, key=lambda x: float(
-                    x.split('.')[0].replace('_', '.')))
+                    os.path.splitext(x)[0].replace('_', '.')))
             except:
                 self.tracking_list = sorted(self.tracking_list)
 

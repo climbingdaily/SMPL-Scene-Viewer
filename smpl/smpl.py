@@ -12,12 +12,21 @@ import torch
 import torch.nn as nn
 import numpy as np
 import os
+
+from smpl.human_body_prior.body_model.body_model import BodyModel
+
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
 import smpl.config as cfg
+
+def load_body_models(gender = 'neutral', support_dir=os.path.dirname(__file__), num_betas=10, num_dmpls=0):
+    bm_fname   = os.path.join(support_dir, f'smplh/{gender}/model.npz')
+    dmpl_fname = os.path.join(support_dir, f'dmpls/{gender}/model.npz')
+    bm = BodyModel(bm_fname=bm_fname, num_betas=num_betas, num_dmpls=num_dmpls, dmpl_fname=dmpl_fname)#.to(comp_device)
+    return bm
 
 def quat2mat(quat):
     """Convert quaternion coefficients to rotation matrix.
@@ -294,3 +303,48 @@ def poses_to_vertices(poses, trans=None, beta = [0] * 10, batch_size = 1024, gen
         trans = trans.astype(np.float32)
         vertices += np.expand_dims(trans, 1)
     return vertices
+
+def smplh_to_vertices_torch(poses, trans, pose_hand, batch_size = 128, betas=torch.zeros((1, 10)), gender='male', is_cuda=True):
+    assert len(poses) == len(trans)
+    if is_cuda:
+        is_cuda = torch.cuda.is_available()
+        
+    if len(betas) == 1:
+        betas = betas.repeat(len(poses), 1)
+
+    def set_var(vars):
+        for i, v in enumerate(vars):  
+            if not isinstance(v, torch.Tensor):  
+                v = torch.from_numpy(v.astype(np.float32))
+            if is_cuda and v.device.type != 'cuda':
+                v = v.cuda()
+            vars[i] = v
+        return vars
+    poses, trans, pose_hand, betas = set_var([poses, trans, pose_hand, betas])
+
+    body_model = load_body_models(gender=gender)
+
+    if is_cuda:
+        body_model = body_model.cuda()
+        
+    # batch_size = 128
+    n = len(poses)
+    n_batch = (n + batch_size - 1) // batch_size
+
+    vertices = []
+    joints = []
+
+    for i in range(n_batch):
+        lb = i * batch_size
+        ub = (i + 1) * batch_size
+        ub = min(ub, n)
+
+        body_pose_world = body_model(root_orient = poses[lb:ub, :3], 
+                                     pose_body = poses[lb:ub, 3:66],
+                                     trans=trans[lb:ub],
+                                     pose_hand=pose_hand[lb:ub].reshape(-1, 90),
+                                     betas=betas[lb:ub])
+        vertices.append(body_pose_world.v)
+        joints.append(body_pose_world.Jtr)
+
+    return torch.cat(vertices), torch.cat(joints)

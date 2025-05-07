@@ -177,7 +177,11 @@ class o3dvis(setting, Menu):
                     self.human_points.append(p)
 
             for key in keys:
-                humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0)
+                if 'joints' in humans[key]:
+                    humans[key]['trans'] = humans[key]['joints'][:, 0]
+                else:
+                    humans[key]['trans'] = vertices_to_joints(humans[key]['verts'], 0)
+                
                 traj = o3d.geometry.PointCloud()
                 traj.points = o3d.utility.Vector3dVector(humans[key]['trans'])
                 traj.paint_uniform_color(POSE_COLOR.get(key, np.array([1. , 1., 1.])))

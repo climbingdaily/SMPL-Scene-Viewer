@@ -140,3 +140,4 @@ vis_data/
 interactive.ipynb
 *_test*
 .*.png
+*.npz
