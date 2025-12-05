@@ -98,7 +98,7 @@ This project is driven by the need for LiDAR-based Human and scene motion captur
     month     = {June},
     year      = {2022},
     pages     = {6792-6802}
-
+}
 @inproceedings{dai2023sloper4d,
     title     = {SLOPER4D: A Scene-Aware Dataset for Global 4D Human Pose Estimation in Urban Environments},
     author    = {Dai, Yudi and Lin, YiTai and Lin, XiPing and Wen, Chenglu and Xu, Lan and Yi, Hongwei and Shen, Siqi and Ma, Yuexin and Wang, Cheng},
@@ -106,6 +106,4 @@ This project is driven by the need for LiDAR-based Human and scene motion captur
     month     = {June},
     year      = {2023}
 }
-}
-
 ```
